@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 # 🌐 Core Imports
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import os
 import io
 import csv
