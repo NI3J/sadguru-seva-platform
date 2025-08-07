@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}सद्गुरुंचे विचार - Wisdom{% endblock %}
+
+{% block head_styles %}
+  <style>
+    .wisdom-section {
+      padding: 40px 20px;
+      background-color: #fffbe7;
+      font-family: 'Noto Serif Devanagari', serif;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      color: #5c3d00;
+      margin-bottom: 25px;
+      text-align: center;
+      text-shadow: 0 1px 1px #ffe7b3;
+    }
+
+    .quote-card {
+      background: #f9f3d7;
+      border-left: 6px solid #c28800;
+      margin: 20px auto;
+      max-width: 680px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(179, 140, 0, 0.2);
+      border-radius: 6px;
+    }
+
+    blockquote p {
+      font-size: 1.2rem;
+      color: #4a3200;
+      margin-bottom: 10px;
+    }
+
+    blockquote footer {
+      font-size: 1rem;
+      color: #725100;
+      text-align: right;
+    }
+
+    .otp-section {
+      padding: 40px 20px;
+      background-color: #fefaf2;
+      text-align: center;
+    }
+
+    .otp-form-container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .otp-form {
+      margin-bottom: 20px;
+    }
+
+    .otp-form input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    .otp-form button {
+      background-color: #c28800;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .otp-form button:hover {
+      background-color: #a67200;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="wisdom-section">
+    <h2 class="section-title">🌿 सदगुरुंचे दररोजचे विचार</h2>
+
+    {% for quote in quotes %}
+      <div class="quote-card">
+        <blockquote>
+          <p>"{{ quote[0] }}"</p>
+          <footer>प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर</footer>
+        </blockquote>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="otp-section">
+    <h2 class="section-title">🎞️ सदगुरु भागवत कथा ज्ञानयज्ञ</h2>
+
+    <div class="otp-form-container">
+      <!-- ✉️ OTP Request Form -->
+      <form action="/verify-otp" method="POST" class="otp-form">
+        <input type="text" name="username" placeholder="आपले नाव" required>
+        <input type="tel" name="mobile" placeholder="मोबाईल नंबर" required>
+        <button type="submit">📲 OTP पाठवा</button>
+      </form>
+
+      {% if otp_sent %}
+        <!-- 🔒 OTP Validation Form -->
+        <form action="/validate-otp" method="POST" class="otp-form">
+          <input type="text" name="otp" placeholder="OTP लिहा" required>
+          <button type="submit">🔓 प्रवेश मिळवा</button>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,9 @@
+<h2>सद्गुरु विचार संग्रह 📿</h2>
+<ul>
+  {% for thought in thoughts %}
+    <li>
+      <blockquote>{{ thought.content }}</blockquote>
+      <small>🗓️ {{ thought.added_on }}</small>
+    </li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="contact-container">
+    <h1>भक्तगण नोंदणी</h1>
+    <p>कृपया आपली माहिती भरून सेवा नोंदवा</p>
+
+    {% if success %}
+      <p class="message">आपली माहिती सुरक्षितपणे नोंदवण्यात आली आहे. धन्यवाद 🙏</p>
+    {% endif %}
+    {% if message %}
+      <p class="message">{{ message }}</p>
+    {% endif %}
+
+    <form method="POST" action="/bhaktgan" class="vertical-form">
+      <label for="name">नाव:</label>
+      <input type="text" name="name" id="name" placeholder="तुमचं नाव" required>
+
+      <label for="email">ईमेल:</label>
+      <input type="email" name="email" id="email" placeholder="ईमेल आयडी">
+
+      <label for="phone">फोन:</label>
+      <input type="tel" name="phone" id="phone" placeholder="मोबाईल नंबर" required>
+
+      <label for="seva_interest">सेवा प्रकार:</label>
+      <input type="text" name="seva_interest" id="seva_interest" placeholder="किंवा तुमची सेवा..." required>
+
+      <label for="city">शहर:</label>
+      <input type="text" name="city" id="city" placeholder="तुमचं शहर">
+
+      <button type="submit">नोंदवा</button>
+    </form>
+  </div>
+{% endblock %}

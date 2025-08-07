@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="dashboard-container">
+    <h1>भक्तगण सूची 📿</h1>
+    <p>एकूण नोंदणी: {{ bhaktgan_list|length }}</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>नाव</th>
+          <th>ईमेल</th>
+          <th>फोन</th>
+          <th>सेवा</th>
+          <th>शहर</th>
+          <th>नोंदणी वेळ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bhakt in bhaktgan_list %}
+        <tr>
+          <td>{{ bhakt.name }}</td>
+          <td>{{ bhakt.email }}</td>
+          <td>{{ bhakt.phone }}</td>
+          <td>{{ bhakt.seva_interest }}</td>
+          <td>{{ bhakt.city }}</td>
+          <td>{{ bhakt.submitted_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

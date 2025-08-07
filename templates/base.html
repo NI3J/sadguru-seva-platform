@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="fast2sms" content="xe56XnE9nGrNB36enF2VFJ0Meceomd62">
+  
+  <title>{% block title %}Spiritual Website{% endblock %}</title>
+
+  <!-- 📜 Shared Fonts & Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari&display=swap" rel="stylesheet">
+
+  {% block head_styles %}{% endblock %}
+</head>
+
+<body>
+  <!-- 🧭 Header & Navigation -->
+  <header>
+    <nav class="navbar">
+      <button class="hamburger" onclick="toggleMenu()">☰</button>
+      <ul id="nav-links" class="nav-links hidden">
+        <li class="nav-item">
+          <a class="nav-link" href="#">मुख्य पृष्ठ</a>
+          <div class="dropdown">
+            <a href="/">मुख्य पृष्ठ</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">🛠️ व्यवस्थापक</a>
+          <div class="dropdown">
+            <a href="{{ url_for('admin_dashboard') }}">🛠️ व्यवस्थापक नोंदणी</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">आमच्याविषयी</a>
+          <div class="dropdown">
+            <a href="/about">आमच्याविषयी माहीती</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">दैनिक कार्यक्रम</a>
+          <div class="dropdown">
+            <a href="/programs">Sadguru Baba से दैनिक कार्यक्रम</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">भक्तगण</a>
+          <div class="dropdown">
+            <a href="/bhaktgan">भक्तगण नोंदणी</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">भक्तगण सूची</a>
+          <div class="dropdown">
+            <a href="/admin/bhaktgan">भक्तगण सूची 📋</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">ज्ञान</a>
+          <div class="dropdown">
+            <a href="/wisdom">ज्ञान</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">संपर्क</a>
+          <div class="dropdown">
+            <a href="/contact">संपर्क</a>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- 📋 Dynamic Content Area -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- 🪷 Site Footer -->
+  <footer class="site-footer">
+    <p>🌼 २०२५ Spiritual Website • Stay connected. Stay conscious.</p>
+  </footer>
+
+  <!-- 📜 Common JavaScript -->
+  <script src="{{ url_for('static', filename='JS/menu-toggle.js') }}"></script>
+
+  {% block footer_scripts %}
+  <script>
+    function filterTableBySeva() {
+      const input = document.getElementById("sevaInput")?.value.toLowerCase();
+      document.querySelectorAll("table tbody tr").forEach(row => {
+        const seva = row.cells[3]?.textContent.toLowerCase();
+        row.style.display = seva.includes(input) ? "" : "none";
+      });
+    }
+  </script>
+  {% endblock %}
+</body>
+</html>

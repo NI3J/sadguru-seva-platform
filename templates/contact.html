@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="contact-container">
+    <h1>Contact Us</h1>
+    <p>2025 Spiritual Site • Powered by Purpose.</p>
+
+    {% if success %}
+      <p class="message">आपला संदेश पाठविला गेला आहे. धन्यवाद 🙏</p>
+    {% endif %}
+    {% if message %}
+      <p class="message">{{ message }}</p>
+    {% endif %}
+
+    <form method="POST" action="/contact" class="vertical-form">
+      <label for="name">Name:</label>
+      <input type="text" name="name" id="name" required>
+
+      <label for="email">Email:</label>
+      <input type="email" name="email" id="email" required>
+
+      <label for="phone">Phone:</label>
+      <input type="tel" name="phone" id="phone" required>
+
+      <label for="message">Message:</label>
+      <textarea name="message" id="message" required></textarea>
+
+      <button type="submit">Send</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,277 @@
+/* 🌼 GLOBAL BODY STYLING */
+body {
+  background: radial-gradient(circle at top left, #fffbe6, #f9f5e3);
+  font-family: 'Tiro Devanagari Marathi', serif;
+  color: #5c3d00;
+  margin: 0;
+  padding: 30px;
+}
+
+/* ✨ TYPOGRAPHY */
+h1, h2 {
+  text-align: center;
+  color: #5e4204;
+  margin-bottom: 20px;
+  text-shadow: 0 1px 1px #ffe8b0;
+}
+
+/* 🎭 ANIMATIONS */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fadeIn 1.2s ease forwards;
+  opacity: 0;
+}
+
+/* 🌿 NAVIGATION BAR */
+nav {
+  background-color: #1a1a1a;
+  padding: 12px 30px;
+  display: flex;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 6px rgba(194, 136, 0, 0.2);
+  border-bottom: 2px solid #c28800;
+}
+nav ul {
+  display: flex;
+  gap: 25px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+nav ul li a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+nav ul li a:hover {
+  color: #c28800;
+  text-shadow: 0 0 5px #ffd288;
+}
+
+/* 📿 TOOLTIP & NAV ITEM */
+.nav-item {
+  position: relative;
+}
+.nav-link {
+  display: block;
+  padding: 10px 14px;
+  color: white;
+  text-decoration: none;
+}
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #1E3A8A;
+  padding: 8px;
+  z-index: 99;
+}
+.nav-item:hover .dropdown {
+  display: block;
+}
+.dropdown a {
+  color: #FFD700;
+  text-decoration: none;
+  display: block;
+  padding: 6px 10px;
+}
+.tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #4B0082;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+  z-index: 99;
+  margin-top: 4px;
+}
+.nav-link:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 🍔 RESPONSIVE MOBILE MENU */
+.hamburger {
+  font-size: 28px;
+  cursor: pointer;
+  display: none;
+  color: white;
+  padding: 10px;
+}
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+  #nav-links {
+    flex-direction: column;
+    background-color: #c28800;
+    padding: 10px;
+  }
+}
+
+
+/* 🧘 FORM CONTAINERS */
+
+/* 🧘🏻‍♂️ FORM CONTAINERS */
+
+.contact-container form,
+.dashboard-container {
+  max-width: 720px;
+  margin: 40px auto;
+  background-color: #fffdf7;
+  border: 2px solid #e6cfaa;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(180, 120, 0, 0.15);
+  padding: 30px;
+}
+
+
+/* 🔐 OTP FORM (Compact Version) */
+/* 🔐 OTP FORM STYLING */
+
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  gap: 10px;
+}
+
+
+
+
+.otp-form input[type="text"],
+.otp-form input[type="tel"] {
+  height: 28px;
+  max-width: 240px;
+  font-size: 14px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background-color: #fdfaf0;
+  border: 1px solid #d9b673;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(200, 160, 80, 0.15);
+}
+
+/* 📤 BUTTONS */
+form button,
+.button {
+  background-color: #c28800;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(194, 136, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+form button:hover,
+.button:hover {
+  background-color: #a06f00;
+  box-shadow: 0 0 12px rgba(162, 111, 0, 0.4);
+  transform: scale(1.05);
+}
+
+/* 📊 TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  border: 1px solid #d9b673;
+  padding: 10px;
+  text-align: left;
+}
+th {
+  background-color: #fff4d4;
+  color: #5c3d00;
+  text-shadow: 0 1px 1px #ffe8b0;
+}
+tr:nth-child(even) {
+  background-color: #fdfaf0;
+}
+
+/* 🌸 QUOTE BOXES */
+
+/* 🌸 SPIRITUAL TEXT BOXES */
+.thought-box,
+.wisdom-container,
+blockquote {
+  background-color: #fffbe6;
+  border-left: 4px solid #c28800;
+  padding: 20px;
+  margin: 30px auto;
+  font-size: 18px;
+  color: #5c3d00;
+  box-shadow: 0 2px 8px rgba(180, 120, 0, 0.1);
+}
+
+/* 🎞️ VIDEO EMBEDS */
+.video-grid iframe {
+  border: 2px solid #d9b673;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(180, 120, 0, 0.15);
+}
+
+
+/* 📿 ACCESS PAGE STYLING */
+/* 📿 SADGURU ACCESS PAGE */
+.access-granted {
+  text-align: center;
+  background-color: #fef9f2;
+  padding: 30px;
+}
+.sadguru-img {
+  width: 120px;
+  border-radius: 60px;
+  box-shadow: 0 0 10px rgba(200, 160, 80, 0.25);
+}
+.blessing {
+  font-size: 1.2em;
+  color: #5c3d00;
+  margin: 10px 0 20px;
+  font-style: italic;
+}
+
+/* 🟨 SPECIAL NAV ITEM STYLE */
+.highlight-nav {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px #ffd288;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 6px rgba(255, 210, 136, 0.25);
+  display: inline-block;
+}
+
+/* 🔮 DAINIK PROGRAM STRUCTURE */
+.non-clickable-heading {
+  background-color: #8A2BE2;
+  color: #fff;
+  padding: 8px;
+}
+.clickable-blue-box {
+  background-color: #1E3A8A;
+  color: #FFD700;
+  padding: 8px;
+  display: block;
+  text-decoration: none;
+}
+

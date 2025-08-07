@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <title>📿 Sadguru Baba चे कार्यक्रम</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 20px;
+      background-color: #f9f7f2;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 30px;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #4B0082;
+      margin-bottom: 20px;
+    }
+    .back-button {
+      display: block;
+      margin: 0 auto 30px auto;
+      background-color: #c28800;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .back-button:hover {
+      background-color: #a06f00;
+    }
+    .day-block {
+      margin-bottom: 40px;
+    }
+    .date-header {
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .today-highlight {
+      color: #d9480f;
+      font-weight: bold;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📿 Sadguru Baba चे दैनिक कार्यक्रम</h2>
+
+    <!-- 🔙 Back Button -->
+    <a href="/" class="back-button">⬅️ मुख्य पृष्ठावर जा</a>
+    {% for day in days %}
+      <div class="day-block">
+        <div class="date-header">
+          🗓️ {{ day.date }}
+          {% if day.date == today %}
+            <span class="today-highlight"> (आज)</span>
+          {% endif %}
+        </div>
+        <ul>
+          {% for program in day.programs %}
+            <li>{{ program }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% else %}
+      <p>🙏 सध्या कोणतेही कार्यक्रम उपलब्ध नाहीत.</p>
+    {% endfor %}
+  </div>
+</body>
+</html>
