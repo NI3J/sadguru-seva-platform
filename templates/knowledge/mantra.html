@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="sa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔱 रुद्राष्टकम् | Rudrashtakam</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-bg: #f9f6f3;
+      --secondary-bg: #fff4dc;
+      --text-primary: #3d2e1e;
+      --text-secondary: #5d3a00;
+      --accent: #d19d00;
+      --accent-dark: #b8860b;
+      --border: #e6d7c3;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --gradient: linear-gradient(135deg, #f9f6f3 0%, #fff4dc 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans Devanagari', serif;
+      background: var(--gradient);
+      color: var(--text-primary);
+      padding: 1rem;
+      line-height: 1.8;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow);
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px var(--shadow);
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      font-style: italic;
+      opacity: 0.8;
+    }
+
+    .audio-container {
+      display: none;
+    }
+
+    .controls {
+      background: var(--secondary-bg);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border: 2px solid var(--border);
+      box-shadow: 0 5px 15px var(--shadow);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 0.75rem 0;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      box-shadow: 0 3px 10px var(--shadow);
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px var(--shadow);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    input[type="range"] {
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+      width: 200px;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, var(--accent) 0%, #e0e0e0 0%);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 2px 6px var(--shadow);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px var(--shadow);
+    }
+
+    select {
+      padding: 0.5rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 25px;
+      background: white;
+      font-size: 1rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+
+    select:focus {
+      border-color: var(--accent);
+    }
+
+    .time-display {
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-family: monospace;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .loop-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .loop-container input[type="checkbox"] {
+      transform: scale(1.2);
+      accent-color: var(--accent);
+    }
+
+    #verses {
+      margin-top: 2rem;
+    }
+
+    .shloka {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: white;
+      border-radius: 15px;
+      border: 2px solid transparent;
+      box-shadow: 0 3px 10px var(--shadow);
+      transition: all 0.3s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .shloka:hover {
+      border-color: var(--border);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px var(--shadow);
+    }
+
+    .shloka.is-active {
+      background: var(--secondary-bg);
+      border-color: var(--accent);
+      box-shadow: 0 8px 25px rgba(209, 157, 0, 0.3);
+      transform: translateY(-3px);
+    }
+
+    .shloka.is-active::before {
+      content: "🎵";
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.2rem;
+      animation: pulse 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.6; transform: scale(1); }
+      to { opacity: 1; transform: scale(1.1); }
+    }
+
+    .shloka p {
+      margin: 0.5rem 0;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      font-weight: 400;
+    }
+
+    .shloka.is-active p {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .verse-number {
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background: var(--accent);
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .credit {
+      font-style: italic;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: 3rem;
+      padding: 1rem;
+      background: var(--secondary-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .error {
+      background: #ffe6e6;
+      color: #cc0000;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid #ffcccc;
+      margin: 1rem 0;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+        margin: 0.5rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .control-row {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      input[type="range"] {
+        width: 250px;
+      }
+
+      .shloka {
+        padding: 1rem;
+      }
+
+      .shloka p {
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      input[type="range"] {
+        width: 200px;
+      }
+      
+      .time-display {
+        min-width: 100px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔱 रुद्राष्टकम्</h1>
+  <div class="subtitle">Rudrashtakam - The Eight Verses to Lord Rudra</div>
+
+  <div class="audio-container">
+    <audio id="mantra-audio" preload="metadata">
+      <source src="{{ url_for('static', filename='audio/रुद्राष्टकम.mp3') }}" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+  </div>
+
+  <div class="controls">
+    <div class="control-row">
+      <button id="play" title="Play/Pause">
+        <span id="play-icon">▶️</span> <span id="play-text">Play</span>
+      </button>
+      <button id="stop" title="Stop">⏹️ Stop</button>
+      <button id="prev" title="Previous Verse">⏮️ Prev</button>
+      <button id="next" title="Next Verse">⏭️ Next</button>
+    </div>
+    
+    <div class="control-row">
+      <input id="seek" type="range" min="0" max="100" step="0.1" value="0" title="Seek">
+    </div>
+    
+    <div class="control-row">
+      <div class="time-display">
+        <span id="current-time">0:00</span> / <span id="duration">--:--</span>
+      </div>
+    </div>
+    
+    <div class="control-row">
+      <div class="volume-container">
+        <span>🔊</span>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume">
+        <button id="mute" title="Mute/Unmute"><span id="mute-icon">🔊</span></button>
+      </div>
+    </div>
+    
+    <div class="control-row">
+      <div class="loop-container">
+        <input id="loop" type="checkbox">
+        <label for="loop">🔁 Loop</label>
+      </div>
+      
+      <label for="rate">⏩ Speed:</label>
+      <select id="rate">
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">
+    Loading audio... 🎵 (Verses are readable below)
+  </div>
+
+  <div id="verses">
+    <div class="shloka" data-start="0" data-verse="1">
+      <div class="verse-number">श्लोक १</div>
+      <p>नमामीशमीशान निर्वाणरूपं। विंभुं ब्यापकं ब्रह्म वेदस्वरूपं।</p>
+      <p>निजं निर्गुणं निर्विकल्पं निरींह। चिदाकाशमाकाशवासं भजेऽहं।।1।।</p>
+    </div>
+
+    <div class="shloka" data-start="12" data-verse="2">
+      <div class="verse-number">श्लोक २</div>
+      <p>निराकारमोंकारमूलं तुरीयं। गिरा ग्यान गोतीतमीशं गिरीशं।।</p>
+      <p>करालं महाकाल कालं कृपालं। गुणागार संसारपारं नतोऽहं।।2।।</p>
+    </div>
+
+    <div class="shloka" data-start="24" data-verse="3">
+      <div class="verse-number">श्लोक ३</div>
+      <p>तुषाराद्रि संकाश गौरं गभीरं। मनोभूत कोटि प्रभा श्री शरीरं।।</p>
+      <p>स्फुरन्मौलि कल्लोलिनी चारु गंगा। लसद्भालबालेन्दु कंठे भुजंगा।।3।।</p>
+    </div>
+
+    <div class="shloka" data-start="36" data-verse="4">
+      <div class="verse-number">श्लोक ४</div>
+      <p>चलत्कुंडलं भ्रू सुनेत्रं विशालं। प्रसन्नाननं नीलकंठं दयालं।।</p>
+      <p>मृगाधीशचर्माम्बरं मुण्डमालं। प्रियं शंकरं सर्वनाथं भजामि।।4।।</p>
+    </div>
+
+    <div class="shloka" data-start="48" data-verse="5">
+      <div class="verse-number">श्लोक ५</div>
+      <p>प्रचंडं प्रकृष्टं प्रगल्भं परेशं। अखंडं अजं भानुकोटिप्रकाशं।।</p>
+      <p>त्रयःशूल निर्मूलनं शूलपाणिं। भजेऽहं भवानीपतिं भावगम्यं।।5।।</p>
+    </div>
+
+    <div class="shloka" data-start="60" data-verse="6">
+      <div class="verse-number">श्लोक ६</div>
+      <p>कलातीत कल्याण कल्पान्तकारी। सदा सज्जनान्ददाता पुरारी।।</p>
+      <p>चिदानंदसंदोह मोहापहारी। प्रसीद प्रसीद प्रभो मन्मथारी।।6।।</p>
+    </div>
+
+    <div class="shloka" data-start="72" data-verse="7">
+      <div class="verse-number">श्लोक ७</div>
+      <p>न यावद् उमानाथ पादारविन्दं। भजंतीह लोके परे वा नराणां।।</p>
+      <p>न तावत्सुखं शान्ति सन्तापनाशं। प्रसीद प्रभो सर्वभूताधिवासं।।7।।</p>
+    </div>
+
+    <div class="shloka" data-start="84" data-verse="8">
+      <div class="verse-number">श्लोक ८</div>
+      <p>न जानामि योगं जपं नैव पूजां। नतोऽहं सदा सर्वदा शंभु तुभ्यं।।</p>
+      <p>जरा जन्म दुःखौघ तातप्यमानं। प्रभो पाहि आपन्नमामीश शंभो।।8।।</p>
+    </div>
+
+    <div class="shloka" data-start="96" data-verse="9">
+      <div class="verse-number">फल श्रुति</div>
+      <p>श्लोकरुद्राष्टकमिदं प्रोक्तं विप्रेण हरतोषये।</p>
+      <p>ये पठन्ति नरा भक्त्या तेषां शम्भुः प्रसीदति।।</p>
+    </div>
+  </div>
+
+  <div class="credit">
+    📜 Composed by Goswami Tulsidas | From the Ramcharitmanas<br>
+    🙏 May Lord Shiva bless all who recite this with devotion
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/mantra.js') }}"></script>
+
+</body>
+</html>

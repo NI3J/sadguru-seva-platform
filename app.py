@@ -339,6 +339,11 @@ def katha():
     video_exists = os.path.exists(video_path)
     return render_template('katha.html', video_exists=video_exists)
 
+# mantra page
+@app.route('/knowledge/mantra')
+def show_rudraashtakam():
+    return render_template('knowledge/mantra.html')
+
 # 📅 View Daily Programs
 @app.route('/programs')
 def programs():
