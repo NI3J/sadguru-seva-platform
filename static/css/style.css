@@ -274,4 +274,26 @@ blockquote {
   display: block;
   text-decoration: none;
 }
+.video-container {
+  max-width: 960px;
+  margin: 0 auto;
+  background: #f3efe9;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.1);
+}
 
+.video-title {
+  font-family: 'Mukta', sans-serif;
+  font-size: 2rem;
+  color: #5c3d2e;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.video-note {
+  text-align: center;
+  font-style: italic;
+  color: #7a5c4b;
+  margin-top: 12px;
+}
