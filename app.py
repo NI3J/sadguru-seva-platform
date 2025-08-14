@@ -91,7 +91,7 @@ def about():
     return render_template('about.html', programs=programs)
 
 # 🙏 Bhaktgan Registration
-@app.route('/bhaktgan', methods=['GET', 'POST'])
+@app.route('/bhaktgan/', methods=['GET', 'POST'])
 def bhaktgan():
     print("🔵 /bhaktgan route accessed")
 
@@ -162,7 +162,7 @@ def bhaktgan():
     return render_template('bhaktgan.html', message=message, bhaktgan=bhakts)   
 
 # 📖 Wisdom Feed
-@app.route('/wisdom')
+@app.route('/wisdom/')
 def wisdom_feed():
     try:
         conn = get_db_connection()
@@ -434,6 +434,19 @@ def admin_dashboard():
         except: pass
 
     return render_template("admin_dashboard.html", show_submission_form=show_submission_form)
+
+@app.route('/knowledge/shivtandav')
+def shivtandav():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT verse_number, content FROM shivtandav_lyrics WHERE language = 'mr' ORDER BY verse_number")
+    lyrics = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('knowledge/shivtandav.html', lyrics=lyrics)
+    
 
 # 🚀 Launch Server
 if __name__ == '__main__':
