@@ -446,7 +446,28 @@ def shivtandav():
     conn.close()
 
     return render_template('knowledge/shivtandav.html', lyrics=lyrics)
-    
+
+@app.route('/knowledge/audio_flow')
+def audio_flow():
+    # 🎧 Bhakti Geet audio files from /static/audio/Bhaktigeet/
+    audios = [
+        'Sare-tirath-dham.mp3',
+        'Shree-Krashna-Govind-Hare-Murare.mp3',
+        'Vithal-Maza.mp3'
+    ]
+
+    # 🖼️ Baba images from /static/images/Baba/
+    images = [
+        'Baba1.jpeg',
+        'Baba2.jpeg',
+        'Baba3.jpeg'
+    ]
+
+    return render_template(
+        'knowledge/audio_flow.html',
+        audios=audios,
+        images=images
+    )
 
 # 🚀 Launch Server
 if __name__ == '__main__':
