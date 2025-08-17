@@ -1,0 +1,135 @@
+/* 🌅 Body Styling */
+body {
+  font-family: 'Mukta', sans-serif;
+  background: linear-gradient(to bottom, #fff8e1, #ffe0b2);
+  color: #4e342e;
+  margin: 0;
+  padding: 20px;
+}
+
+/* 📜 Satsang Container */
+.satsang-container {
+  max-width: 720px;
+  margin: auto;
+  background: #fff3e0;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.satsang-container:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* 🕉️ Headings */
+h1 {
+  text-align: center;
+  color: #bf360c;
+  font-size: 2.4em;
+  margin-bottom: 10px;
+}
+
+h2 {
+  text-align: center;
+  color: #e65100;
+  font-size: 1.6em;
+  margin-bottom: 20px;
+}
+
+h3 {
+  color: #6d4c41;
+  font-size: 1.3em;
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
+/* 📖 Content Blocks */
+.satsang-content {
+  font-size: 1.2em;
+  line-height: 1.8;
+  text-align: justify;
+  padding: 10px 0;
+  margin-bottom: 2em;
+}
+
+#satsang-content-marathi,
+#satsang-content-english {
+  font-size: 1.2em;
+  line-height: 1.8;
+  text-align: justify;
+  padding: 10px 0;
+}
+
+/* ✍️ Author */
+.satsang-author {
+  text-align: right;
+  font-style: italic;
+  margin-top: 30px;
+  color: #6d4c41;
+}
+
+/* 🔘 Navigation Button */
+#next-satsang {
+  display: block;
+  margin: 30px auto 0;
+  padding: 12px 24px;
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#next-satsang:hover {
+  background-color: #f57c00;
+  transform: scale(1.05);
+}
+
+/* 🌗 Language Toggle (Optional Enhancement) */
+.language-toggle {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.language-toggle button {
+  margin: 0 10px;
+  padding: 8px 16px;
+  font-size: 1em;
+  background-color: #ffe0b2;
+  border: 1px solid #ff9800;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.language-toggle button:hover {
+  background-color: #ffcc80;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 600px) {
+  .satsang-container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  h2 {
+    font-size: 1.4em;
+  }
+
+  h3 {
+    font-size: 1.2em;
+  }
+
+  .satsang-content,
+  #satsang-content-marathi,
+  #satsang-content-english {
+    font-size: 1.1em;
+  }
+}

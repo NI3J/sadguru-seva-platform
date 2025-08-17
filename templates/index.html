@@ -5,34 +5,17 @@ Spiritual Website • RadhaKrishna Ashram
 {% endblock %}
 
 {% block head_styles %}
-<link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Marathi&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
 <style>
-  body {
-    font-family: 'Tiro Devanagari Marathi', serif;
-    background: radial-gradient(circle, #fffaf0, #f5e9d6);
-    overflow-x: hidden;
-    position: relative;
-  }
-
-  body::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: url('{{ url_for('static', filename='images/mahadev.jpg') }}') no-repeat center;
-    background-size: 320px;
-    opacity: 0.05;
-    z-index: -1;
-  }
-
+  /* Page-specific styles for index page */
   .hero-section {
     text-align: center;
-    padding-top: 40px;
+    padding: 40px 20px;
+    background: radial-gradient(circle, #fffaf0, #f5e9d6);
+    border-radius: 15px;
+    margin: 20px;
+    box-shadow: 0 4px 20px rgba(194, 136, 0, 0.1);
   }
-
+  
   .hero-section img {
     width: 90%;
     max-width: 480px;
@@ -40,19 +23,28 @@ Spiritual Website • RadhaKrishna Ashram
     box-shadow: 0 0 12px rgba(179, 140, 0, 0.6);
     animation: zoomFade 8s infinite alternate ease-in-out;
   }
-
+  
   @keyframes zoomFade {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(1.02); opacity: 0.95; }
   }
-
+  
   .welcome-text {
     font-size: 2rem;
     color: #5c3d00;
-    margin-top: 25px;
+    margin: 25px 0;
     text-shadow: 0 1px 1px #ffe7b3;
+    font-family: 'Tiro Devanagari Marathi', serif;
   }
-
+  
+  .description-text {
+    font-size: 1.1rem;
+    color: #5c3d00;
+    margin: 20px auto;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+  
   .divider {
     width: 100px;
     height: 4px;
@@ -60,7 +52,7 @@ Spiritual Website • RadhaKrishna Ashram
     margin: 20px auto;
     border-radius: 2px;
   }
-
+  
   .floating-trishul {
     position: fixed;
     bottom: 30px;
@@ -68,30 +60,73 @@ Spiritual Website • RadhaKrishna Ashram
     width: 80px;
     opacity: 0.85;
     animation: floatTrishul 6s infinite ease-in-out;
+    z-index: 100;
   }
-
+  
   @keyframes floatTrishul {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-12px); }
+  }
+
+  /* Background decoration */
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    height: 320px;
+    background: url('{{ url_for('static', filename='images/mahadev.jpg') }}') no-repeat center;
+    background-size: contain;
+    opacity: 0.05;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .welcome-text {
+      font-size: 1.5rem;
+    }
+    
+    .hero-section {
+      margin: 10px;
+      padding: 20px 10px;
+    }
+    
+    .floating-trishul {
+      width: 60px;
+      bottom: 20px;
+      right: 20px;
+    }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-  {% include 'navbar.html' %}
-
-  <div class="hero-section">
-    <div class="welcome-text">
-      राधाकृष्ण आश्रम गातेगावच्या अध्यात्मीक वेब साइटवर आपले स्वागत आहे
-    </div>
-
-    <img src="{{ url_for('static', filename='images/mahadev.jpg') }}" alt="Mahadev" class="mahadev-img">
-
-    <p>हे स्थान अंतर्गत परिवर्तन आणि जागरूक जीवनासाठी समर्पित आहे.</p>
-    <div class="divider"></div>
+<div class="hero-section">
+  <div class="welcome-text">
+    राधाकृष्ण आश्रम गातेगावच्या अध्यात्मीक वेब साइटवर आपले स्वागत आहे
   </div>
+  
+  <!-- Main image - using placeholder if mahadev.jpg doesn't exist -->
+  <img src="{{ url_for('static', filename='images/mahadev.jpg') }}" 
+       alt="Mahadev" 
+       class="mahadev-img"
+       onerror="this.style.display='none';">
+  
+  <div class="description-text">
+    <p>हे स्थान अंतर्गत परिवर्तन आणि जागरूक जीवनासाठी समर्पित आहे.</p>
+    <p>आध्यात्मिक प्रवासात आपले स्वागत आहे.</p>
+  </div>
+  
+  <div class="divider"></div>
+</div>
 
-  <img src="{{ url_for('static', filename='images/trishul.svg') }}" class="floating-trishul" alt="Trishul">
-
-  {% include 'footer.html' %}
+<!-- Floating Trishul - hide if image doesn't exist -->
+<img src="{{ url_for('static', filename='images/trishul.svg') }}" 
+     class="floating-trishul" 
+     alt="Trishul"
+     onerror="this.style.display='none';">
 {% endblock %}

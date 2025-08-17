@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <title>🙏 आजचा सत्संग</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/satsang.css') }}">
+</head>
+<body>
+  <div class="satsang-container">
+    <h1 id="satsang-title">🙏 आजचा सत्संग</h1>
+
+    {% if satsang %}
+      <!-- 🌿 Title and Author -->
+      <h2 id="satsang-subtitle">{{ satsang.title }}</h2>
+      <p class="satsang-author">
+        <strong>✍️ लेखक: </strong> {{ satsang.author }}
+      </p>
+
+      <!-- 🌸 Marathi Content -->
+      <div id="satsang-content-marathi" class="satsang-content">
+        <h3>🌿 मराठी</h3>
+        <p>{{ satsang.content | safe }}</p>
+      </div>
+
+      <!-- 🌼 English Content (if available) -->
+      {% if satsang.content_en %}
+        <div id="satsang-content-english" class="satsang-content">
+          <h3>🌼 English</h3>
+          <p>{{ satsang.content_en | safe }}</p>
+        </div>
+      {% endif %}
+
+      <!-- 🔜 Navigation -->
+      {% if next_page %}
+        <button id="next-satsang" data-next="{{ next_page }}">➡️ पुढील सत्संग</button>
+      {% endif %}
+    {% else %}
+      <!-- 🚫 Fallback Message -->
+      <p class="fallback-message">{{ satsang.content }}</p>
+    {% endif %}
+  </div>
+
+  <script src="{{ url_for('static', filename='js/satsang.js') }}"></script>
+</body>
+</html>
+
