@@ -21,6 +21,10 @@ from dotenv import load_dotenv
 from pymysql.cursors import DictCursor
 import requests
 from db_config import get_db_connection
+from flask_moment import Moment
+from datetime import date
+
+
 
 # 📦 Load Environment Variables
 load_dotenv()
@@ -469,6 +473,56 @@ def audio_flow():
         images=images
     )
 
+def get_today_page_number(start_date):
+    """🌿 Calculate today's satsang page number based on start date."""
+    return (date.today() - start_date).days + 1
+
+def fetch_satsang(page_number):
+    """📖 Fetch satsang content from the database."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT title, content, content_en, author
+        FROM satsang
+        WHERE page_number = %s AND is_active = 1
+    """
+    cursor.execute(query, (page_number,))
+    satsang = cursor.fetchone()
+    conn.close()
+    return satsang
+
+@app.route('/knowledge/satsang')
+def daily_satsang():
+    """🕉️ Serve daily satsang page with fallback and navigation."""
+    start_date = date(2025, 8, 17)
+
+    # 🔢 Determine page number from query or today's date
+    page_param = request.args.get('page')
+    page_number = int(page_param) if page_param and page_param.isdigit() else get_today_page_number(start_date)
+
+    # 📖 Fetch satsang from DB
+    satsang = fetch_satsang(page_number)
+
+    # 🌸 Fallback satsang if none found
+    if not satsang:
+        satsang = {
+            'title': 'सत्संग उपलब्ध नाही',
+            'content': 'आज सत्संग उपलब्ध नाही. कृपया उद्या प्रयत्न करा.',
+            'content_en': '',
+            'author': 'सद्गुरू कृपा'
+        }
+        next_page = None
+    else:
+        next_page = page_number + 1
+
+    # 🎨 Render satsang page
+    return render_template(
+        'knowledge/satsang.html',
+        satsang=satsang,
+        next_page=next_page
+    )
+    
 # 🚀 Launch Server
 if __name__ == '__main__':
     print("🕉️ Spiritual Flask app launching...")

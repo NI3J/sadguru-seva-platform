@@ -1,102 +1,279 @@
 <!DOCTYPE html>
 <html lang="mr">
 <head>
+  <!-- 🔍 Meta Information -->
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="fast2sms" content="xe56XnE9nGrNB36enF2VFJ0Meceomd62">
+  <meta name="description" content="{% block meta_description %}आध्यात्मिक वेबसाइट - बाबांचे विचार आणि भक्तिगीत{% endblock %}">
+  <meta name="keywords" content="{% block meta_keywords %}आध्यात्म, भक्ति, बाबा, भागवत कथा{% endblock %}">
 
+  <!-- 📄 Page Title -->
   <title>{% block title %}Spiritual Website{% endblock %}</title>
 
-  <!-- 📜 Shared Fonts & Styles -->
+  <!-- 🎨 Stylesheets -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari&display=swap" rel="stylesheet">
-
   {% block head_styles %}{% endblock %}
+
+  <!-- 🔗 Favicon and App Icons -->
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 
 <body>
   <!-- 🧭 Header & Navigation -->
-  <header>
-    <nav class="navbar">
-      <button class="hamburger" onclick="toggleMenu()">☰</button>
-      <ul id="nav-links" class="nav-links hidden">
-        <li class="nav-item">
-          <a class="nav-link" href="#">मुख्य पृष्ठ</a>
-          <div class="dropdown">
-            <a href="/">मुख्य पृष्ठ</a>
+  <header class="site-header" role="banner">
+    <nav class="navbar" role="navigation" aria-label="मुख्य नेव्हिगेशन">
+      <!-- Mobile Menu Toggle -->
+      <button
+  class="hamburger"
+  onclick="toggleMenu()"
+  aria-expanded="false"
+  aria-controls="nav-links"
+  aria-label="मेनू टॉगल करा"
+  style="display: block; background: #c28800; color: white; border: 2px solid white; padding: 15px; font-size: 20px; border-radius: 5px; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); z-index: 9999;"
+>
+  ☰
+</button>
+      <!-- Navigation Links -->
+      <ul id="nav-links" class="nav-links hidden" role="menubar">
+        <!-- Home -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            🏠 मुख्य पृष्ठ
+          </a>
+          <div class="dropdown" role="menu" aria-label="मुख्य पृष्ठ मेनू">
+            <a href="/" role="menuitem">मुख्य पृष्ठ</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">🛠️ व्यवस्थापक</a>
-          <div class="dropdown">
-            <a href="{{ url_for('admin_dashboard') }}">🛠️ व्यवस्थापक नोंदणी</a>
+
+        <!-- Admin -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            🛠️ व्यवस्थापक
+          </a>
+          <div class="dropdown" role="menu" aria-label="व्यवस्थापक मेनू">
+            <a href="{{ url_for('admin_dashboard') }}" role="menuitem">🛠️ व्यवस्थापक नोंदणी</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">आमच्याविषयी</a>
-          <div class="dropdown">
-            <a href="/about">आमच्याविषयी माहीती</a>
+
+        <!-- About Us -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            ℹ️ आमच्याविषयी
+          </a>
+          <div class="dropdown" role="menu" aria-label="आमच्याविषयी मेनू">
+            <a href="/about" role="menuitem">आमच्याविषयी माहीती</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">दैनिक कार्यक्रम</a>
-          <div class="dropdown">
-            <a href="/programs">Sadguru Baba से दैनिक कार्यक्रम</a>
+
+        <!-- Daily Programs -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            📅 दैनिक कार्यक्रम
+          </a>
+          <div class="dropdown" role="menu" aria-label="दैनिक कार्यक्रम मेनू">
+            <a href="/programs" role="menuitem">Sadguru Baba से दैनिक कार्यक्रम</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">भक्तगण</a>
-          <div class="dropdown">
-            <a href="/bhaktgan">भक्तगण नोंदणी</a>
+
+        <!-- Devotees Registration -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            👥 भक्तगण
+          </a>
+          <div class="dropdown" role="menu" aria-label="भक्तगण मेनू">
+            <a href="/bhaktgan" role="menuitem">भक्तगण नोंदणी</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">भक्तगण सूची</a>
-          <div class="dropdown">
-            <a href="/admin/bhaktgan">भक्तगण सूची 📋</a>
+
+        <!-- Devotees List -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            📋 भक्तगण सूची
+          </a>
+          <div class="dropdown" role="menu" aria-label="भक्तगण सूची मेनू">
+            <a href="/admin/bhaktgan" role="menuitem">भक्तगण सूची 📋</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">ज्ञान</a>
-          <div class="dropdown">
-            <a href="/wisdom">बाबांचे विचार आणि भागवत कथा</a>
-            <a href="/knowledge/mantra">🔱 रुद्राष्टकम श्रवण</a>
-            <a href="/knowledge/shivtandav">शिवतांडव व्हिडिओ</a>
-            <a href="/knowledge/audio_flow">🎵 भक्तिगीत आणि भजन</a>
+
+        <!-- Knowledge/Wisdom -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            📚 ज्ञान
+          </a>
+          <div class="dropdown" role="menu" aria-label="ज्ञान मेनू">
+            <a href="/wisdom" role="menuitem">बाबांचे विचार आणि भागवत कथा</a>
+            <a href="/knowledge/mantra" role="menuitem">🔱 रुद्राष्टकम श्रवण</a>
+            <a href="/knowledge/shivtandav" role="menuitem">🕉️ शिवतांडव व्हिडिओ</a>
+            <a href="/knowledge/audio_flow" role="menuitem">🎵 भक्तिगीत आणि भजन</a>
+            <a href="/knowledge/satsang" role="menuitem">🕉️प.पु.सद्गुरु पादेश्वर महाराज सत्संग</a>
           </div>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">संपर्क</a>
-          <div class="dropdown">
-            <a href="/contact">संपर्क</a>
+
+        <!-- Contact -->
+        <li class="nav-item" role="none">
+          <a class="nav-link" href="#" role="menuitem" aria-haspopup="true" aria-expanded="false">
+            📞 संपर्क
+          </a>
+          <div class="dropdown" role="menu" aria-label="संपर्क मेनू">
+            <a href="/contact" role="menuitem">संपर्क</a>
           </div>
         </li>
       </ul>
     </nav>
   </header>
 
-  <!-- 📋 Dynamic Content Area -->
-  <main>
-    {% block content %}{% endblock %}
+  <!-- 📋 Skip to Content Link (Accessibility) -->
+  <a class="skip-link" href="#main-content">मुख्य सामग्रीवर जा</a>
+
+  <!-- 📋 Main Content Area -->
+  <main id="main-content" class="main-content" role="main">
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      {% block breadcrumb %}{% endblock %}
+    </nav>
+
+    <!-- Page Content -->
+    <div class="content-wrapper">
+      {% block content %}{% endblock %}
+    </div>
   </main>
 
   <!-- 🪷 Site Footer -->
-  <footer class="site-footer">
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-content">
+      <div class="footer-section">
+        <h3>आमच्याबद्दल</h3>
+        <p>आध्यात्मिक वेबसाइट - बाबांचे विचार आणि भक्तिगीत</p>
+      </div>
+
+      <div class="footer-section">
+        <h3>जलद लिंक्स</h3>
+        <ul>
+          <li><a href="/">मुख्य पृष्ठ</a></li>
+          <li><a href="/about">आमच्याविषयी</a></li>
+          <li><a href="/contact">संपर्क</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-section">
+        <h3>संपर्क माहिती</h3>
+        <p>{% block contact_info %}संपर्क माहिती येथे येईल{% endblock %}</p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; {% block copyright_year %}2025{% endblock %} आध्यात्मिक वेबसाइट. सर्व हक्क राखीव.</p>
+    </div>
   </footer>
 
-  <!-- 📜 Common JavaScript -->
-  <script src="{{ url_for('static', filename='JS/menu-toggle.js') }}"></script>
+  <!-- 📜 JavaScript Files -->
+  <!-- Core Scripts -->
+  <script src="{{ url_for('static', filename='js/menu-toggle.js') }}" defer></script>
 
-  {% block footer_scripts %}
+  <!-- Common Utility Scripts -->
   <script>
+    // Menu Toggle Function
+    function toggleMenu() {
+      const navLinks = document.getElementById('nav-links');
+      const hamburger = document.querySelector('.hamburger');
+
+      navLinks.classList.toggle('hidden');
+
+      // Update ARIA attributes for accessibility
+      const isExpanded = !navLinks.classList.contains('hidden');
+      hamburger.setAttribute('aria-expanded', isExpanded);
+
+      // Add animation class
+      hamburger.classList.toggle('active');
+    }
+
+    // Table Filter Function
     function filterTableBySeva() {
-      const input = document.getElementById("sevaInput")?.value.toLowerCase();
-      document.querySelectorAll("table tbody tr").forEach(row => {
-        const seva = row.cells[3]?.textContent.toLowerCase();
-        row.style.display = seva.includes(input) ? "" : "none";
+      const input = document.getElementById("sevaInput");
+      if (!input) return;
+
+      const filterValue = input.value.toLowerCase();
+      const tableRows = document.querySelectorAll("table tbody tr");
+
+      tableRows.forEach(row => {
+        const sevaCell = row.cells[3];
+        if (sevaCell) {
+          const sevaText = sevaCell.textContent.toLowerCase();
+          row.style.display = sevaText.includes(filterValue) ? "" : "none";
+        }
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        if (!item.contains(event.target)) {
+          const dropdown = item.querySelector('.dropdown');
+          if (dropdown) {
+            dropdown.classList.remove('show');
+          }
+        }
+      });
+    });
+
+    // Keyboard navigation for dropdowns
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        const openDropdowns = document.querySelectorAll('.dropdown.show');
+        openDropdowns.forEach(dropdown => {
+          dropdown.classList.remove('show');
+        });
+      }
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Performance optimization: Lazy load images
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.classList.remove('lazy');
+            imageObserver.unobserve(img);
+          }
+        });
+      });
+
+      document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
       });
     }
   </script>
-  {% endblock %}
+
+  <!-- Page-specific Scripts -->
+  {% block footer_scripts %}{% endblock %}
+
+  <!-- Analytics and Tracking (if needed) -->
+  {% block analytics %}{% endblock %}
 </body>
 </html>
 
