@@ -9,8 +9,8 @@ marathi_content = read_file('content/satsang_001_marathi.txt')
 english_content = read_file('content/satsang_001_english.txt')
 
 # 🌸 Metadata
-page_number = 2 
-title = 'सद्गुरू वाणी'
+page_number = 3
+title = 'स्वप्न सृष्टि:'
 author = 'प.पु.श्री.अशोककाका शास्त्री'
 date = '2025-08-18'
 is_active = 1

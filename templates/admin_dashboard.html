@@ -114,7 +114,7 @@
     </form>
     {% else %}
     <!-- प्रशासक सत्यापन फॉर्म -->
-    <form method="POST" action="{{ url_for('admin_dashboard') }}">
+      <form method="POST" action="{{ url_for('admin.admin_dashboard') }}">
       <label for="name">🧑‍💼 आपले नाव:</label>
       <input type="text" name="name" id="name" required>
 

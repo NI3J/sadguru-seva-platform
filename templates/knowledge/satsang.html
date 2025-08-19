@@ -38,9 +38,13 @@
       <!-- 🚫 Fallback Message -->
       <p class="fallback-message">{{ satsang.content }}</p>
     {% endif %}
+
+    <!-- 🏠 Home Button -->
+    <div class="home-button-wrapper">
+      <a href="/" id="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+    </div>
   </div>
 
   <script src="{{ url_for('static', filename='js/satsang.js') }}"></script>
 </body>
 </html>
-

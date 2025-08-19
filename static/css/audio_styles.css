@@ -77,3 +77,28 @@ h1 {
   margin-top: 40px;
   color: #ffcc00;
 }
+#home-button {
+  display: inline-block;
+  margin: 30px auto;
+  padding: 12px 24px;
+  background-color: #fbe9e7;
+  color: #4e342e;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 8px;
+  font-family: 'Noto Serif Devanagari', serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#home-button:hover {
+  background-color: #ffccbc;
+  transform: scale(1.05);
+}
+
+.home-icon {
+  width: 20px;
+  vertical-align: middle;
+  margin-right: 8px;
+}
