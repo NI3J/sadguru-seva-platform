@@ -1,159 +1,604 @@
-/* 🌅 Body Styling */
+/* ===== SATSANG CSS STYLES ===== */
+
+/* Root Variables */
+:root {
+    --primary-color: #ff6b35;
+    --secondary-color: #004d40;
+    --accent-color: #ffab00;
+    --background-gradient: linear-gradient(135deg, #fff8e1 0%, #f3e5ab 100%);
+    --card-background: rgba(255, 255, 255, 0.95);
+    --text-primary: #2d3436;
+    --text-secondary: #636e72;
+    --border-color: #ddd2a4;
+    --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.15);
+    --border-radius: 12px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-  font-family: 'Mukta', sans-serif;
-  background: linear-gradient(to bottom, #fff8e1, #ffe0b2);
-  color: #4e342e;
-  margin: 0;
-  padding: 20px;
+    font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--background-gradient);
+    min-height: 100vh;
+    font-size: 16px;
 }
 
-/* 📜 Satsang Container */
+/* Container */
 .satsang-container {
-  max-width: 720px;
-  margin: auto;
-  background: #fff3e0;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
-}
-
-.satsang-container:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-/* 🕉️ Headings */
-h1 {
-  text-align: center;
-  color: #bf360c;
-  font-size: 2.4em;
-  margin-bottom: 10px;
-}
-
-h2 {
-  text-align: center;
-  color: #e65100;
-  font-size: 1.6em;
-  margin-bottom: 20px;
-}
-
-h3 {
-  color: #6d4c41;
-  font-size: 1.3em;
-  margin-top: 30px;
-  margin-bottom: 10px;
-}
-
-/* 📖 Content Blocks */
-.satsang-content {
-  font-size: 1.2em;
-  line-height: 1.8;
-  text-align: justify;
-  padding: 10px 0;
-  margin-bottom: 2em;
-}
-
-#satsang-content-marathi,
-#satsang-content-english {
-  font-size: 1.2em;
-  line-height: 1.8;
-  text-align: justify;
-  padding: 10px 0;
-}
-
-/* ✍️ Author */
-.satsang-author {
-  text-align: right;
-  font-style: italic;
-  margin-top: 30px;
-  color: #6d4c41;
-}
-
-/* 🔘 Navigation Button */
-#next-satsang {
-  display: block;
-  margin: 30px auto 0;
-  padding: 12px 24px;
-  background-color: #ff9800;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-#next-satsang:hover {
-  background-color: #f57c00;
-  transform: scale(1.05);
-}
-
-/* 🌗 Language Toggle (Optional Enhancement) */
-.language-toggle {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.language-toggle button {
-  margin: 0 10px;
-  padding: 8px 16px;
-  font-size: 1em;
-  background-color: #ffe0b2;
-  border: 1px solid #ff9800;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.language-toggle button:hover {
-  background-color: #ffcc80;
-}
-
-/* 📱 Responsive Design */
-@media (max-width: 600px) {
-  .satsang-container {
+    max-width: 1000px;
+    margin: 0 auto;
     padding: 20px;
-  }
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
 
-  h1 {
-    font-size: 2em;
-  }
+/* ===== HEADER STYLES ===== */
+.satsang-header {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: 2px solid var(--accent-color);
+}
 
-  h2 {
-    font-size: 1.4em;
-  }
+.header-content {
+    padding: 30px;
+    text-align: center;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+}
 
-  h3 {
-    font-size: 1.2em;
-  }
+.om-symbol {
+    font-size: 3em;
+    margin-bottom: 10px;
+    animation: pulse 2s infinite;
+}
 
-  .satsang-content,
-  #satsang-content-marathi,
-  #satsang-content-english {
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.main-title {
+    font-family: 'Noto Serif Devanagari', serif;
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.date-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.marathi-date {
+    font-family: 'Noto Serif Devanagari', serif;
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--secondary-color);
+}
+
+.english-date {
     font-size: 1.1em;
-  }
-}
-#home-button {
-  display: inline-block;
-  margin: 30px auto;
-  padding: 12px 24px;
-  background-color: #ffe0b2;
-  color: #4e342e;
-  text-align: center;
-  text-decoration: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  font-family: 'Noto Serif Devanagari', serif;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: background-color 0.3s ease, transform 0.2s ease;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
-#home-button:hover {
-  background-color: #ffcc80;
-  transform: scale(1.05);
+.page-info {
+    background: var(--accent-color);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95em;
+    box-shadow: var(--shadow-light);
 }
 
-.home-button-wrapper {
-  text-align: center;
+/* ===== NAVIGATION STYLES ===== */
+.satsang-nav {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    margin-bottom: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.nav-btn {
+    padding: 12px 20px;
+    border: 2px solid transparent;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95em;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.nav-btn:not(.disabled) {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-light);
+}
+
+.nav-btn:not(.disabled):hover {
+    background: #e55a2b;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.nav-btn.today-btn {
+    background: var(--accent-color);
+    color: var(--secondary-color);
+    font-weight: 700;
+}
+
+.nav-btn.disabled {
+    background: #f1f3f4;
+    color: #9aa0a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.status-indicators {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.today {
+    background: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #4caf50;
+}
+
+.status-badge.future {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #2196f3;
+}
+
+.status-badge.past {
+    background: #fce4ec;
+    color: #ad1457;
+    border: 1px solid #e91e63;
+}
+
+.status-badge.fallback {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ff9800;
+}
+
+/* ===== MAIN CONTENT STYLES ===== */
+.satsang-main {
+    flex: 1;
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    padding: 30px;
+    margin-bottom: 20px;
+}
+
+.satsang-title-section {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.satsang-title {
+    font-family: 'Noto Serif Devanagari', serif;
+    font-size: 2em;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.author-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-color);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+/* ===== LANGUAGE TOGGLE ===== */
+.language-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    justify-content: center;
+}
+
+.lang-btn {
+    padding: 12px 24px;
+    border: 2px solid var(--primary-color);
+    background: white;
+    color: var(--primary-color);
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lang-btn.active,
+.lang-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-light);
+    transform: translateY(-1px);
+}
+
+/* ===== CONTENT SECTIONS ===== */
+.content-section {
+    margin-bottom: 30px;
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.content-header h3 {
+    font-size: 1.5em;
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Noto Serif Devanagari', serif;
+}
+
+.content-text {
+    background: #fafafa;
+    padding: 25px;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--accent-color);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.marathi-content .content-text {
+    font-family: 'Noto Serif Devanagari', serif;
+    font-size: 1.1em;
+    line-height: 1.8;
+    text-align: justify;
+    color: var(--text-primary);
+}
+
+.english-content .content-text {
+    font-family: 'Georgia', serif;
+    font-size: 1.05em;
+    line-height: 1.7;
+    text-align: justify;
+    color: var(--text-primary);
+}
+
+.content-text p {
+    margin-bottom: 15px;
+}
+
+.content-text p:last-child {
+    margin-bottom: 0;
+}
+
+.no-content {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.no-content i {
+    font-size: 3em;
+    margin-bottom: 15px;
+    color: var(--accent-color);
+    display: block;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.action-btn {
+    padding: 10px 18px;
+    background: white;
+    color: var(--secondary-color);
+    border: 2px solid var(--secondary-color);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.action-btn:hover {
+    background: var(--secondary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+/* ===== FOOTER STYLES ===== */
+.satsang-footer {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    margin-top: auto;
+}
+
+.footer-content {
+    padding: 25px;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: var(--border-radius);
+}
+
+.lotus-symbol {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.footer-text {
+    font-family: 'Noto Serif Devanagari', serif;
+    font-size: 1.1em;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.footer-symbols {
+    font-size: 1.5em;
+    letter-spacing: 10px;
+}
+
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    background: white;
+    padding: 40px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: var(--shadow-medium);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .satsang-container {
+        padding: 15px;
+    }
+
+    .header-content {
+        padding: 20px;
+    }
+
+    .main-title {
+        font-size: 2em;
+    }
+
+    .satsang-nav {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .nav-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .satsang-main {
+        padding: 20px;
+    }
+
+    .satsang-title {
+        font-size: 1.6em;
+    }
+
+    .content-text {
+        padding: 20px;
+        font-size: 1em;
+    }
+
+    .marathi-content .content-text {
+        font-size: 1.05em;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .action-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .satsang-container {
+        padding: 10px;
+    }
+
+    .main-title {
+        font-size: 1.8em;
+    }
+
+    .nav-btn {
+        padding: 10px 16px;
+        font-size: 0.9em;
+    }
+
+    .content-text {
+        padding: 15px;
+        font-size: 0.95em;
+    }
+
+    .date-info {
+        font-size: 0.9em;
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    .satsang-nav,
+    .action-buttons,
+    .language-toggle {
+        display: none;
+    }
+
+    .satsang-container {
+        box-shadow: none;
+        max-width: 100%;
+    }
+
+    .content-section {
+        page-break-inside: avoid;
+    }
+}
+
+/* ===== FONT SIZE ADJUSTMENTS ===== */
+.font-small {
+    font-size: 0.9em;
+}
+
+.font-medium {
+    font-size: 1em;
+}
+
+.font-large {
+    font-size: 1.1em;
+}
+
+.font-xlarge {
+    font-size: 1.2em;
+}
+
+/* ===== ACCESSIBILITY ===== */
+.nav-btn:focus,
+.lang-btn:focus,
+.action-btn:focus {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+.home-button-section {
+    text-align: center;
+    margin-top: 12px;
+}
+
+.home-button {
+    display: inline-block;
+    background-color: #f4e2d8; /* soft saffron tone */
+    color: #4b2e2e; /* earthy brown for contrast */
+    padding: 10px 20px;
+    border: 2px solid #c19a6b; /* warm border */
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.home-button:hover {
+    background-color: #e6cfc2;
+    color: #2c1a1a;
+    border-color: #a67c52;
 }
