@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import hashlib
 import logging
 from datetime import date, datetime, timedelta
@@ -22,24 +21,27 @@ class SatsangError(Exception):
     pass
 
 # ========== EXISTING WISDOM ROUTES ==========
-
 # 📖 Wisdom Feed
 @wisdom_bp.route('/wisdom/')
 def wisdom_feed():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(DictCursor)
+        
         cursor.execute("SELECT COUNT(*) AS count FROM sadguru_thoughts")
         total = cursor.fetchone()['count']
-
+        
         if total == 0:
             raise ValueError("No thoughts available in DB.")
-
-        today = datetime.date.today().isoformat()
+        
+        # FIX: Use date.today() instead of datetime.date.today()
+        today = date.today().isoformat()
+        
         index = int(hashlib.sha256(today.encode()).hexdigest(), 16) % total
-
+        
         cursor.execute("SELECT content FROM sadguru_thoughts LIMIT 1 OFFSET %s", (index,))
         thought = cursor.fetchone()['content']
+        
     except Exception as e:
         logger.error(f"Error loading wisdom: {e}")
         return "🧘 Unable to load Sadguru's thought today."
@@ -48,7 +50,7 @@ def wisdom_feed():
             cursor.close()
         if conn:
             conn.close()
-
+    
     return render_template('wisdom.html', quotes=[(thought,)])
 
 # 🗃️ Wisdom Archive

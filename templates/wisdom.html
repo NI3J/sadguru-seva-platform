@@ -3,100 +3,65 @@
 {% block title %}सद्गुरुंचे विचार - Wisdom{% endblock %}
 
 {% block head_styles %}
-  <style>
-    .wisdom-section {
-      padding: 40px 20px;
-      background-color: #fffbe7;
-      font-family: 'Noto Serif Devanagari', serif;
-    }
-
-    .section-title {
-      font-size: 1.8rem;
-      color: #5c3d00;
-      margin-bottom: 25px;
-      text-align: center;
-      text-shadow: 0 1px 1px #ffe7b3;
-    }
-
-    .quote-card {
-      background: #f9f3d7;
-      border-left: 6px solid #c28800;
-      margin: 20px auto;
-      max-width: 680px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(179, 140, 0, 0.2);
-      border-radius: 6px;
-    }
-
-    blockquote p {
-      font-size: 1.2rem;
-      color: #4a3200;
-      margin-bottom: 10px;
-    }
-
-    blockquote footer {
-      font-size: 1rem;
-      color: #725100;
-      text-align: right;
-    }
-
-    .otp-section {
-      padding: 40px 20px;
-      background-color: #fefaf2;
-      text-align: center;
-    }
-
-    .otp-form-container {
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    .otp-form {
-      margin-bottom: 20px;
-    }
-
-    .otp-form input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-
-    .otp-form button {
-      background-color: #c28800;
-      color: white;
-      padding: 12px;
-      border: none;
-      border-radius: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    .otp-form button:hover {
-      background-color: #a67200;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/wisdom.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-  <section class="wisdom-section">
-    <h2 class="section-title">🌿 सदगुरुंचे दररोजचे विचार</h2>
-
-    {% for quote in quotes %}
-      <div class="quote-card">
-        <blockquote>
-          <p>"{{ quote[0] }}"</p>
-          <footer>प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर</footer>
-        </blockquote>
-      </div>
-    {% endfor %}
+  <!-- 🏠 Navigation -->
+  <section class="home-button-section">
+    <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
   </section>
 
+  <!-- ✨ Floating Particles -->
+  <div class="spiritual-particles">
+    {% for _ in range(8) %}
+      <div class="particle"></div>
+    {% endfor %}
+  </div>
+
+  <!-- 🌿 Wisdom Quotes Section -->
+  <section class="wisdom-section">
+    <div class="sacred-header">
+      <div class="sacred-symbol">🕉️</div>
+      <h1 class="section-title">🌿 सदगुरुंचे दररोजचे विचार</h1>
+      <div class="divider">
+        <span class="divider-symbol">🪷</span><span class="divider-line"></span>
+        <span class="divider-symbol">✨</span><span class="divider-line"></span>
+        <span class="divider-symbol">🪷</span>
+      </div>
+    </div>
+
+    <div class="quotes-container">
+      {% for quote in quotes %}
+        <article class="quote-card" data-index="{{ loop.index0 }}">
+          <div class="quote-ornament">🌸</div>
+          <blockquote class="quote-content">
+            <p class="quote-text">"{{ quote[0] }}"</p>
+            <footer class="quote-author">
+              <div class="author-symbol">🙏</div>
+              <cite>प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर</cite>
+            </footer>
+          </blockquote>
+          <div class="quote-decoration">
+            <span class="decoration-dot"></span>
+            <span class="decoration-dot"></span>
+            <span class="decoration-dot"></span>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- 🔐 OTP Section -->
   <section class="otp-section">
-    <h2 class="section-title">🎞️ सदगुरु भागवत कथा ज्ञानयज्ञ</h2>
+    <div class="otp-header">
+      <div class="sacred-symbol-small">🎞️</div>
+      <h2 class="otp-title">सदगुरु भागवत कथा ज्ञानयज्ञ</h2>
+      <p class="otp-subtitle">आध्यात्मिक प्रवासासाठी नोंदणी करा</p>
+    </div>
 
     <div class="otp-form-container">
       <!-- ✉️ OTP Request Form -->
@@ -114,5 +79,24 @@
         </form>
       {% endif %}
     </div>
+
+    <!-- 🌸 Spiritual Message -->
+    <div class="spiritual-message">
+      <p>"ज्ञानाचा मार्ग हा आनंदाचा मार्ग आहे" 🌸</p>
+    </div>
   </section>
+
+  <!-- ⏳ Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="loading-text">कृपया थांबा...</div>
+    </div>
+  </div>
+
+  <!-- 🎉 Success Particles -->
+  <div class="success-particles" id="successParticles"></div>
+
+  <!-- 📜 Wisdom JS -->
+  <script src="{{ url_for('static', filename='js/wisdom.js') }}"></script>
 {% endblock %}

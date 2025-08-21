@@ -1,20 +1,51 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <meta charset="UTF-8">
-    <title>About</title>
-</head>
-<body>
-    {% include 'navbar.html' %}
-    
-    <h1>About Us</h1>
-    <p>2025 Spiritual Site • Powered by Purpose</p>
-    {% include 'footer.html' %}
+{% block title %}आमच्याबद्दल - Wisdom Portal{% endblock %}
 
-</body>
-</html>
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
+
+<div class="about-container">
+    <div class="about-card">
+        <div class="icon-section">
+            <div class="main-icon">🕉️</div>
+            <div class="decorative-icons">
+                <span class="floating-icon">🪔</span>
+                <span class="floating-icon">✨</span>
+                <span class="floating-icon">🙏</span>
+            </div>
+        </div>
+        
+        <h1 class="about-title">आमच्याबद्दल</h1>
+        
+        <div class="message-box">
+            <div class="message-icon">🔄</div>
+            <p class="message-text">हे पेज काही दिवसात अपडेट केले जाईल</p>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-item">
+                <span class="info-icon">🌟</span>
+                <span class="info-text">2025 Spiritual Site</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">💡</span>
+                <span class="info-text">Powered by Purpose</span>
+            </div>
+        </div>
+        
+        <div class="back-link">
+            <a href="{{ url_for('main.home') }}" class="back-button">
+                <span class="back-icon">🏠</span>
+                <span class="back-text">मुख्य पृष्ठावर परत जा</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/about.js') }}"></script>
 {% endblock %}
+
