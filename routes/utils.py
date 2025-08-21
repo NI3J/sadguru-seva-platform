@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-import os
 import random
 import requests
 from flask import current_app
 from flask_mail import Message
+import csv, os
+from datetime import datetime
 
 # 📞 Phone Normalizer Utility
 def normalize(phone):
@@ -55,3 +56,4 @@ def send_email(subject, recipients, html_body, sender=None):
     except Exception as e:
         print(f"⚠️ Failed to send email: {e}")
         return False
+

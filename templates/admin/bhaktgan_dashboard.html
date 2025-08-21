@@ -1,10 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="dashboard-container">
-    <h1>भक्तगण सूची 📿</h1>
-    <p>एकूण नोंदणी: {{ bhaktgan_list|length }}</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bhaktgan_dashboard.css') }}">
+<script src="{{ url_for('static', filename='js/bhaktgan_dashboard.js') }}"></script>
 
-    <table>
+<div class="dashboard-container">
+  <div class="header-section">
+    <h1>भक्तगण सूची <span class="bead">📿</span></h1>
+    <p class="total-count">एकूण नोंदणी: <strong>{{ bhaktgan_list|length }}</strong></p>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="bhakt-table">
       <thead>
         <tr>
           <th>नाव</th>
@@ -29,4 +35,5 @@
       </tbody>
     </table>
   </div>
+</div>
 {% endblock %}
