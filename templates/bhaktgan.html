@@ -1,33 +1,92 @@
 {% extends 'base.html' %}
+
+{% block head_styles %}
+<!-- Link to external CSS file -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bhaktgan.css') }}">
+{% endblock %}
+
 {% block content %}
-  <div class="contact-container">
-    <h1>भक्तगण नोंदणी</h1>
-    <p>कृपया आपली माहिती भरून सेवा नोंदवा</p>
+<div class="contact-container">
+  <h1>भक्तगण नोंदणी</h1>
+  <p>कृपया आपली माहिती भरून सेवा नोंदवा</p>
+  <p>आपल्या सेवेने सद्गुरुंच्या मिशनला वाढ मिळेल</p>
+  
+  {% if success %}
+    <div class="message">
+      आपली माहिती सुरक्षितपणे नोंदवण्यात आली आहे. 
+      लवकरच आमच्या टीमकडून संपर्क होईल. धन्यवाद 🙏
+    </div>
+  {% endif %}
+  
+  {% if message %}
+    <div class="message">{{ message }}</div>
+  {% endif %}
+  
+  <form method="POST" action="/bhaktgan" class="vertical-form">
+    <div class="form-group">
+      <label for="name">पूर्ण नाव:</label>
+      <input type="text" 
+             name="name" 
+             id="name" 
+             placeholder="आपले पूर्ण नाव लिहा" 
+             required
+             autocomplete="name">
+    </div>
+    
+    <div class="form-group">
+      <label for="email">ईमेल पत्ता:</label>
+      <input type="email" 
+             name="email" 
+             id="email" 
+             placeholder="तुमचा ईमेल पत्ता (वैकल्पिक)"
+             autocomplete="email">
+    </div>
+    
+    <div class="form-group">
+      <label for="phone">मोबाईल नंबर:</label>
+      <input type="tel" 
+             name="phone" 
+             id="phone" 
+             placeholder="उदा: 9876543210" 
+             required
+             pattern="[0-9]{10}"
+             autocomplete="tel">
+    </div>
+    
+    <div class="form-group">
+      <label for="seva_interest">सेवा प्रकार निवडा:</label>
+      <input type="text" 
+             name="seva_interest" 
+             id="seva_interest" 
+             placeholder="तुमची आवडती सेवा निवडा किंवा लिहा" 
+             required
+             readonly>
+      <!-- Seva options will be added by JavaScript -->
+    </div>
+    
+    <div class="form-group">
+      <label for="city">शहर/गाव:</label>
+      <input type="text" 
+             name="city" 
+             id="city" 
+             placeholder="तुमचे राहण्याचे ठिकाण"
+             autocomplete="address-level2">
+    </div>
+    
+    <div class="form-group">
+      <label for="experience">आध्यात्मिक अनुभव:</label>
+      <input type="text" 
+             name="experience" 
+             id="experience" 
+             placeholder="तुमचा सेवा अनुभव (वैकल्पिक)">
+    </div>
+    
+    <button type="submit">
+      🙏 नोंदवा 🙏
+    </button>
+  </form>
+</div>
 
-    {% if success %}
-      <p class="message">आपली माहिती सुरक्षितपणे नोंदवण्यात आली आहे. धन्यवाद 🙏</p>
-    {% endif %}
-    {% if message %}
-      <p class="message">{{ message }}</p>
-    {% endif %}
-
-    <form method="POST" action="/bhaktgan" class="vertical-form">
-      <label for="name">नाव:</label>
-      <input type="text" name="name" id="name" placeholder="तुमचं नाव" required>
-
-      <label for="email">ईमेल:</label>
-      <input type="email" name="email" id="email" placeholder="ईमेल आयडी">
-
-      <label for="phone">फोन:</label>
-      <input type="tel" name="phone" id="phone" placeholder="मोबाईल नंबर" required>
-
-      <label for="seva_interest">सेवा प्रकार:</label>
-      <input type="text" name="seva_interest" id="seva_interest" placeholder="किंवा तुमची सेवा..." required>
-
-      <label for="city">शहर:</label>
-      <input type="text" name="city" id="city" placeholder="तुमचं शहर">
-
-      <button type="submit">नोंदवा</button>
-    </form>
-  </div>
+<!-- Link to external JavaScript file -->
+<script src="{{ url_for('static', filename='js/bhaktgan.js') }}"></script>
 {% endblock %}

@@ -4,6 +4,7 @@ import pymysql
 from flask import Blueprint, render_template, request, current_app
 from db_config import get_db_connection
 from routes.utils import send_email
+from routes.storage import save_bhakt_to_csv  # CSV saver
 
 # 🌟 Create Blueprint
 main_bp = Blueprint('main', __name__)
@@ -65,8 +66,14 @@ def bhaktgan():
                     (name, email, phone, seva_interest, city)
                 )
                 conn.commit()
-                message = "🕉️ Thank you for joining the Bhaktgan!"
                 print("✅ New bhakt registered.")
+
+                # 💾 Save to CSV
+                try:
+                    save_bhakt_to_csv(name, email, phone, seva_interest, city)
+                    print("📁 Bhakt data saved to CSV.")
+                except Exception as e:
+                    print(f"⚠️ Failed to save CSV: {e}")
 
                 # 📧 Send welcome email
                 try:
@@ -79,6 +86,9 @@ def bhaktgan():
                     print("📨 Welcome email sent.")
                 except Exception as e:
                     print(f"⚠️ Failed to send email: {e}")
+
+                # 🌸 Confirmation message
+                message = "🕉️ तुमच्या सेवेची माहिती सुरक्षितरित्या भरली गेली आहे 🙏 सेवा दिल्याबद्दल धन्यवाद!"
 
             except pymysql.err.IntegrityError:
                 message = "🌸 You're already part of the Bhaktgan."
