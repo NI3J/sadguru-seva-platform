@@ -56,10 +56,10 @@ def insert_satsang_entry(
 
 if __name__ == "__main__":
     insert_satsang_entry(
-        page_number=5,
-        title='आत्मदेव::',
+        page_number=6,
+        title=':अध्यात्म मार्गातील पायऱ्या:',
         marathi_path='content/satsang_001_marathi.txt',
         english_path='content/satsang_001_english.txt',
         author='प.पु.श्री.अशोककाका शास्त्री',
-        date='2025-08-20'
+        date='2025-08-22'
     )

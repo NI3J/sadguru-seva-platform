@@ -2,10 +2,10 @@
 
 import io
 import csv
-from flask import Blueprint, render_template, request, make_response, session, flash
 from db_config import get_db_connection
 from pymysql.cursors import DictCursor
 from routes.utils import normalize
+from flask import Blueprint, render_template, request, make_response, session, redirect, url_for
 
 # 👨‍💼 Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -14,26 +14,29 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/admin_dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     show_submission_form = False
-
+    
+    # Handle logout
+    if request.method == 'POST' and request.form.get('logout'):
+        session.pop('admin_name', None)
+        session.pop('admin_phone', None)
+        return redirect(url_for('admin.admin_dashboard'))
+    
     try:
         connection = get_db_connection()
         cursor = connection.cursor(DictCursor)
-
+        
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             mobile = normalize(request.form.get('mobile', ''))
-
             cursor.execute(
                 "SELECT * FROM authorized_admins WHERE name = %s AND phone = %s",
                 (name, mobile)
             )
             admin = cursor.fetchone()
-
             if admin:
                 session['admin_name'] = name
                 session['admin_phone'] = mobile
                 show_submission_form = True
-
         elif session.get('admin_name') and session.get('admin_phone'):
             cursor.execute(
                 "SELECT * FROM authorized_admins WHERE name = %s AND phone = %s",
@@ -41,7 +44,6 @@ def admin_dashboard():
             )
             admin = cursor.fetchone()
             show_submission_form = bool(admin)
-
     except Exception as err:
         print("⚠ DB Error:", err)
     finally:
@@ -49,8 +51,16 @@ def admin_dashboard():
         except: pass
         try: connection.close()
         except: pass
-
+        
     return render_template("admin_dashboard.html", show_submission_form=show_submission_form)
+
+#Logout Route
+
+@admin_bp.route('/logout', methods=['POST'])
+def logout():
+    session.pop('admin_name', None)
+    session.pop('admin_phone', None)
+    return redirect(url_for('admin.admin_dashboard'))
 
 # 📊 Bhaktgan Dashboard
 @admin_bp.route('/admin/bhaktgan')
