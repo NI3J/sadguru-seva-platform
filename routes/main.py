@@ -6,6 +6,7 @@ from db_config import get_db_connection
 from routes.utils import send_email
 from routes.storage import save_bhakt_to_csv  # CSV saver
 
+
 # 🌟 Create Blueprint
 main_bp = Blueprint('main', __name__)
 
@@ -130,6 +131,7 @@ def contact():
         return render_template('contact.html', success=True)
 
     return render_template('contact.html')
+
 
 # 📄 Fast2SMS Verification File
 @main_bp.route('/fast2sms_verify.txt')
