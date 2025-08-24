@@ -1,0 +1,134 @@
+/* 🌸 Overall Page Wrapper */
+.virtuous-photo-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    background-color: #faf6f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Heading */
+.photo-heading {
+    text-align: center;
+    color: #8b5e3c;
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* Frame */
+.photo-frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Slideshow container */
+.photo-slideshow {
+    width: 100%;
+    height: 480px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+    border: 2px solid #e0d2c1;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Images */
+.photo-slideshow img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 6px;
+    transition: opacity 0.6s ease;
+}
+
+/* Meta section */
+.photo-meta {
+    width: 100%;
+    margin-top: 1rem;
+    text-align: center;
+    font-family: 'Noto Sans', sans-serif;
+}
+
+.photo-title {
+    font-size: 1.4rem;
+    color: #5e3d25;
+    margin-bottom: 0.25rem;
+    font-weight: bold;
+}
+
+.photo-description {
+    font-size: 1rem;
+    color: #6a4b33;
+    margin-bottom: 0.5rem;
+}
+
+.photo-alt {
+    font-size: 0.85rem;
+    color: #8f7a6b;
+}
+
+/* Controls */
+.photo-controls {
+    margin-top: 0.8rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.photo-btn {
+    background-color: #f2e3d5;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.photo-btn:hover {
+    background-color: #e6d1b8;
+}
+
+/* Counter + progress */
+.photo-counter-wrapper {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.photo-counter {
+    font-size: 0.95rem;
+    color: #5e3d25;
+}
+
+.progress-bar {
+    width: 180px;
+    height: 6px;
+    background-color: #e0d2c1;
+    border-radius: 3px;
+    margin-top: 0.3rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #d49b6a;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+/* Mobile tweaks */
+@media (max-width: 600px) {
+    .photo-slideshow {
+        height: 320px;
+    }
+    .photo-title {
+        font-size: 1.2rem;
+    }
+}
