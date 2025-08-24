@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}सद्गुरुंचे दर्शन छायाचित्रे{% endblock %}
+
+{% block content %}
+<!-- Inline CSS and JS since base.html doesn't have extra_head/extra_scripts blocks -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/photos.css') }}">
+
+<div class="virtuous-photo-wrapper">
+    <!-- Page Heading -->
+    <h2 class="photo-heading">🌸 सद्गुरुंचे दर्शन छायाचित्रे</h2>
+    <div class="photo-frame">
+        <!-- Slideshow container -->
+        <div id="photo-container" class="photo-slideshow"></div>
+        <!-- Meta information -->
+        <div class="photo-info">
+            <h3 id="photo-title"></h3>
+            <p id="photo-description"></p>
+            <small id="photo-alt"></small>
+        </div>
+        <!-- Controls -->
+        <div class="photo-controls">
+            <button id="prev-btn" class="photo-btn">⏮️ मागील</button>
+            <button id="play-pause-btn" class="photo-btn">⏸️ विराम</button>
+            <button id="next-btn" class="photo-btn">⏭️ पुढील</button>
+        </div>
+        <!-- Counter + Progress -->
+        <div class="photo-counter-wrapper">
+            <span id="photo-counter" class="photo-counter">1 / 1</span>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inline JavaScript -->
+<script src="{{ url_for('static', filename='js/photos.js') }}"></script>
+{% endblock %}
