@@ -18,24 +18,51 @@
         <!-- Stats Section -->
         <div class="stats-container">
             <div class="stat-card">
-                <div class="stat-number" id="currentCount">{{ current_count }}</div>
-                <div class="stat-label">आज का जप</div>
+                <div class="stat-number" id="dailyWords">{{ daily_words }}</div>
+                <div class="stat-label">आज के शब्द</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalRounds">{{ current_rounds }}</div>
-                <div class="stat-label">पूर्ण मंत्र</div>
+                <div class="stat-number" id="dailyRounds">{{ daily_rounds }}</div>
+                <div class="stat-label">आज के राउंड</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="sessionCount">{{ current_count }}</div>
+                <div class="stat-label">सत्र में शब्द</div>
             </div>
         </div>
 
         <!-- Main Japa Area -->
         <div class="japa-container">
-            <!-- Mantra Display Box -->
+            <!-- Current Expected Word Display -->
+            <div class="current-word-display">
+                <h3>अगला शब्द:</h3>
+                <div class="expected-word" id="expectedWord">
+                    <span class="devanagari" id="expectedDevanagari">
+                        {% if mantra_words and current_word_index <= mantra_words|length %}
+                            {{ mantra_words[current_word_index - 1]['word_devanagari'] }}
+                        {% else %}
+                            राधे
+                        {% endif %}
+                    </span>
+                    <span class="english" id="expectedEnglish">
+                        {% if mantra_words and current_word_index <= mantra_words|length %}
+                            ({{ mantra_words[current_word_index - 1]['word_english'] }})
+                        {% else %}
+                            (radhe)
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="word-progress">
+                    <span id="wordProgress">{{ current_word_index }}/16</span>
+                </div>
+            </div>
+
+            <!-- Full Mantra Display -->
             <div class="mantra-box" id="mantraBox">
                 <div class="mantra-text" id="mantraText">
-                    {{ mantra_text }}
-                </div>
-                <div class="progress-indicator">
-                    <span id="wordProgress">0/16</span> शब्द
+                    {% for word in mantra_words %}
+                        <span class="mantra-word" data-word-order="{{ word.word_order }}">{{ word.word_devanagari }}</span>
+                    {% endfor %}
                 </div>
             </div>
 
@@ -54,14 +81,18 @@
                 <div class="voice-status" id="voiceStatus">
                     माइक्रोफोन तैयार है
                 </div>
+                
+                <div class="recognition-feedback" id="recognitionFeedback" style="display: none;">
+                    <!-- Shows what was heard and whether it matched -->
+                </div>
             </div>
 
-            <!-- Word Counter -->
-            <div class="word-counter">
-                <div class="counter-ring">
-                    <div class="counter-text">
-                        <span class="counter-number" id="wordCount">0</span>
-                        <span class="counter-label">शब्द</span>
+            <!-- Progress Ring -->
+            <div class="progress-container">
+                <div class="progress-ring">
+                    <div class="progress-text">
+                        <span class="progress-number" id="progressNumber">{{ current_word_index }}</span>
+                        <span class="progress-label">/ 16</span>
                     </div>
                 </div>
             </div>
@@ -71,10 +102,11 @@
         <div class="instructions">
             <h3>📋 निर्देश:</h3>
             <ul>
-                <li>"राधे" कहने पर एक शब्द की गिनती होगी</li>
-                <li>पूरे 16 शब्द मंत्र पूरा होने पर सभी शब्द गायब हो जाएंगे</li>
-                <li>गिनती 16, 32, 48... इस तरह बढ़ती रहेगी</li>
-                <li>स्पष्ट उच्चारण करें और माइक के पास बोलें</li>
+                <li>ऊपर दिखाया गया शब्द स्पष्ट रूप से बोलें</li>
+                <li>सही शब्द बोलने पर अगला शब्द दिखेगा</li>
+                <li>16 शब्द पूरे होने पर एक राउंड पूरा होगा</li>
+                <li>माइक के पास स्पष्ट उच्चारण करें</li>
+                <li>शुरू करने के लिए 'जप प्रारंभ करें' दबाएं</li>
             </ul>
         </div>
 
@@ -84,6 +116,11 @@
             ❌ {{ error }}
         </div>
         {% endif %}
+
+        <!-- Hidden data for JavaScript -->
+        <script type="application/json" id="mantraWordsData">
+            {{ mantra_words | tojson }}
+        </script>
     </div>
 
     <script src="{{ url_for('static', filename='js/japa.js') }}"></script>
