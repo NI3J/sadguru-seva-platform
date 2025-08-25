@@ -48,9 +48,175 @@ body {
 /* Stats Container */
 .stats-container {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
     margin-bottom: 30px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+/* Current Word Display */
+.current-word-display {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.current-word-display h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.expected-word {
+    margin-bottom: 15px;
+}
+
+.expected-word .devanagari {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.expected-word .english {
+    font-size: 1.2rem;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.word-progress {
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Full Mantra Display */
+.mantra-box {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    transition: all 0.5s ease;
+}
+
+.mantra-box.completed {
+    background: rgba(76, 175, 80, 0.2);
+    border: 2px solid #4CAF50;
+    animation: completeFlash 1s ease-in-out;
+}
+
+.mantra-text {
+    font-size: 1.5rem;
+    line-height: 1.8;
+    color: #2c3e50;
+}
+
+.mantra-word {
+    margin: 0 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.mantra-word.current {
+    background: #3498db;
+    color: white;
+    font-weight: 600;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+}
+
+/* Recognition Feedback */
+.recognition-feedback {
+    margin-top: 15px;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.recognition-feedback.success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+    border: 1px solid #4CAF50;
+}
+
+.recognition-feedback.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #c62828;
+    border: 1px solid #f44336;
+}
+
+/* Progress Container */
+.progress-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.progress-ring {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.2);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+}
+
+.progress-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    display: block;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
 }
 
 .stat-card {
