@@ -24,7 +24,8 @@ from routes.auth import auth_bp
 from routes.admin import admin_bp
 from routes.wisdom import wisdom_bp
 from routes.programs import programs_bp
-from routes.photos import photos_bp  # ✅ Added missing blueprint
+from routes.photos import photos_bp
+from routes.japa import japa_bp  # ✅ Newly added blueprint
 from routes.utils import send_email
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -57,7 +58,8 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(wisdom_bp)
     app.register_blueprint(programs_bp)
-    app.register_blueprint(photos_bp)  # ✅ Now registered
+    app.register_blueprint(photos_bp)
+    app.register_blueprint(japa_bp)  # ✅ Japa blueprint now active
     print("✅ All blueprints registered successfully")
 
     # 🌸 Marathi Date Filters
@@ -157,7 +159,6 @@ if __name__ == '__main__':
     print(f"📁 Template folder: {app.template_folder}")
     print(f"📁 Static folder: {app.static_folder}")
 
-    # Check if critical template exists
     template_check = os.path.join(app.template_folder, 'program', 'program.html')
     if os.path.exists(template_check):
         print(f"✅ Template found: {template_check}")
