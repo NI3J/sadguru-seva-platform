@@ -9,12 +9,17 @@ class JapaApp {
 
         // 🌼 Mantra patterns (regex for phonetic flexibility)
         this.wordPatterns = [
-            /राधे|radhe|राधी|radhi|राधी/gi,
+            /राधे|radhe|राधी|radhi|ऱाधे/gi,
             /कृष्णा|krishna|कृष्ण/gi,
             /शाम|shaam|shyam|श्याम/gi,
-            /शामा|shama|shyama|श्यामा/gi,
-            /ऱाधे|राधे/gi
+            /शामा|shama|shyama|श्यामा/gi
         ];
+        this.mantraWords = ['राधे', 'कृष्णा', 'शाम', 'शामा'];
+
+        // 🌿 Debounce tracking
+        this.lastMatchedWord = '';
+        this.lastMatchTime = 0;
+        this.matchCooldown = 1000; // 1 second
 
         // 🌿 UI Elements
         this.elements = {
@@ -54,8 +59,8 @@ class JapaApp {
 
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
-        this.recognition.interimResults = true; // ✅ Faster recognition
-        this.recognition.lang = 'hi-IN'; // You can try 'mr-IN' if needed
+        this.recognition.interimResults = true;
+        this.recognition.lang = 'hi-IN';
 
         this.recognition.onstart = () => {
             this.isListening = true;
@@ -68,17 +73,12 @@ class JapaApp {
         this.recognition.onend = () => {
             if (this.isListening) {
                 setTimeout(() => {
-                    try {
-                        this.recognition.start();
-                    } catch (e) {
-                        console.log('Recognition restart failed:', e);
-                    }
+                    try { this.recognition.start(); } catch (e) { console.log('Restart failed:', e); }
                 }, 100);
             }
         };
 
         this.recognition.onerror = (event) => {
-            console.log('Speech recognition error:', event.error);
             const messages = {
                 'no-speech': '🔇 कुछ सुनाई नहीं दिया, फिर से बोलें',
                 'audio-capture': '❌ माइक्रोफोन एक्सेस नहीं मिला',
@@ -96,24 +96,37 @@ class JapaApp {
     }
 
     processTranscript(transcript) {
-        const count = this.countMantraWords(transcript);
-        if (count > 0) {
-            for (let i = 0; i < count; i++) {
+        const now = Date.now();
+        const matchedWords = this.extractMatchedWords(transcript);
+        let validCount = 0;
+
+        matchedWords.forEach(word => {
+            if (this.shouldCountWord(word, now)) {
                 this.incrementWordCount();
+                this.lastMatchedWord = word;
+                this.lastMatchTime = now;
+                validCount++;
             }
-            this.updateStatus(`✅ पहचाने गए शब्द: ${count} / ${this.targetWords}`);
+        });
+
+        if (validCount > 0) {
+            this.updateStatus(`✅ पहचाने गए शब्द: ${validCount} / ${this.targetWords}`);
         } else {
             this.updateStatus('🔍 जप शब्द नहीं पहचाना गया');
         }
     }
 
-    countMantraWords(transcript) {
-        let count = 0;
-        this.wordPatterns.forEach(pattern => {
+    extractMatchedWords(transcript) {
+        const matched = [];
+        this.wordPatterns.forEach((pattern, index) => {
             const matches = transcript.match(pattern);
-            if (matches) count += matches.length;
+            if (matches) matched.push(this.mantraWords[index]);
         });
-        return count;
+        return [...new Set(matched)];
+    }
+
+    shouldCountWord(word, now) {
+        return word !== this.lastMatchedWord || (now - this.lastMatchTime > this.matchCooldown);
     }
 
     incrementWordCount() {
