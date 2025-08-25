@@ -21,7 +21,7 @@ def japa_page():
         cursor.execute("SELECT mantra_text FROM japa_mantras WHERE id = 1")
         mantra_result = cursor.fetchone()
         mantra_text = mantra_result['mantra_text'] if mantra_result else (
-            "राधे कृष्णा राधे कृष्णा कृष्णा कृष्णा राधे राधे राम राम हरे हरे हरे हरे राम राम"
+            "राधे कृष्णा राधे कृष्णा कृष्णा कृष्णा राधे राधे राधे शाम राधे शामा शाम शामा राधे राधे"
         )
 
         # 🙏 Fetch today's session data
@@ -155,3 +155,4 @@ def get_japa_stats():
     except Exception as e:
         print(f"Error getting japa stats: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
