@@ -1,4 +1,3 @@
-// 🌸 Japa Sadhana JavaScript
 class JapaApp {
     constructor() {
         this.recognition = null;
@@ -8,9 +7,13 @@ class JapaApp {
         this.totalRounds = parseInt(document.getElementById('totalRounds').textContent) || 0;
         this.targetWords = 16;
 
-        // 🌼 Mantra words to recognize
-        this.mantraWords = [
-            'राधे', 'कृष्णा', 'शाम', 'शामा', 'ऱाधे'
+        // 🌼 Mantra patterns (regex for phonetic flexibility)
+        this.wordPatterns = [
+            /राधे|radhe|राधी|radhi|राधी/gi,
+            /कृष्णा|krishna|कृष्ण/gi,
+            /शाम|shaam|shyam|श्याम/gi,
+            /शामा|shama|shyama|श्यामा/gi,
+            /ऱाधे|राधे/gi
         ];
 
         // 🌿 UI Elements
@@ -51,8 +54,8 @@ class JapaApp {
 
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
-        this.recognition.interimResults = false;
-        this.recognition.lang = 'hi-IN';
+        this.recognition.interimResults = true; // ✅ Faster recognition
+        this.recognition.lang = 'hi-IN'; // You can try 'mr-IN' if needed
 
         this.recognition.onstart = () => {
             this.isListening = true;
@@ -84,15 +87,16 @@ class JapaApp {
         };
 
         this.recognition.onresult = (event) => {
-            const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-            this.processTranscript(transcript);
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcript = event.results[i][0].transcript.trim().toLowerCase();
+                this.elements.voiceStatus.textContent = `🗣 सुना गया: ${transcript}`;
+                this.processTranscript(transcript);
+            }
         };
     }
 
     processTranscript(transcript) {
-        console.log('Recognized:', transcript);
         const count = this.countMantraWords(transcript);
-
         if (count > 0) {
             for (let i = 0; i < count; i++) {
                 this.incrementWordCount();
@@ -105,9 +109,8 @@ class JapaApp {
 
     countMantraWords(transcript) {
         let count = 0;
-        this.mantraWords.forEach(word => {
-            const regex = new RegExp(word, 'gi');
-            const matches = transcript.match(regex);
+        this.wordPatterns.forEach(pattern => {
+            const matches = transcript.match(pattern);
             if (matches) count += matches.length;
         });
         return count;
