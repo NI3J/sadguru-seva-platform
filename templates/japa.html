@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>जप साधना | Japa Sadhana</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/japa.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">🙏 जप साधना</h1>
+            <p class="subtitle">राधे कृष्णा मंत्र जप</p>
+        </header>
+
+        <!-- Stats Section -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="currentCount">{{ current_count }}</div>
+                <div class="stat-label">आज का जप</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalRounds">{{ current_rounds }}</div>
+                <div class="stat-label">पूर्ण मंत्र</div>
+            </div>
+        </div>
+
+        <!-- Main Japa Area -->
+        <div class="japa-container">
+            <!-- Mantra Display Box -->
+            <div class="mantra-box" id="mantraBox">
+                <div class="mantra-text" id="mantraText">
+                    {{ mantra_text }}
+                </div>
+                <div class="progress-indicator">
+                    <span id="wordProgress">0/16</span> शब्द
+                </div>
+            </div>
+
+            <!-- Voice Controls -->
+            <div class="controls-container">
+                <button class="voice-btn" id="startBtn">
+                    <div class="mic-icon">🎤</div>
+                    <span>जप प्रारंभ करें</span>
+                </button>
+                
+                <button class="voice-btn stop-btn" id="stopBtn" style="display: none;">
+                    <div class="stop-icon">⏹</div>
+                    <span>जप रोकें</span>
+                </button>
+
+                <div class="voice-status" id="voiceStatus">
+                    माइक्रोफोन तैयार है
+                </div>
+            </div>
+
+            <!-- Word Counter -->
+            <div class="word-counter">
+                <div class="counter-ring">
+                    <div class="counter-text">
+                        <span class="counter-number" id="wordCount">0</span>
+                        <span class="counter-label">शब्द</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>📋 निर्देश:</h3>
+            <ul>
+                <li>"राधे" कहने पर एक शब्द की गिनती होगी</li>
+                <li>पूरे 16 शब्द मंत्र पूरा होने पर सभी शब्द गायब हो जाएंगे</li>
+                <li>गिनती 16, 32, 48... इस तरह बढ़ती रहेगी</li>
+                <li>स्पष्ट उच्चारण करें और माइक के पास बोलें</li>
+            </ul>
+        </div>
+
+        <!-- Error Display -->
+        {% if error %}
+        <div class="error-message">
+            ❌ {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/japa.js') }}"></script>
+</body>
+</html>
