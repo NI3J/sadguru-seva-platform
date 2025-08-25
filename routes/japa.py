@@ -162,7 +162,7 @@ def update_japa_count():
         word_mappings = {
             'radhe': ['radhe', 'राधे', 'राधा', 'radha', 'ride', 'ready'],
             'krishna': ['krishna', 'कृष्णा', 'कृष्ण', 'krishn', 'krish', 'krishnan'],
-            'naam': ['naam', 'नाम', 'nam', 'name']
+            'shama': ['shama', 'शाम', 'sham', 'shama']
         }
         is_match = recognized_word == expected_english or \
                    (expected_english in word_mappings and recognized_word in word_mappings[expected_english])
@@ -199,12 +199,12 @@ def update_japa_count():
         """, (new_count, new_word_index, user_token))
         conn.commit()
 
-        # Next word
+        # Next word (Devanagari)
         cursor.execute("""
-            SELECT word_english FROM krasha_jap WHERE word_order = %s
+            SELECT word_devanagari FROM krasha_jap WHERE word_order = %s
         """, (new_word_index,))
         next_row = cursor.fetchone()
-        next_word = {'word_english': next_row['word_english']} if next_row else None
+        next_word = {'word_devanagari': next_row['word_devanagari']} if next_row else None
 
         return jsonify({
             'success': True,
@@ -222,7 +222,7 @@ def update_japa_count():
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
-        
+
 @japa_bp.route('/api/japa/get_stats', methods=['GET'])
 def get_japa_stats():
     conn = None
