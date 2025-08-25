@@ -56,10 +56,12 @@ def insert_satsang_entry(
 
 if __name__ == "__main__":
     insert_satsang_entry(
-        page_number=7,
-        title=':सद्गुरू वाणी:मृत्यू नंतर::',
+        page_number=8,
+        title=':सद्गुरू वाणी:ईश्र्वरावर विश्र्वास किंवा विसंबून राहणे:',
         marathi_path='content/satsang_001_marathi.txt',
         english_path='content/satsang_001_english.txt',
         author='प.पु.श्री.अशोककाका शास्त्री',
-        date='2025-08-23'
+        date='2025-08-24'
     )
+
+

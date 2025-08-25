@@ -1,134 +1,841 @@
-/* 🌸 Overall Page Wrapper */
+/* =================================
+   🌸 VIRTUOUS PHOTOS SLIDESHOW CSS
+   Restructured & Optimized Version
+   ================================= */
+
+/* === TABLE OF CONTENTS ===
+   1. CSS Custom Properties
+   2. Reset & Base Styles
+   3. Main Container
+   4. Header Section
+   5. Progress Bar
+   6. Slideshow Container
+   7. Photo Elements
+   8. Metadata Section
+   9. Controls Section
+   10. Counter Section
+   11. Animations & Keyframes
+   12. Utility Classes
+   13. Media Queries
+   14. Accessibility
+   15. Print Styles
+   ========================== */
+
+/* 1. CSS CUSTOM PROPERTIES */
+:root {
+  /* --- Color System --- */
+  --primary-hue: 25;
+  --primary-sat: 45%;
+  --primary-light: 35%;
+  
+  --primary-color: hsl(var(--primary-hue), var(--primary-sat), var(--primary-light));
+  --secondary-color: hsl(var(--primary-hue), 40%, 55%);
+  --accent-color: hsl(15, 100%, 60%);
+  
+  /* Surface Colors */
+  --surface-primary: hsl(var(--primary-hue), 25%, 97%);
+  --surface-secondary: hsl(0, 0%, 100%);
+  --surface-glass: hsla(0, 0%, 100%, 0.8);
+  --surface-elevated: hsl(var(--primary-hue), 15%, 95%);
+  
+  /* Border Colors */
+  --border-primary: hsl(var(--primary-hue), 20%, 88%);
+  --border-secondary: hsl(var(--primary-hue), 18%, 82%);
+  --border-focus: var(--accent-color);
+  
+  /* Text Colors */
+  --text-primary: hsl(var(--primary-hue), 45%, 20%);
+  --text-secondary: hsl(var(--primary-hue), 35%, 30%);
+  --text-muted: hsl(var(--primary-hue), 25%, 45%);
+  --text-inverse: hsl(0, 0%, 100%);
+  
+  /* Interactive Colors */
+  --interactive-bg: hsl(var(--primary-hue), 30%, 92%);
+  --interactive-hover: hsl(var(--primary-hue), 25%, 88%);
+  --interactive-active: hsl(var(--primary-hue), 22%, 82%);
+  
+  /* --- Spacing Scale --- */
+  --space-2xs: 0.125rem; /* 2px */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 1rem;      /* 16px */
+  --space-lg: 1.5rem;    /* 24px */
+  --space-xl: 2rem;      /* 32px */
+  --space-2xl: 3rem;     /* 48px */
+  --space-3xl: 4rem;     /* 64px */
+  
+  /* --- Typography Scale --- */
+  --text-2xs: clamp(0.7rem, 1.5vw, 0.8rem);
+  --text-xs: clamp(0.8rem, 2vw, 0.9rem);
+  --text-sm: clamp(0.9rem, 2.5vw, 1rem);
+  --text-base: clamp(1rem, 3vw, 1.1rem);
+  --text-lg: clamp(1.1rem, 3.5vw, 1.3rem);
+  --text-xl: clamp(1.2rem, 4vw, 1.6rem);
+  --text-2xl: clamp(1.5rem, 4.5vw, 2rem);
+  --text-3xl: clamp(1.8rem, 5vw, 2.5rem);
+  
+  /* --- Border Radius Scale --- */
+  --radius-2xs: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+  
+  /* --- Shadow System --- */
+  --shadow-xs: 0 1px 2px 0 hsla(0, 0%, 0%, 0.05);
+  --shadow-sm: 0 1px 3px 0 hsla(0, 0%, 0%, 0.1), 0 1px 2px 0 hsla(0, 0%, 0%, 0.06);
+  --shadow-md: 0 4px 6px -1px hsla(0, 0%, 0%, 0.1), 0 2px 4px -1px hsla(0, 0%, 0%, 0.06);
+  --shadow-lg: 0 10px 15px -3px hsla(0, 0%, 0%, 0.1), 0 4px 6px -2px hsla(0, 0%, 0%, 0.05);
+  --shadow-xl: 0 20px 25px -5px hsla(0, 0%, 0%, 0.1), 0 10px 10px -5px hsla(0, 0%, 0%, 0.04);
+  
+  /* --- Transition System --- */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* --- Layout Properties --- */
+  --container-max: 960px;
+  --slideshow-aspect: 4/3;
+  --slideshow-height: 480px;
+  --slideshow-height-tablet: 360px;
+  --slideshow-height-mobile: 280px;
+  
+  /* --- Z-Index Scale --- */
+  --z-below: -1;
+  --z-default: 0;
+  --z-above: 1;
+  --z-dropdown: 10;
+  --z-overlay: 20;
+  --z-modal: 30;
+  --z-tooltip: 40;
+  --z-toast: 50;
+}
+
+/* 2. RESET & BASE STYLES */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 3. MAIN CONTAINER */
 .virtuous-photo-wrapper {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1.5rem;
-    background-color: #faf6f0;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  /* Layout */
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: var(--space-lg);
+  
+  /* Appearance */
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  
+  /* Typography */
+  font-family: 'Noto Sans Devanagari', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  
+  /* Performance */
+  contain: layout style;
+  position: relative;
 }
 
-/* Heading */
+/* 4. HEADER SECTION */
 .photo-heading {
-    text-align: center;
-    color: #8b5e3c;
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    font-family: 'Noto Sans Devanagari', sans-serif;
+  /* Typography */
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--primary-color);
+  text-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.1);
+  
+  /* Layout */
+  text-align: center;
+  margin-bottom: var(--space-lg);
 }
 
-/* Frame */
-.photo-frame {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Slideshow container */
-.photo-slideshow {
-    width: 100%;
-    height: 480px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #ffffff;
-    border: 2px solid #e0d2c1;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-
-/* Images */
-.photo-slideshow img {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 6px;
-    transition: opacity 0.6s ease;
-}
-
-/* Meta section */
-.photo-meta {
-    width: 100%;
-    margin-top: 1rem;
-    text-align: center;
-    font-family: 'Noto Sans', sans-serif;
-}
-
-.photo-title {
-    font-size: 1.4rem;
-    color: #5e3d25;
-    margin-bottom: 0.25rem;
-    font-weight: bold;
-}
-
-.photo-description {
-    font-size: 1rem;
-    color: #6a4b33;
-    margin-bottom: 0.5rem;
-}
-
-.photo-alt {
-    font-size: 0.85rem;
-    color: #8f7a6b;
-}
-
-/* Controls */
-.photo-controls {
-    margin-top: 0.8rem;
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.photo-btn {
-    background-color: #f2e3d5;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.3s ease;
-}
-
-.photo-btn:hover {
-    background-color: #e6d1b8;
-}
-
-/* Counter + progress */
-.photo-counter-wrapper {
-    margin-top: 0.8rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.photo-counter {
-    font-size: 0.95rem;
-    color: #5e3d25;
-}
-
+/* 5. PROGRESS BAR */
 .progress-bar {
-    width: 180px;
-    height: 6px;
-    background-color: #e0d2c1;
-    border-radius: 3px;
-    margin-top: 0.3rem;
-    overflow: hidden;
+  /* Layout */
+  width: 100%;
+  max-width: 300px;
+  height: 6px;
+  margin-inline: auto;
+  margin-bottom: var(--space-sm);
+  
+  /* Appearance */
+  background-color: var(--border-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px hsla(0, 0%, 0%, 0.1);
 }
 
-.progress-fill {
-    height: 100%;
-    background-color: #d49b6a;
-    width: 0%;
-    transition: width 0.5s ease;
+.progress-fill,
+#progress-fill {
+  /* Layout */
+  height: 100%;
+  width: 0%;
+  
+  /* Appearance */
+  background: linear-gradient(
+    90deg,
+    var(--secondary-color) 0%,
+    var(--accent-color) 50%,
+    var(--primary-color) 100%
+  );
+  border-radius: var(--radius-sm);
+  
+  /* Animation */
+  transition: width var(--duration-fast) var(--ease-out);
+  
+  /* Performance */
+  position: relative;
+  will-change: width;
 }
 
-/* Mobile tweaks */
-@media (max-width: 600px) {
-    .photo-slideshow {
-        height: 320px;
-    }
-    .photo-title {
-        font-size: 1.2rem;
-    }
+.progress-fill::after,
+#progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 10px;
+  background: linear-gradient(90deg, transparent, hsla(0, 0%, 100%, 0.4));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* 6. SLIDESHOW CONTAINER */
+.photo-frame {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.photo-slideshow,
+#photo-container {
+  /* Layout */
+  width: 100%;
+  height: var(--slideshow-height);
+  aspect-ratio: var(--slideshow-aspect);
+  
+  /* Appearance */
+  background-color: var(--surface-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  
+  /* Positioning */
+  position: relative;
+  overflow: hidden;
+  
+  /* Performance */
+  contain: layout style paint;
+  transform: translateZ(0);
+}
+
+/* 7. PHOTO ELEMENTS */
+.virtue-photo {
+  /* Positioning */
+  position: absolute;
+  inset: 0;
+  
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Sizing */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  
+  /* Appearance */
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  
+  /* State */
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.98);
+  z-index: var(--z-default);
+  
+  /* Animation */
+  transition: 
+    opacity var(--duration-slower) var(--ease-out),
+    visibility var(--duration-slower) var(--ease-out),
+    transform var(--duration-slower) var(--ease-out);
+  
+  /* Performance */
+  will-change: opacity, transform, visibility;
+  backface-visibility: hidden;
+}
+
+.virtue-photo.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  z-index: var(--z-above);
+}
+
+@media (hover: hover) {
+  .virtue-photo.active:hover {
+    transform: scale(1.02);
+    transition-duration: var(--duration-normal);
+  }
+}
+
+/* Loading States */
+.virtue-photo[data-loading="true"] {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface-primary),
+    var(--surface-primary) 10px,
+    var(--border-primary) 10px,
+    var(--border-primary) 20px
+  );
+}
+
+.virtue-photo[data-loading="true"]::after {
+  content: "📸 लोड हो रहा है...";
+  color: var(--text-muted);
+  font-size: var(--text-base);
+}
+
+/* Empty State */
+.loading-placeholder,
+.no-photos-message {
+  /* Positioning */
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  
+  /* Layout */
+  text-align: center;
+  padding: var(--space-xl);
+  max-width: 400px;
+  
+  /* Appearance */
+  background: var(--surface-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+  
+  /* Typography */
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+}
+
+.no-photos-message h3 {
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+
+.no-photos-message p {
+  font-size: var(--text-base);
+  opacity: 0.8;
+}
+
+/* 8. METADATA SECTION */
+.photo-meta {
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 120px;
+  padding: var(--space-md);
+  
+  /* Appearance */
+  background: var(--surface-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(5px);
+  box-shadow: var(--shadow-sm);
+  
+  /* Typography */
+  text-align: center;
+  font-family: 'Noto Sans', system-ui, sans-serif;
+}
+
+.photo-title,
+#photo-title {
+  /* Typography */
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.05);
+  
+  /* Layout */
+  margin-bottom: var(--space-xs);
+  
+  /* Animation */
+  animation: gentle-float 4s var(--ease-in-out) infinite;
+  animation-delay: 0.5s;
+}
+
+.photo-description,
+#photo-description {
+  /* Typography */
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  
+  /* Layout */
+  margin-bottom: var(--space-sm);
+  max-width: 600px;
+  margin-inline: auto;
+}
+
+.photo-alt,
+#photo-alt {
+  /* Typography */
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* 9. CONTROLS SECTION */
+.photo-controls {
+  /* Layout */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding: var(--space-md);
+  
+  /* Appearance */
+  background: var(--surface-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(5px);
+  box-shadow: var(--shadow-sm);
+}
+
+.photo-btn,
+#prev-btn,
+#play-pause-btn,
+#next-btn {
+  /* Layout */
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  border-radius: var(--radius-lg);
+  
+  /* Appearance */
+  background: var(--interactive-bg);
+  box-shadow: var(--shadow-sm);
+  
+  /* Typography */
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  
+  /* Interaction */
+  cursor: pointer;
+  user-select: none;
+  
+  /* Animation */
+  transition: all var(--duration-normal) var(--ease-out);
+  
+  /* Performance */
+  position: relative;
+  overflow: hidden;
+  will-change: transform, box-shadow;
+}
+
+@media (hover: hover) {
+  .photo-btn:hover,
+  #prev-btn:hover,
+  #play-pause-btn:hover,
+  #next-btn:hover {
+    background: var(--interactive-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    color: var(--primary-color);
+  }
+}
+
+.photo-btn:active,
+#prev-btn:active,
+#play-pause-btn:active,
+#next-btn:active {
+  background: var(--interactive-active);
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.photo-btn:focus-visible,
+#prev-btn:focus-visible,
+#play-pause-btn:focus-visible,
+#next-btn:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Special Play/Pause Button */
+#play-pause-btn {
+  background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+  color: var(--text-inverse);
+  font-weight: 600;
+  min-width: 120px;
+}
+
+@media (hover: hover) {
+  #play-pause-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* 10. COUNTER SECTION */
+.photo-counter-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.photo-counter,
+#photo-counter {
+  /* Typography */
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  
+  /* Layout */
+  min-width: 80px;
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+  
+  /* Appearance */
+  background: var(--surface-glass);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(5px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 11. ANIMATIONS & KEYFRAMES */
+@keyframes gentle-float {
+  0%, 100% { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+  25% { 
+    transform: translateY(-4px);
+    opacity: 0.95;
+  }
+  50% { 
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+  75% { 
+    transform: translateY(-6px);
+    opacity: 0.98;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 12. UTILITY CLASSES */
+.fade-in {
+  animation: fadeIn 0.5s var(--ease-in-out);
+}
+
+.slide-in {
+  animation: slideIn 0.5s var(--ease-out);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Focus Management */
+.focus-trap {
+  position: relative;
+}
+
+.focus-trap:focus {
+  outline: none;
+}
+
+/* 13. RESPONSIVE DESIGN */
+
+/* Large Tablets and Small Desktops (1024px and down) */
+@media (max-width: 64rem) {
+  .virtuous-photo-wrapper {
+    padding: var(--space-md);
+  }
+  
+  .photo-slideshow,
+  #photo-container {
+    height: calc(var(--slideshow-height) * 0.9);
+  }
+}
+
+/* Standard Tablets (768px and down) */
+@media (max-width: 48rem) {
+  :root {
+    --space-lg: var(--space-md);
+    --space-xl: var(--space-lg);
+  }
+  
+  .virtuous-photo-wrapper {
+    margin: var(--space-sm);
+    padding: var(--space-md);
+  }
+  
+  .photo-slideshow,
+  #photo-container {
+    height: var(--slideshow-height-tablet);
+  }
+  
+  .photo-controls {
+    gap: var(--space-sm);
+  }
+  
+  .photo-btn,
+  #prev-btn,
+  #play-pause-btn,
+  #next-btn {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-sm);
+  }
+  
+  .progress-bar {
+    max-width: 250px;
+    height: 5px;
+  }
+}
+
+/* Mobile Phones (600px and down) */
+@media (max-width: 37.5rem) {
+  :root {
+    --space-md: 0.75rem;
+    --space-lg: var(--space-md);
+  }
+  
+  .virtuous-photo-wrapper {
+    margin: var(--space-xs);
+    padding: var(--space-md);
+  }
+  
+  .photo-slideshow,
+  #photo-container {
+    height: var(--slideshow-height-mobile);
+  }
+  
+  .photo-meta {
+    min-height: 100px;
+    padding: var(--space-sm);
+  }
+  
+  .photo-controls {
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+  
+  .photo-btn,
+  #prev-btn,
+  #play-pause-btn,
+  #next-btn {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+    min-width: auto;
+  }
+  
+  #play-pause-btn {
+    min-width: 100px;
+  }
+  
+  .progress-bar {
+    max-width: 200px;
+    height: 4px;
+  }
+}
+
+/* Small Mobile (400px and down) */
+@media (max-width: 25rem) {
+  .photo-slideshow,
+  #photo-container {
+    height: 240px;
+  }
+  
+  .photo-controls {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .progress-bar {
+    max-width: 180px;
+  }
+  
+  .photo-btn,
+  #prev-btn,
+  #play-pause-btn,
+  #next-btn {
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+/* 14. ACCESSIBILITY ENHANCEMENTS */
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border-primary: hsl(0, 0%, 0%);
+    --interactive-bg: hsl(0, 0%, 100%);
+    --interactive-hover: hsl(0, 0%, 95%);
+    --text-muted: hsl(0, 0%, 0%);
+  }
+  
+  .virtue-photo {
+    border: 2px solid currentColor;
+  }
+  
+  .photo-btn,
+  #prev-btn,
+  #play-pause-btn,
+  #next-btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 50ms;
+    --duration-normal: 100ms;
+    --duration-slow: 150ms;
+    --duration-slower: 200ms;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .photo-title,
+  #photo-title {
+    animation: none;
+  }
+  
+  .virtue-photo.active:hover {
+    transform: scale(1);
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: hsl(25, 45%, 75%);
+    --secondary-color: hsl(25, 35%, 65%);
+    --accent-color: hsl(15, 85%, 70%);
+    
+    --surface-primary: hsl(25, 15%, 8%);
+    --surface-secondary: hsl(25, 12%, 12%);
+    --surface-glass: hsla(25, 12%, 15%, 0.8);
+    --surface-elevated: hsl(25, 10%, 15%);
+    
+    --border-primary: hsl(25, 8%, 25%);
+    --border-secondary: hsl(25, 6%, 30%);
+    
+    --text-primary: hsl(25, 20%, 85%);
+    --text-secondary: hsl(25, 15%, 75%);
+    --text-muted: hsl(25, 10%, 60%);
+    
+    --interactive-bg: hsl(25, 8%, 20%);
+    --interactive-hover: hsl(25, 6%, 25%);
+    --interactive-active: hsl(25, 4%, 30%);
+  }
+  
+  .virtuous-photo-wrapper {
+    box-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.4);
+  }
+}
+
+/* 15. PRINT STYLES */
+@media print {
+  /* Hide interactive elements */
+  .photo-controls,
+  .photo-counter-wrapper,
+  .progress-bar {
+    display: none !important;
+  }
+  
+  /* Show only active photo */
+  .virtue-photo:not(.active) {
+    display: none !important;
+  }
+  
+  .virtue-photo.active {
+    position: static !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  
+  /* Clean print layout */
+  .virtuous-photo-wrapper {
+    box-shadow: none;
+    background: white;
+    margin: 0;
+    padding: var(--space-md);
+  }
+  
+  .photo-slideshow,
+  #photo-container {
+    border: 1px solid black;
+    height: auto;
+    min-height: 400px;
+  }
+  
+  /* Print-friendly colors */
+  .photo-heading,
+  .photo-title,
+  #photo-title {
+    color: black !important;
+  }
+  
+  .photo-description,
+  #photo-description,
+  .photo-alt,
+  #photo-alt {
+    color: #333 !important;
+  }
 }
