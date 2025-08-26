@@ -3,92 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>जप साधना | Japa Sadhana</title>
+    <meta name="description" content="Radhe Krishna Japa Sadhana - Voice-guided mantra chanting with speech recognition">
+    <meta name="keywords" content="japa, sadhana, radhe krishna, mantra, meditation, chanting">
+    <meta name="author" content="Sadguru Seva Platform">
+    <title>🙏 जप साधना | Radhe Krishna Japa Sadhana</title>
+    
+    <!-- CSS Files -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/japa.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    
+    <!-- Meta tags for PWA -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Japa Sadhana">
 </head>
 <body>
 <div class="container">
     <!-- Header -->
     <header class="header">
         <h1 class="title">🙏 जप साधना</h1>
-        <p class="subtitle">राधे कृष्णा मंत्र जप</p>
+        <p class="subtitle">राधे कृष्णा मंत्र जप - Voice Guided Chanting</p>
     </header>
 
     <!-- Stats Section -->
     <div class="stats-container">
-        <div class="stat-card">
+        <div class="stat-card" title="आज तक बोले गए शब्दों की संख्या">
             <div class="stat-number" id="dailyWords">{{ daily_words or 0 }}</div>
             <div class="stat-label">आज के शब्द</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="आज पूरे किए गए राउंड">
             <div class="stat-number" id="dailyRounds">{{ daily_rounds or 0 }}</div>
             <div class="stat-label">आज के राउंड</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="वर्तमान सत्र में बोले गए शब्द">
             <div class="stat-number" id="sessionCount">{{ current_count or 0 }}</div>
             <div class="stat-label">सत्र में शब्द</div>
         </div>
+        {% if lifetime_rounds is defined and lifetime_words is defined %}
+        <div class="stat-card" title="कुल जीवनकाल के राउंड">
+            <div class="stat-number" id="lifetimeRounds">{{ lifetime_rounds or 0 }}</div>
+            <div class="stat-label">कुल राउंड</div>
+        </div>
+        <div class="stat-card" title="कुल जीवनकाल के शब्द">
+            <div class="stat-number" id="lifetimeWords">{{ lifetime_words or 0 }}</div>
+            <div class="stat-label">कुल शब्द</div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Main Japa Area -->
     <div class="japa-container">
         <!-- Current Expected Word Display -->
         <div class="current-word-display">
-            <h3>अगला शब्द:</h3>
+            <h3>अगला शब्द बोलें:</h3>
             <div class="expected-word" id="expectedWord">
                 {% if mantra_words and (1 <= current_word_index <= mantra_words|length) %}
-                    <span class="devanagari" id="expectedDevanagari">
+                    <span class="devanagari" id="expectedDevanagari" role="main">
                         {{ mantra_words[current_word_index - 1].word_devanagari }}
                     </span>
-                    <span class="english" id="expectedEnglish">
+                    <span class="english" id="expectedEnglish" role="complementary">
                         ({{ mantra_words[current_word_index - 1].word_english }})
                     </span>
                 {% else %}
-                    <span class="devanagari" id="expectedDevanagari">राधे</span>
-                    <span class="english" id="expectedEnglish">(radhe)</span>
+                    <span class="devanagari" id="expectedDevanagari" role="main">राधे</span>
+                    <span class="english" id="expectedEnglish" role="complementary">(radhe)</span>
                 {% endif %}
             </div>
-            <div class="word-progress">
-                <span id="wordProgress">{{ current_word_index or 0 }}/16</span>
+            <div class="word-progress" role="status" aria-live="polite">
+                <span id="wordProgress">{{ current_word_index or 1 }}/16</span>
             </div>
         </div>
 
         <!-- Full Mantra Display -->
-        <div class="mantra-box" id="mantraBox">
+        <div class="mantra-box" id="mantraBox" role="region" aria-label="पूरा मंत्र">
             <div class="mantra-text" id="mantraText">
                 {% if mantra_words %}
                     {% for word in mantra_words %}
-                        <span class="mantra-word" data-word-order="{{ word.word_order }}">
+                        <span class="mantra-word" 
+                              data-word-order="{{ word.word_order }}"
+                              data-word-english="{{ word.word_english }}"
+                              data-word-devanagari="{{ word.word_devanagari }}"
+                              title="{{ word.word_english }}"
+                              tabindex="0">
                             {{ word.word_devanagari }}
                         </span>
                     {% endfor %}
                 {% else %}
-                    <span class="mantra-word">राधे</span>
-                    <span class="mantra-word">कृष्ण</span>
+                    <span class="mantra-word" data-word-order="1" data-word-english="radhe" title="radhe">राधे</span>
+                    <span class="mantra-word" data-word-order="2" data-word-english="krishna" title="krishna">कृष्णा</span>
+                    <span class="mantra-word" data-word-order="3" data-word-english="shyam" title="shyam">श्याम</span>
+                    <span class="mantra-word" data-word-order="4" data-word-english="shama" title="shama">शामा</span>
                 {% endif %}
             </div>
         </div>
 
         <!-- Voice Controls -->
-        <div class="controls-container">
-            <button class="voice-btn" id="startBtn">
-                <div class="mic-icon">🎤</div>
+        <div class="controls-container" role="region" aria-label="नियंत्रण">
+            <button class="voice-btn" id="startBtn" 
+                    title="जप प्रारंभ करें (स्पेसबार दबाएं)" 
+                    aria-label="जप प्रारंभ करें">
+                <div class="mic-icon" aria-hidden="true">🎤</div>
                 <span>जप प्रारंभ करें</span>
             </button>
-            <button class="voice-btn stop-btn" id="stopBtn" style="display:none;">
-                <div class="stop-icon">⏹</div>
+            <button class="voice-btn stop-btn" id="stopBtn" 
+                    style="display:none;" 
+                    title="जप रोकें (Escape दबाएं)"
+                    aria-label="जप रोकें">
+                <div class="stop-icon" aria-hidden="true">⏹</div>
                 <span>जप रोकें</span>
             </button>
-            <div class="voice-status" id="voiceStatus">माइक्रोफोन तैयार है</div>
-            <div class="recognition-feedback" id="recognitionFeedback" style="display:none;"></div>
+            
+            <div class="voice-status" id="voiceStatus" role="status" aria-live="polite">
+                माइक्रोफोन तैयार है। प्रारंभ करने के लिए बटन दबाएं
+            </div>
+            
+            <div class="recognition-feedback" id="recognitionFeedback" 
+                 style="display:none;" role="alert" aria-live="assertive">
+            </div>
         </div>
 
         <!-- Progress Ring -->
         <div class="progress-container">
-            <div class="progress-ring">
+            <div class="progress-ring" id="counterRing" role="progressbar" 
+                 aria-valuenow="{{ current_word_index or 1 }}" 
+                 aria-valuemin="1" 
+                 aria-valuemax="16"
+                 aria-label="मंत्र प्रगति">
                 <div class="progress-text">
-                    <span class="progress-number" id="progressNumber">{{ current_word_index or 0 }}</span>
+                    <span class="progress-number" id="progressNumber">{{ current_word_index or 1 }}</span>
                     <span class="progress-label">/ 16</span>
                 </div>
             </div>
@@ -96,27 +143,129 @@
     </div>
 
     <!-- Instructions -->
-    <div class="instructions">
-        <h3>📋 निर्देश:</h3>
+    <div class="instructions" role="region" aria-labelledby="instructions-heading">
+        <h3 id="instructions-heading">📋 उपयोग निर्देश:</h3>
         <ul>
-            <li>ऊपर दिखाया गया शब्द स्पष्ट रूप से बोलें</li>
+            <li>माइक की अनुमति दें और "जप प्रारंभ करें" बटन दबाएं</li>
+            <li>ऊपर दिखाया गया शब्द स्पष्ट रूप से बोलें (हिंदी या अंग्रेजी में)</li>
             <li>सही शब्द बोलने पर अगला शब्द दिखेगा</li>
             <li>16 शब्द पूरे होने पर एक राउंड पूरा होगा</li>
-            <li>माइक के पास स्पष्ट उच्चारण करें</li>
-            <li>शुरू करने के लिए 'जप प्रारंभ करें' दबाएं</li>
+            <li>बेहतर पहचान के लिए शांत वातावरण में बोलें</li>
+            <li>कीबोर्ड शॉर्टकट: स्पेसबार (शुरू), Escape (रोकें)</li>
         </ul>
+    </div>
+
+    <!-- Pronunciation Guide -->
+    <div class="instructions" style="margin-top: 20px;" role="region" aria-labelledby="pronunciation-heading">
+        <h3 id="pronunciation-heading">🗣️ उच्चारण गाइड:</h3>
+        <ul>
+            <li><strong>राधे</strong> - "Radhe", "Radha", "राधेय" कहें</li>
+            <li><strong>कृष्णा</strong> - "Krishna", "Krishn", "कृष्ण" कहें</li>
+            <li><strong>श्याम</strong> - "Shyam", "Sham", "श्यामा" कहें</li>
+            <li><strong>शामा</strong> - "Shama", "Shyama", "सामा" कहें</li>
+        </ul>
+    </div>
+
+    <!-- System Status -->
+    <div class="instructions" style="margin-top: 20px; text-align: center;" role="region" aria-labelledby="system-status">
+        <h3 id="system-status">⚡ सिस्टम स्थिति:</h3>
+        <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="micStatus">🎤</span>
+                <span id="micStatusText">माइक तैयार</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="networkStatus">🌐</span>
+                <span id="networkStatusText">ऑनलाइन</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="speechStatus">🗣️</span>
+                <span id="speechStatusText">वॉइस रिकग्निशन तैयार</span>
+            </div>
+        </div>
     </div>
 
     <!-- Error Display -->
     {% if error %}
-    <div class="error-message">❌ {{ error }}</div>
+    <div class="error-message" role="alert">
+        ❌ त्रुटि: {{ error }}
+        <br><small>कृपया पेज को रिफ्रेश करें या तकनीकी सहायता लें</small>
+    </div>
     {% endif %}
 
-    <!-- Hidden data for JS -->
+    <!-- Hidden data for JavaScript -->
     <script type="application/json" id="mantraWordsData">
-        {{ mantra_words | tojson }}
+        {{ mantra_words | tojson | safe }}
+    </script>
+    
+    <!-- Additional metadata for JavaScript -->
+    <script type="application/json" id="configData">
+        {
+            "totalWords": {{ mantra_words|length if mantra_words else 16 }},
+            "currentWordIndex": {{ current_word_index or 1 }},
+            "sessionCount": {{ current_count or 0 }},
+            "dailyStats": {
+                "words": {{ daily_words or 0 }},
+                "rounds": {{ daily_rounds or 0 }}
+            },
+            "lifetimeStats": {
+                "words": {{ lifetime_words or 0 }},
+                "rounds": {{ lifetime_rounds or 0 }}
+            },
+            "supportedLanguages": ["hi-IN", "en-IN", "en-US"],
+            "version": "2.0.0"
+        }
     </script>
 </div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+    <div>
+        <div style="width: 50px; height: 50px; border: 3px solid transparent; border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+        <div>प्रसंस्करण हो रहा है...</div>
+    </div>
+</div>
+
+<!-- JavaScript -->
 <script src="{{ url_for('static', filename='js/japa.js') }}"></script>
+
+<!-- Service Worker for offline capability (optional) -->
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+        });
+    }
+    
+    // Update system status indicators
+    function updateSystemStatus() {
+        // Network status
+        const networkStatus = document.getElementById('networkStatus');
+        const networkStatusText = document.getElementById('networkStatusText');
+        if (navigator.onLine) {
+            networkStatus.textContent = '🟢';
+            networkStatusText.textContent = 'ऑनलाइन';
+        } else {
+            networkStatus.textContent = '🔴';
+            networkStatusText.textContent = 'ऑफलाइन';
+        }
+        
+        // Speech recognition status
+        const speechStatus = document.getElementById('speechStatus');
+        const speechStatusText = document.getElementById('speechStatusText');
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            speechStatus.textContent = '✅';
+            speechStatusText.textContent = 'वॉइस रिकग्निशन उपलब्ध';
+        } else {
+            speechStatus.textContent = '❌';
+            speechStatusText.textContent = 'वॉइस रिकग्निशन अनुपलब्ध';
+        }
+    }
+    
+    // Update status on load and network changes
+    document.addEventListener('DOMContentLoaded', updateSystemStatus);
+    window.addEventListener('online', updateSystemStatus);
+    window.addEventListener('offline', updateSystemStatus);
+</script>
 </body>
 </html>
