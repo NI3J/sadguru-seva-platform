@@ -10,11 +10,20 @@ japa_bp = Blueprint('japa', __name__)
 
 # ---------- Helpers ----------
 def get_or_create_user_token() -> str:
-    """Stable per-browser UUID stored in Flask session."""
+    """Get authenticated user_id or redirect to auth if not authenticated."""
+    # Check if user is authenticated via the auth system
+    if session.get('authenticated') and session.get('user_id'):
+        return session.get('user_id')
+    
+    # For backwards compatibility, check old japa_user_token
     token = session.get('japa_user_token')
-    if not token or not isinstance(token, str) or not token.strip():
-        token = str(uuid.uuid4())
-        session['japa_user_token'] = token
+    if token and isinstance(token, str) and token.strip():
+        return token
+    
+    # If no authentication, create a temporary token (for testing)
+    # In production, you should redirect to /auth instead
+    token = str(uuid.uuid4())
+    session['japa_user_token'] = token
     return token
 
 def get_cursor(conn):
@@ -41,72 +50,72 @@ def normalize_word(word):
     """Normalize word for better matching."""
     if not word:
         return ""
-    
+
     # Convert to lowercase and strip
     word = word.lower().strip()
-    
+
     # Remove punctuation and extra spaces
     word = re.sub(r'[^\w\s]', '', word)
     word = re.sub(r'\s+', ' ', word).strip()
-    
+
     return word
 
 def is_word_match(recognized_word, expected_word):
     """Enhanced word matching with fuzzy logic and multiple variations."""
     recognized = normalize_word(recognized_word)
     expected = normalize_word(expected_word)
-    
+
     # Direct match
     if recognized == expected:
         return True
-    
+
     # Enhanced word mappings with more variations
     word_mappings = {
         'radhe': [
-            'radhe', 'राधे', 'राधा', 'radha', 'ride', 'ready', 'radi', 'radhi',
-            'rade', 'radey', 'radhai', 'radhey', 'राध', 'राधेय'
+            'radhe', 'राधे', 'राधे', 'radhe', 'radhe', 'ready', 'radi', 'radhi',
+            'rade', 'radey', 'radhai', 'radhey', 'राधे', 'राधेय'
         ],
         'krishna': [
-            'krishna', 'कृष्णा', 'कृष्ण', 'krishn', 'krish', 'krishnan', 'krisna',
-            'krishnaa', 'krishnah', 'krsna', 'कृष्णाय', 'कृष्णः', 'कृषण'
+            'krishna', 'कृष्णा', 'कृष्णा', 'krishna', 'krisha', 'krishnana', 'krisna',
+            'krishnaa', 'krishnaha', 'krsna', 'कृष्णाय', 'कृष्णा', 'कृषणा'
         ],
         'shyam': [
-            'shyam', 'श्याम', 'sham', 'shaam', 'shyama', 'श्यामा', 'syam',
-            'shyamaa', 'shyamah', 'श्यामाय', 'shyamal', 'श्यामल', 'shym'
+            'shyam', 'श्याम', 'sham', 'shaam', 'shyam', 'श्याम', 'syam',
+            'shyam', 'shyamah', 'श्यामाय', 'shyamal', 'श्यामल', 'shym'
         ],
         'shama': [
-            'shama', 'शामा', 'sham', 'shaam', 'shyama', 'श्यामा', 'sama',
-            'shamaa', 'shamah', 'शामाय', 'shyam', 'श्याम'
+            'shama', 'शामा', 'shama', 'shaama', 'shyama', 'श्यामा', 'sama',
+            'shamaa', 'shamaha', 'शामाय', 'shyama', 'श्यामा'
         ]
     }
-    
+
     # Check if recognized word matches any variation of expected word
     if expected in word_mappings:
         for variation in word_mappings[expected]:
             if recognized == normalize_word(variation):
                 return True
-    
+
     # Check reverse mapping (if recognized word is a variation of expected)
     for base_word, variations in word_mappings.items():
         if base_word == expected:
             for variation in variations:
                 if recognized == normalize_word(variation):
                     return True
-    
+
     # Fuzzy matching for close pronunciations
     similarity_threshold = 0.7
     if len(recognized) >= 3 and len(expected) >= 3:
         similarity = difflib.SequenceMatcher(None, recognized, expected).ratio()
         if similarity >= similarity_threshold:
             return True
-    
+
     # Check for partial matches (useful for longer words)
     if len(expected) >= 4:
         if recognized in expected or expected in recognized:
             min_length = min(len(recognized), len(expected))
             if min_length >= 3:
                 return True
-    
+
     return False
 
 # ---------- Routes ----------
@@ -245,7 +254,7 @@ def update_japa_count():
         expected = cursor.fetchone()
         if not expected:
             return jsonify({'success': False, 'error': 'Word not found'}), 404
-        
+
         expected_english = expected['word_english']
         expected_devanagari = expected['word_devanagari']
 
@@ -261,8 +270,8 @@ def update_japa_count():
                     'word_devanagari': expected_devanagari
                 },
                 'recognized_word': recognized_word,
-                'similarity_score': difflib.SequenceMatcher(None, 
-                    normalize_word(recognized_word), 
+                'similarity_score': difflib.SequenceMatcher(None,
+                    normalize_word(recognized_word),
                     normalize_word(expected_english)
                 ).ratio()
             }), 200
@@ -395,3 +404,4 @@ def get_japa_stats():
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
+
