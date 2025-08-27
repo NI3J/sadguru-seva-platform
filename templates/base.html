@@ -116,7 +116,11 @@
             <a href="/knowledge/shivtandav" role="menuitem">🕉️ शिवतांडव व्हिडिओ</a>
             <a href="/knowledge/audio_flow" role="menuitem">🎵 भक्तिगीत आणि भजन</a>
             <a href="/knowledge/satsang" role="menuitem">🕉️प.पु.सद्गुरु पादेश्वर महाराज सत्संग</a>
-            <a href="/japa" role="menuitem">🕉️ नाम जप</a>
+            {% if session.get('authenticated') %}
+            <a href="/japa" role="menuitem">🙏 जप साधना</a>
+            {% else %}
+            <a href="/auth" role="menuitem">🙏 जप साधना लॉगिन</a>
+            {% endif %}
           </div>
         </li>
 
@@ -278,4 +282,3 @@
   {% block analytics %}{% endblock %}
 </body>
 </html>
-

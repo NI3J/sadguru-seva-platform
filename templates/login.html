@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sadguru Seva Platform - Authentication for Japa Sadhana">
+    <title>🔐 प्रवेश | Sadguru Seva Platform</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Meta tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">🕉️ सदगुरु सेवा मंच</h1>
+            <p class="subtitle">जप साधना में प्रवेश</p>
+        </header>
+
+        <!-- Authentication Form -->
+        <div class="auth-container">
+            <!-- Step 1: Name and Mobile -->
+            <div class="auth-step" id="step1">
+                <div class="form-card">
+                    <h2 class="form-title">📱 मोबाइल सत्यापन</h2>
+                    <p class="form-description">कृपया अपना नाम और मोबाइल नंबर दर्ज करें</p>
+                    
+                    <form id="mobileForm" class="auth-form">
+                        <div class="input-group">
+                            <label for="name" class="input-label">👤 पूरा नाम</label>
+                            <input type="text" id="name" name="name" class="input-field" 
+                                   placeholder="अपना नाम दर्ज करें" maxlength="50" required
+                                   pattern="[A-Za-z\s]{2,50}" title="केवल अक्षर और स्पेस, 2-50 वर्ण">
+                            <span class="input-error" id="nameError"></span>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="mobile" class="input-label">📞 मोबाइल नंबर</label>
+                            <input type="tel" id="mobile" name="mobile" class="input-field" 
+                                   placeholder="10 अंकों का मोबाइल नंबर" maxlength="10" required
+                                   pattern="[6-9][0-9]{9}" title="10 अंकों का भारतीय मोबाइल नंबर">
+                            <span class="input-error" id="mobileError"></span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn" id="sendOtpBtn">
+                            <span class="btn-icon">📨</span>
+                            <span class="btn-text">OTP भेजें</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Step 2: OTP Verification -->
+            <div class="auth-step" id="step2" style="display: none;">
+                <div class="form-card">
+                    <h2 class="form-title">🔐 OTP सत्यापन</h2>
+                    <p class="form-description" id="otpDescription">
+                        आपके मोबाइल नंबर पर भेजा गया 6 अंकों का OTP दर्ज करें
+                    </p>
+                    
+                    <form id="otpForm" class="auth-form">
+                        <div class="input-group">
+                            <label for="otp" class="input-label">🔢 OTP कोड</label>
+                            <input type="text" id="otp" name="otp" class="input-field otp-input" 
+                                   placeholder="6 अंकों का OTP" maxlength="6" required
+                                   pattern="[0-9]{6}" title="6 अंकों का OTP"
+                                   autocomplete="one-time-code">
+                            <span class="input-error" id="otpError"></span>
+                        </div>
+                        
+                        <div class="otp-timer" id="otpTimer">
+                            <span id="timerText">OTP 10:00 मिनट में समाप्त होगा</span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn" id="verifyOtpBtn">
+                            <span class="btn-icon">✅</span>
+                            <span class="btn-text">OTP सत्यापित करें</span>
+                        </button>
+                        
+                        <div class="resend-section">
+                            <button type="button" class="resend-btn" id="resendOtpBtn" disabled>
+                                <span class="btn-icon">🔄</span>
+                                <span class="btn-text">दोबारा भेजें</span>
+                            </button>
+                            
+                            <button type="button" class="back-btn" id="backBtn">
+                                <span class="btn-icon">⬅️</span>
+                                <span class="btn-text">वापस जाएं</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p class="loading-text" id="loadingText">प्रसंस्करण हो रहा है...</p>
+                </div>
+            </div>
+
+            <!-- Status Messages -->
+            <div class="status-message" id="statusMessage" style="display: none;">
+                <div class="status-content">
+                    <span class="status-icon" id="statusIcon"></span>
+                    <span class="status-text" id="statusText"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="info-section">
+            <h3>📋 महत्वपूर्ण जानकारी:</h3>
+            <ul>
+                <li>OTP आपके मोबाइल नंबर पर SMS के द्वारा भेजा जाएगा</li>
+                <li>OTP की वैधता 10 मिनट है</li>
+                <li>यदि OTP नहीं आया तो "दोबारा भेजें" पर क्लिक करें</li>
+                <li>नेटवर्क की समस्या हो तो कुछ देर प्रतीक्षा करें</li>
+                <li>सुरक्षा के लिए अपना OTP किसी के साथ साझा न करें</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>🙏 सदगुरु सेवा मंच - आध्यात्मिक साधना का डिजिटल माध्यम</p>
+            <p><small>सुरक्षित और निजी प्लेटफॉर्म</small></p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+</body>
+</html>

@@ -7,15 +7,15 @@
     <meta name="keywords" content="japa, sadhana, radhe krishna, mantra, meditation, chanting">
     <meta name="author" content="Sadguru Seva Platform">
     <title>🙏 जप साधना | Radhe Krishna Japa Sadhana</title>
-    
+
     <!-- CSS Files -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/japa.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Favicon and Icons -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    
+
     <!-- Meta tags for PWA -->
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,26 +32,26 @@
 
     <!-- Stats Section -->
     <div class="stats-container">
-        <div class="stat-card" title="आज तक बोले गए शब्दों की संख्या">
+        <div class="stat-card" title="जप संख्या">
             <div class="stat-number" id="dailyWords">{{ daily_words or 0 }}</div>
-            <div class="stat-label">आज के शब्द</div>
+            <div class="stat-label">आजची जप संख्या</div>
         </div>
-        <div class="stat-card" title="आज पूरे किए गए राउंड">
+        <div class="stat-card" title="पुर्ण केलेले राउंड">
             <div class="stat-number" id="dailyRounds">{{ daily_rounds or 0 }}</div>
-            <div class="stat-label">आज के राउंड</div>
+            <div class="stat-label">आजचे राउंड</div>
         </div>
-        <div class="stat-card" title="वर्तमान सत्र में बोले गए शब्द">
+        <div class="stat-card" title="ह्या सत्रामध्ये केलेली जप संख्या">
             <div class="stat-number" id="sessionCount">{{ current_count or 0 }}</div>
-            <div class="stat-label">सत्र में शब्द</div>
+            <div class="stat-label">सत्रातील जप</div>
         </div>
         {% if lifetime_rounds is defined and lifetime_words is defined %}
-        <div class="stat-card" title="कुल जीवनकाल के राउंड">
+        <div class="stat-card" title="पुर्ण जिवन प्रवासातील राउंड">
             <div class="stat-number" id="lifetimeRounds">{{ lifetime_rounds or 0 }}</div>
-            <div class="stat-label">कुल राउंड</div>
+            <div class="stat-label"> पुर्ण राउंड</div>
         </div>
-        <div class="stat-card" title="कुल जीवनकाल के शब्द">
+        <div class="stat-card" title="पुर्ण जिवन प्रवासातील जप संख्या">
             <div class="stat-number" id="lifetimeWords">{{ lifetime_words or 0 }}</div>
-            <div class="stat-label">कुल शब्द</div>
+            <div class="stat-label">पुर्ण जप</div>
         </div>
         {% endif %}
     </div>
@@ -84,7 +84,7 @@
             <div class="mantra-text" id="mantraText">
                 {% if mantra_words %}
                     {% for word in mantra_words %}
-                        <span class="mantra-word" 
+                        <span class="mantra-word"
                               data-word-order="{{ word.word_order }}"
                               data-word-english="{{ word.word_english }}"
                               data-word-devanagari="{{ word.word_devanagari }}"
@@ -104,34 +104,39 @@
 
         <!-- Voice Controls -->
         <div class="controls-container" role="region" aria-label="नियंत्रण">
-            <button class="voice-btn" id="startBtn" 
-                    title="जप प्रारंभ करें (स्पेसबार दबाएं)" 
-                    aria-label="जप प्रारंभ करें">
+            <button class="voice-btn" id="startBtn"
+                    title="जपाला सुरवात करा स्पेस दाबा"
+                    aria-label="जप सुरवात करा">
                 <div class="mic-icon" aria-hidden="true">🎤</div>
-                <span>जप प्रारंभ करें</span>
+                <span>जप सुरुवात करा</span>
             </button>
-            <button class="voice-btn stop-btn" id="stopBtn" 
-                    style="display:none;" 
-                    title="जप रोकें (Escape दबाएं)"
-                    aria-label="जप रोकें">
+            <button class="voice-btn stop-btn" id="stopBtn"
+                    style="display:none;"
+                    title="जपाला थांबवा (Escape दाबा)"
+                    aria-label="जपाला थांबवा">
                 <div class="stop-icon" aria-hidden="true">⏹</div>
-                <span>जप रोकें</span>
+                <span>जप थांबवा</span>
             </button>
-            
+
             <div class="voice-status" id="voiceStatus" role="status" aria-live="polite">
-                माइक्रोफोन तैयार है। प्रारंभ करने के लिए बटन दबाएं
+                माइक्रोफोन तयार आहे। सुरुवात करण्यासाठी बटन दाबा
             </div>
-            
-            <div class="recognition-feedback" id="recognitionFeedback" 
+            <form method="POST" action="/auth/japa/logout" style="text-align: right;">
+            <button type="submit" class="btn btn-outline-danger">
+            🚪 सत्र समाप्त करें
+            </button>
+            </form>
+
+            <div class="recognition-feedback" id="recognitionFeedback"
                  style="display:none;" role="alert" aria-live="assertive">
             </div>
-        </div>
+            </div>
 
         <!-- Progress Ring -->
         <div class="progress-container">
-            <div class="progress-ring" id="counterRing" role="progressbar" 
-                 aria-valuenow="{{ current_word_index or 1 }}" 
-                 aria-valuemin="1" 
+            <div class="progress-ring" id="counterRing" role="progressbar"
+                 aria-valuenow="{{ current_word_index or 1 }}"
+                 aria-valuemin="1"
                  aria-valuemax="16"
                  aria-label="मंत्र प्रगति">
                 <div class="progress-text">
@@ -159,10 +164,10 @@
     <div class="instructions" style="margin-top: 20px;" role="region" aria-labelledby="pronunciation-heading">
         <h3 id="pronunciation-heading">🗣️ उच्चारण गाइड:</h3>
         <ul>
-            <li><strong>राधे</strong> - "Radhe", "Radha", "राधेय" कहें</li>
-            <li><strong>कृष्णा</strong> - "Krishna", "Krishn", "कृष्ण" कहें</li>
-            <li><strong>श्याम</strong> - "Shyam", "Sham", "श्यामा" कहें</li>
-            <li><strong>शामा</strong> - "Shama", "Shyama", "सामा" कहें</li>
+            <li><strong>राधे</strong> - "Radhe", "Radhe", "राधेय" कहें</li>
+            <li><strong>कृष्णा</strong> - "Krishna", "Krishna", "कृष्णा" कहें</li>
+            <li><strong>श्याम</strong> - "Shyam", "Shyam", "श्याम" कहें</li>
+            <li><strong>शामा</strong> - "Shama", "Shama", "शामा" कहें</li>
         </ul>
     </div>
 
@@ -197,7 +202,7 @@
     <script type="application/json" id="mantraWordsData">
         {{ mantra_words | tojson | safe }}
     </script>
-    
+
     <!-- Additional metadata for JavaScript -->
     <script type="application/json" id="configData">
         {
@@ -236,7 +241,7 @@
             console.log('ServiceWorker registration failed: ', err);
         });
     }
-    
+
     // Update system status indicators
     function updateSystemStatus() {
         // Network status
@@ -249,7 +254,7 @@
             networkStatus.textContent = '🔴';
             networkStatusText.textContent = 'ऑफलाइन';
         }
-        
+
         // Speech recognition status
         const speechStatus = document.getElementById('speechStatus');
         const speechStatusText = document.getElementById('speechStatusText');
@@ -261,7 +266,7 @@
             speechStatusText.textContent = 'वॉइस रिकग्निशन अनुपलब्ध';
         }
     }
-    
+
     // Update status on load and network changes
     document.addEventListener('DOMContentLoaded', updateSystemStatus);
     window.addEventListener('online', updateSystemStatus);
@@ -269,3 +274,4 @@
 </script>
 </body>
 </html>
+

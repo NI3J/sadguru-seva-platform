@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 
-from flask import Blueprint, render_template, request, redirect, flash, session
 from routes.utils import generate_otp, send_sms
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
+from db_config import get_db_connection
+import pymysql
+import requests
+import random
+import string
+from datetime import datetime, timedelta
+import re
 
 # 🔐 Create Blueprint
 auth_bp = Blueprint('auth', __name__)
+
 
 # 🔐 OTP Request
 @auth_bp.route('/verify-otp', methods=['POST'])
@@ -44,3 +52,6 @@ def validate_otp():
 def retry_otp():
     username = session.get('username', 'भक्त')
     return render_template('enter_otp.html', username=username)
+
+# Japa page authentication code starting from below
+
