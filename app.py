@@ -27,6 +27,8 @@ from routes.programs import programs_bp
 from routes.photos import photos_bp
 from routes.japa import japa_bp  # ✅ Newly added blueprint
 from routes.utils import send_email
+from middleware.auth_middleware import login_required
+from routes.japa_auth import japa_auth_bp
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🌟 App Factory
@@ -60,6 +62,8 @@ def create_app():
     app.register_blueprint(programs_bp)
     app.register_blueprint(photos_bp)
     app.register_blueprint(japa_bp)  # ✅ Japa blueprint now active
+    app.register_blueprint(japa_auth_bp)
+
     print("✅ All blueprints registered successfully")
 
     # 🌸 Marathi Date Filters
