@@ -1,4 +1,4 @@
-// Enhanced Japa Sadhana JavaScript with improved speech recognition
+// Enhanced Japa Sadhana JavaScript with repetition pattern support
 class JapaApp {
     constructor() {
         this.recognition = null;
@@ -10,10 +10,12 @@ class JapaApp {
         this.lifetimeRounds = 0;
         this.lifetimeWords = 0;
         this.sessionActive = false;
-        this.totalWordsInMantra = 16;
+        this.totalWordsInMantra = 16; // Will be updated from backend
         this.recognitionTimeout = null;
         this.lastRecognitionTime = 0;
         this.consecutiveFailures = 0;
+        this.mantraPattern = null;
+        this.currentRepetitionInfo = null;
 
         // Load mantra words from page data
         const mantraWordsElement = document.getElementById('mantraWordsData');
@@ -44,10 +46,11 @@ class JapaApp {
         this.init();
     }
 
-    init() {
+    async init() {
         this.loadInitialData();
         this.setupEventListeners();
         this.initSpeechRecognition();
+        await this.loadMantraPattern();
         this.updateDisplay();
     }
 
@@ -61,10 +64,28 @@ class JapaApp {
         this.currentWordIndex = parseInt(this.elements.progressNumber?.textContent) || 1;
     }
 
+    async loadMantraPattern() {
+        try {
+            const response = await fetch('/api/japa/get_pattern');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.mantraPattern = data.data.pattern;
+                this.totalWordsInMantra = data.data.total_utterances;
+                console.log('Loaded mantra pattern:', this.mantraPattern);
+                console.log('Total utterances in one round:', this.totalWordsInMantra);
+            }
+        } catch (error) {
+            console.error('Error loading mantra pattern:', error);
+            // Fallback to default if pattern loading fails
+            this.totalWordsInMantra = 16;
+        }
+    }
+
     setupEventListeners() {
         this.elements.startBtn?.addEventListener('click', () => this.startJapaSession());
         this.elements.stopBtn?.addEventListener('click', () => this.stopJapaSession());
-        
+
         // Add keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !this.isListening) {
@@ -80,7 +101,7 @@ class JapaApp {
     async startJapaSession() {
         try {
             this.updateStatus('🔄 सत्र प्रारंभ हो रहा है...');
-            
+
             // Start backend session
             const response = await fetch('/api/japa/start_session', {
                 method: 'POST',
@@ -117,7 +138,7 @@ class JapaApp {
             this.sessionActive = false;
             this.updateStatus('✅ जप सत्र समाप्त');
             this.consecutiveFailures = 0;
-            
+
             // Update stats after ending session
             await this.updateStats();
         } catch (error) {
@@ -140,10 +161,10 @@ class JapaApp {
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
         this.recognition.maxAlternatives = 3;
-        
+
         // Try multiple language settings for better recognition
         this.recognition.lang = 'en-IN'; // English (India) often works better for transliterated words
-        
+
         this.recognition.onstart = () => {
             this.isListening = true;
             this.lastRecognitionTime = Date.now();
@@ -151,14 +172,14 @@ class JapaApp {
             this.elements.startBtn.style.display = 'none';
             this.elements.stopBtn.style.display = 'inline-flex';
             this.elements.stopBtn.classList.add('listening');
-            
+
             // Set a timeout to restart recognition if it stops unexpectedly
             this.setRecognitionTimeout();
         };
 
         this.recognition.onend = () => {
             this.clearRecognitionTimeout();
-            
+
             if (this.isListening && this.sessionActive) {
                 // Auto-restart recognition with a short delay
                 setTimeout(() => {
@@ -183,7 +204,7 @@ class JapaApp {
         this.recognition.onresult = (event) => {
             this.clearRecognitionTimeout();
             this.lastRecognitionTime = Date.now();
-            
+
             let interimTranscript = '';
             let finalTranscript = '';
 
@@ -234,7 +255,7 @@ class JapaApp {
 
     handleRecognitionError(error) {
         this.consecutiveFailures++;
-        
+
         switch (error) {
             case 'no-speech':
                 if (this.consecutiveFailures < 3) {
@@ -289,7 +310,13 @@ class JapaApp {
                     this.sessionCount = data.new_count;
                     this.currentWordIndex = data.current_word_index;
 
-                    this.showRecognitionFeedback(`✅ सही! "${data.recognized_word}"`, true);
+                    // Show repetition info if available
+                    let successMessage = `✅ सही! "${data.recognized_word}"`;
+                    if (data.next_word && data.next_word.repetition_info) {
+                        successMessage += ` (${data.next_word.repetition_info})`;
+                    }
+
+                    this.showRecognitionFeedback(successMessage, true);
                     this.animateCounterUpdate();
 
                     if (data.completed_round) {
@@ -298,18 +325,31 @@ class JapaApp {
                     }
 
                     this.updateDisplay();
-                    this.updateStatus('🎤 बहुत अच्छे! अगला शब्द बोलें');
+                    
+                    // Update status with next word info
+                    if (data.next_word && data.next_word.repetition_info) {
+                        this.updateStatus(`🎤 बहुत अच्छे! अगला शब्द: "${data.next_word.word_english}" (${data.next_word.repetition_info})`);
+                    } else {
+                        this.updateStatus('🎤 बहुत अच्छे! अगला शब्द बोलें');
+                    }
                 } else {
                     // Word didn't match
                     const expected = data.expected_word;
                     const similarity = (data.similarity_score * 100).toFixed(0);
-                    
-                    this.showRecognitionFeedback(
-                        `❌ गलत शब्द: "${data.recognized_word}" | अपेक्षित: "${expected.word_english}" (समानता: ${similarity}%)`,
-                        false
-                    );
-                    
-                    this.updateStatus(`🎤 फिर से कोशिश करें। बोलें: "${expected.word_english}"`);
+
+                    let errorMessage = `❌ गलत शब्द: "${data.recognized_word}" | अपेक्षित: "${expected.word_english}"`;
+                    if (expected.repetition_info) {
+                        errorMessage += ` (${expected.repetition_info})`;
+                    }
+                    errorMessage += ` (समानता: ${similarity}%)`;
+
+                    this.showRecognitionFeedback(errorMessage, false);
+
+                    let statusMessage = `🎤 फिर से कोशिश करें। बोलें: "${expected.word_english}"`;
+                    if (expected.repetition_info) {
+                        statusMessage += ` (${expected.repetition_info})`;
+                    }
+                    this.updateStatus(statusMessage);
                 }
             } else {
                 console.error('API Error:', data.error);
@@ -338,7 +378,7 @@ class JapaApp {
     showRoundCompletion() {
         // Visual feedback for completing a full round
         this.elements.mantraBox?.classList.add('completed');
-        this.updateStatus('🎉 एक राउंड पूरा! ' + this.totalWordsInMantra + ' शब्द पूरे हुए');
+        this.updateStatus(`🎉 एक राउंड पूरा! ${this.totalWordsInMantra} शब्द पूरे हुए`);
 
         // Add celebration animation
         if (this.elements.counterRing) {
@@ -372,6 +412,12 @@ class JapaApp {
                 this.dailyRounds = data.data.today.rounds;
                 this.lifetimeWords = data.data.lifetime.words;
                 this.lifetimeRounds = data.data.lifetime.rounds;
+                
+                // Update total utterances if provided
+                if (data.data.pattern_info && data.data.pattern_info.total_utterances) {
+                    this.totalWordsInMantra = data.data.pattern_info.total_utterances;
+                }
+                
                 this.updateDisplay();
             }
         } catch (error) {
@@ -388,7 +434,12 @@ class JapaApp {
                     this.elements.expectedDevanagari.textContent = currentWord.word_devanagari;
                 }
                 if (this.elements.expectedEnglish) {
-                    this.elements.expectedEnglish.textContent = `(${currentWord.word_english})`;
+                    let englishText = `(${currentWord.word_english})`;
+                    // Add repetition info if available
+                    if (currentWord.repetition_number && currentWord.total_repetitions > 1) {
+                        englishText += ` [${currentWord.repetition_number}/${currentWord.total_repetitions}]`;
+                    }
+                    this.elements.expectedEnglish.textContent = englishText;
                 }
             }
         }
@@ -410,17 +461,23 @@ class JapaApp {
 
         // Highlight current word in mantra
         this.highlightCurrentWord();
+
+        // Update progress ring aria attributes
+        if (this.elements.counterRing) {
+            this.elements.counterRing.setAttribute('aria-valuenow', this.currentWordIndex);
+            this.elements.counterRing.setAttribute('aria-valuemax', this.totalWordsInMantra);
+        }
     }
 
     updateCountWithAnimation(element, newValue) {
         if (!element) return;
-        
+
         const currentValue = parseInt(element.textContent) || 0;
         if (currentValue !== newValue) {
             element.style.transform = 'scale(1.2)';
             element.style.color = '#4CAF50';
             element.textContent = newValue;
-            
+
             setTimeout(() => {
                 element.style.transform = 'scale(1)';
                 element.style.color = '';
@@ -456,7 +513,7 @@ class JapaApp {
         if (this.recognition && this.isListening) {
             this.isListening = false;
             this.clearRecognitionTimeout();
-            
+
             try {
                 this.recognition.stop();
             } catch (e) {
@@ -488,18 +545,39 @@ class JapaApp {
         };
         return hints[word.toLowerCase()] || `${word} - स्पष्ट उच्चारण करें`;
     }
+
+    // Method to show detailed pattern information
+    showPatternInfo() {
+        if (this.mantraPattern) {
+            console.log('Mantra Pattern:', this.mantraPattern);
+            console.log('Current Position:', this.currentWordIndex);
+            console.log('Total Utterances:', this.totalWordsInMantra);
+            
+            const currentWord = this.getCurrentExpectedWord();
+            if (currentWord) {
+                console.log('Current Word Info:', currentWord);
+            }
+        }
+    }
 }
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.japaApp = new JapaApp();
-    
+
     // Add helpful tips on load
     setTimeout(() => {
         if (window.japaApp && !window.japaApp.sessionActive) {
             window.japaApp.updateStatus('💡 टिप: स्पेसबार दबाकर जप शुरू करें, Escape से रोकें');
         }
     }, 2000);
+
+    // Add debug command (for development)
+    window.showPatternInfo = () => {
+        if (window.japaApp) {
+            window.japaApp.showPatternInfo();
+        }
+    };
 });
 
 // Handle page visibility changes
@@ -531,3 +609,15 @@ window.addEventListener('offline', () => {
         window.japaApp.stopJapaSession();
     }
 });
+
+// Add performance monitoring
+if ('performance' in window) {
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            if (perfData) {
+                console.log('Page Load Time:', Math.round(perfData.loadEventEnd - perfData.loadEventStart), 'ms');
+            }
+        }, 0);
+    });
+}
