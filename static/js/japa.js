@@ -1,4 +1,4 @@
-// Enhanced Japa Sadhana JavaScript with repetition pattern support
+// Enhanced Japa Sadhana JavaScript with individual repetition pattern support
 class JapaApp {
     constructor() {
         this.recognition = null;
@@ -68,7 +68,7 @@ class JapaApp {
         try {
             const response = await fetch('/api/japa/get_pattern');
             const data = await response.json();
-            
+
             if (data.success) {
                 this.mantraPattern = data.data.pattern;
                 this.totalWordsInMantra = data.data.total_utterances;
@@ -100,7 +100,7 @@ class JapaApp {
 
     async startJapaSession() {
         try {
-            this.updateStatus('🔄 सत्र प्रारंभ हो रहा है...');
+            this.updateStatus('सत्र प्रारंभ हो रहा है...');
 
             // Start backend session
             const response = await fetch('/api/japa/start_session', {
@@ -117,11 +117,11 @@ class JapaApp {
                 this.updateDisplay();
                 this.startListening();
             } else {
-                this.updateStatus('❌ सत्र शुरू नहीं हो सका: ' + data.error);
+                this.updateStatus('सत्र शुरू नहीं हो सका: ' + data.error);
             }
         } catch (error) {
             console.error('Error starting session:', error);
-            this.updateStatus('❌ सत्र शुरू करने में त्रुटि');
+            this.updateStatus('सत्र शुरू करने में त्रुटि');
         }
     }
 
@@ -136,20 +136,20 @@ class JapaApp {
             });
 
             this.sessionActive = false;
-            this.updateStatus('✅ जप सत्र समाप्त');
+            this.updateStatus('जप सत्र समाप्त');
             this.consecutiveFailures = 0;
 
             // Update stats after ending session
             await this.updateStats();
         } catch (error) {
             console.error('Error ending session:', error);
-            this.updateStatus('❌ सत्र समाप्त करने में त्रुटि');
+            this.updateStatus('सत्र समाप्त करने में त्रुटि');
         }
     }
 
     initSpeechRecognition() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            this.updateStatus('❌ आपका ब्राउज़र वॉइस रिकग्निशन सपोर्ट नहीं करता');
+            this.updateStatus('आपका ब्राउज़र वॉइस रिकग्निशन सपोर्ट नहीं करता');
             this.elements.startBtn.disabled = true;
             return;
         }
@@ -168,7 +168,7 @@ class JapaApp {
         this.recognition.onstart = () => {
             this.isListening = true;
             this.lastRecognitionTime = Date.now();
-            this.updateStatus('🎤 सुन रहा है... अपेक्षित शब्द बोलें');
+            this.updateStatus('सुन रहा है... अपेक्षित शब्द बोलें');
             this.elements.startBtn.style.display = 'none';
             this.elements.stopBtn.style.display = 'inline-flex';
             this.elements.stopBtn.classList.add('listening');
@@ -219,7 +219,7 @@ class JapaApp {
 
             // Show interim results for better UX
             if (interimTranscript) {
-                this.updateStatus(`🎤 सुना गया: "${interimTranscript.trim()}" (प्रसंस्करण...)`);
+                this.updateStatus(`सुना गया: "${interimTranscript.trim()}" (प्रसंस्करण...)`);
             }
 
             // Process final results
@@ -236,7 +236,7 @@ class JapaApp {
         this.clearRecognitionTimeout();
         this.recognitionTimeout = setTimeout(() => {
             if (this.isListening) {
-                this.updateStatus('🔄 फिर से सुनने की कोशिश कर रहा है...');
+                this.updateStatus('फिर से सुनने की कोशिश कर रहा है...');
                 try {
                     this.recognition.stop();
                 } catch (e) {
@@ -259,40 +259,40 @@ class JapaApp {
         switch (error) {
             case 'no-speech':
                 if (this.consecutiveFailures < 3) {
-                    this.updateStatus('🔇 कुछ सुनाई नहीं दिया, फिर से बोलें');
+                    this.updateStatus('कुछ सुनाई नहीं दिया, फिर से बोलें');
                 } else {
-                    this.updateStatus('🔇 कई बार कुछ नहीं सुना। माइक की जांच करें');
+                    this.updateStatus('कई बार कुछ नहीं सुना। माइक की जांच करें');
                 }
                 break;
             case 'audio-capture':
-                this.updateStatus('❌ माइक्रोफोन एक्सेस नहीं मिला');
+                this.updateStatus('माइक्रोफोन एक्सेस नहीं मिला');
                 this.stopJapaSession();
                 break;
             case 'not-allowed':
-                this.updateStatus('❌ माइक्रोफोन की अनुमति नहीं दी गई');
+                this.updateStatus('माइक्रोफोन की अनुमति नहीं दी गई');
                 this.stopJapaSession();
                 break;
             case 'network':
-                this.updateStatus('❌ नेटवर्क त्रुटि, कनेक्शन जांचें');
+                this.updateStatus('नेटवर्क त्रुटि, कनेक्शन जांचें');
                 break;
             case 'service-not-allowed':
-                this.updateStatus('❌ वॉइस सर्विस उपलब्ध नहीं');
+                this.updateStatus('वॉइस सर्विस उपलब्ध नहीं');
                 this.stopJapaSession();
                 break;
             default:
-                this.updateStatus(`❌ आवाज़ पहचानने में समस्या: ${error}`);
+                this.updateStatus(`आवाज़ पहचानने में समस्या: ${error}`);
         }
 
         // If too many failures, suggest troubleshooting
         if (this.consecutiveFailures >= 5) {
-            this.updateStatus('❌ बहुत सारी त्रुटियां। कृपया माइक और इंटरनेट जांचें');
+            this.updateStatus('बहुत सारी त्रुटियां। कृपया माइक और इंटरनेट जांचें');
             this.stopJapaSession();
         }
     }
 
     async processTranscript(transcript) {
         const cleanedWord = transcript.toLowerCase().trim();
-        this.updateStatus(`🔄 प्रसंस्करण: "${cleanedWord}"`);
+        this.updateStatus(`प्रसंस्करण: "${cleanedWord}"`);
 
         try {
             const response = await fetch('/api/japa/update_count', {
@@ -310,10 +310,22 @@ class JapaApp {
                     this.sessionCount = data.new_count;
                     this.currentWordIndex = data.current_word_index;
 
-                    // Show repetition info if available
-                    let successMessage = `✅ सही! "${data.recognized_word}"`;
+                    // Enhanced success message with clearer repetition feedback
+                    let successMessage = `सही! "${data.recognized_word}"`;
                     if (data.next_word && data.next_word.repetition_info) {
-                        successMessage += ` (${data.next_word.repetition_info})`;
+                        const [current, total] = data.next_word.repetition_info.split('/');
+                        if (parseInt(total) > 1) {
+                            if (parseInt(current) === 1) {
+                                // Just completed a word group, starting new one
+                                successMessage += ` - अब "${data.next_word.word_english}" बोलें (${data.next_word.repetition_info})`;
+                            } else {
+                                // Within a repetition group
+                                successMessage += ` - फिर से "${data.next_word.word_english}" बोलें (${data.next_word.repetition_info})`;
+                            }
+                        } else {
+                            // Single repetition word
+                            successMessage += ` - अब "${data.next_word.word_english}" बोलें`;
+                        }
                     }
 
                     this.showRecognitionFeedback(successMessage, true);
@@ -325,39 +337,65 @@ class JapaApp {
                     }
 
                     this.updateDisplay();
-                    
-                    // Update status with next word info
+
+                    // Update status with next word info and clear repetition guidance
                     if (data.next_word && data.next_word.repetition_info) {
-                        this.updateStatus(`🎤 बहुत अच्छे! अगला शब्द: "${data.next_word.word_english}" (${data.next_word.repetition_info})`);
+                        const [current, total] = data.next_word.repetition_info.split('/');
+                        let statusMessage;
+                        
+                        if (parseInt(total) > 1) {
+                            if (parseInt(current) === 1) {
+                                // Starting a new repetition group
+                                statusMessage = `सुन रहा है... "${data.next_word.word_english}" बोलें (${total} बार में से ${current} बार)`;
+                            } else {
+                                // Continuing repetitions
+                                statusMessage = `सुन रहा है... "${data.next_word.word_english}" फिर से बोलें (${total} बार में से ${current} बार)`;
+                            }
+                        } else {
+                            statusMessage = `सुन रहा है... "${data.next_word.word_english}" बोलें`;
+                        }
+                        
+                        this.updateStatus(statusMessage);
                     } else {
-                        this.updateStatus('🎤 बहुत अच्छे! अगला शब्द बोलें');
+                        this.updateStatus('सुन रहा है... अगला शब्द बोलें');
                     }
                 } else {
                     // Word didn't match
                     const expected = data.expected_word;
                     const similarity = (data.similarity_score * 100).toFixed(0);
 
-                    let errorMessage = `❌ गलत शब्द: "${data.recognized_word}" | अपेक्षित: "${expected.word_english}"`;
+                    let errorMessage = `गलत शब्द: "${data.recognized_word}" | अपेक्षित: "${expected.word_english}"`;
                     if (expected.repetition_info) {
-                        errorMessage += ` (${expected.repetition_info})`;
+                        const [current, total] = expected.repetition_info.split('/');
+                        if (parseInt(total) > 1) {
+                            errorMessage += ` (${total} बार में से ${current} बार)`;
+                        }
                     }
                     errorMessage += ` (समानता: ${similarity}%)`;
 
                     this.showRecognitionFeedback(errorMessage, false);
 
-                    let statusMessage = `🎤 फिर से कोशिश करें। बोलें: "${expected.word_english}"`;
+                    // Enhanced status message for repetitions
+                    let statusMessage;
                     if (expected.repetition_info) {
-                        statusMessage += ` (${expected.repetition_info})`;
+                        const [current, total] = expected.repetition_info.split('/');
+                        if (parseInt(total) > 1) {
+                            statusMessage = `फिर से कोशिश करें। बोलें: "${expected.word_english}" (${total} बार में से ${current} बार)`;
+                        } else {
+                            statusMessage = `फिर से कोशिश करें। बोलें: "${expected.word_english}"`;
+                        }
+                    } else {
+                        statusMessage = `फिर से कोशिश करें। बोलें: "${expected.word_english}"`;
                     }
                     this.updateStatus(statusMessage);
                 }
             } else {
                 console.error('API Error:', data.error);
-                this.updateStatus('❌ सर्वर त्रुटि। फिर से कोशिश करें');
+                this.updateStatus('सर्वर त्रुटि। फिर से कोशिश करें');
             }
         } catch (error) {
             console.error('Error processing transcript:', error);
-            this.updateStatus('❌ शब्द प्रसंस्करण में त्रुटि');
+            this.updateStatus('शब्द प्रसंस्करण में त्रुटि');
         }
     }
 
@@ -368,17 +406,17 @@ class JapaApp {
             feedback.className = `recognition-feedback ${isSuccess ? 'success' : 'error'}`;
             feedback.style.display = 'block';
 
-            // Auto-hide after delay
+            // Auto-hide after delay - longer for error messages
             setTimeout(() => {
                 feedback.style.display = 'none';
-            }, isSuccess ? 2000 : 4000);
+            }, isSuccess ? 3000 : 5000);
         }
     }
 
     showRoundCompletion() {
         // Visual feedback for completing a full round
         this.elements.mantraBox?.classList.add('completed');
-        this.updateStatus(`🎉 एक राउंड पूरा! ${this.totalWordsInMantra} शब्द पूरे हुए`);
+        this.updateStatus(`एक राउंड पूरा! ${this.totalWordsInMantra} शब्द पूरे हुए`);
 
         // Add celebration animation
         if (this.elements.counterRing) {
@@ -412,12 +450,12 @@ class JapaApp {
                 this.dailyRounds = data.data.today.rounds;
                 this.lifetimeWords = data.data.lifetime.words;
                 this.lifetimeRounds = data.data.lifetime.rounds;
-                
+
                 // Update total utterances if provided
                 if (data.data.pattern_info && data.data.pattern_info.total_utterances) {
                     this.totalWordsInMantra = data.data.pattern_info.total_utterances;
                 }
-                
+
                 this.updateDisplay();
             }
         } catch (error) {
@@ -426,7 +464,8 @@ class JapaApp {
     }
 
     updateDisplay() {
-        // Update current expected word
+        // Update current expected word - this logic is now handled by the backend
+        // We'll get the correct word info from the API responses
         if (this.mantraWords && this.currentWordIndex <= this.mantraWords.length) {
             const currentWord = this.mantraWords[this.currentWordIndex - 1];
             if (currentWord) {
@@ -504,7 +543,7 @@ class JapaApp {
                 this.recognition.start();
             } catch (e) {
                 console.log('Recognition start failed:', e);
-                this.updateStatus('❌ वॉइस रिकग्निशन शुरू नहीं हो सका');
+                this.updateStatus('वॉइस रिकग्निशन शुरू नहीं हो सका');
             }
         }
     }
@@ -520,7 +559,7 @@ class JapaApp {
                 console.log('Recognition stop failed:', e);
             }
 
-            this.updateStatus('⏹ जप रोका गया');
+            this.updateStatus('जप रोका गया');
             this.elements.startBtn.style.display = 'inline-flex';
             this.elements.stopBtn.style.display = 'none';
             this.elements.stopBtn?.classList.remove('listening');
@@ -552,11 +591,28 @@ class JapaApp {
             console.log('Mantra Pattern:', this.mantraPattern);
             console.log('Current Position:', this.currentWordIndex);
             console.log('Total Utterances:', this.totalWordsInMantra);
-            
+
             const currentWord = this.getCurrentExpectedWord();
             if (currentWord) {
                 console.log('Current Word Info:', currentWord);
             }
+        }
+    }
+
+    // New method to provide clearer repetition feedback
+    getRepetitionStatus(repetitionInfo) {
+        if (!repetitionInfo) return '';
+        
+        const [current, total] = repetitionInfo.split('/').map(n => parseInt(n));
+        
+        if (total === 1) {
+            return '';
+        } else if (current === 1) {
+            return `(${total} बार बोलना है - पहली बार)`;
+        } else if (current === total) {
+            return `(अंतिम बार - ${current}/${total})`;
+        } else {
+            return `(${current}/${total} बार)`;
         }
     }
 }
@@ -568,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add helpful tips on load
     setTimeout(() => {
         if (window.japaApp && !window.japaApp.sessionActive) {
-            window.japaApp.updateStatus('💡 टिप: स्पेसबार दबाकर जप शुरू करें, Escape से रोकें');
+            window.japaApp.updateStatus('टिप: स्पेसबार दबाकर जप शुरू करें, Escape से रोकें');
         }
     }, 2000);
 
@@ -599,13 +655,13 @@ window.addEventListener('beforeunload', (e) => {
 // Handle connection issues
 window.addEventListener('online', () => {
     if (window.japaApp) {
-        window.japaApp.updateStatus('🟢 इंटरनेट कनेक्शन वापस आ गया');
+        window.japaApp.updateStatus('इंटरनेट कनेक्शन वापस आ गया');
     }
 });
 
 window.addEventListener('offline', () => {
     if (window.japaApp) {
-        window.japaApp.updateStatus('🔴 इंटरनेट कनेक्शन बंद है');
+        window.japaApp.updateStatus('इंटरनेट कनेक्शन बंद है');
         window.japaApp.stopJapaSession();
     }
 });
