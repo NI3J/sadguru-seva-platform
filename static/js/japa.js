@@ -1,4 +1,4 @@
-// Enhanced Japa Sadhana JavaScript with simplified utterance tracking
+// Enhanced Japa Sadhana JavaScript with individual repetition pattern support
 class JapaApp {
     constructor() {
         this.recognition = null;
@@ -10,11 +10,14 @@ class JapaApp {
         this.lifetimeRounds = 0;
         this.lifetimeWords = 0;
         this.sessionActive = false;
-        this.totalWordsInMantra = 16; // Total utterances in one round
+        this.totalWordsInMantra = 16; // Will be updated from backend
         this.recognitionTimeout = null;
         this.lastRecognitionTime = 0;
         this.consecutiveFailures = 0;
-        this.utteranceSequence = null;
+        this.mantraPattern = null;
+        this.currentRepetitionInfo = null;
+        this.currentPatternPosition = 1;
+        this.currentRepetitionCount = 1;
 
         // Load mantra words from page data
         const mantraWordsElement = document.getElementById('mantraWordsData');
@@ -49,7 +52,7 @@ class JapaApp {
         this.loadInitialData();
         this.setupEventListeners();
         this.initSpeechRecognition();
-        await this.loadUtteranceSequence();
+        await this.loadMantraPattern();
         this.updateDisplay();
     }
 
@@ -63,20 +66,20 @@ class JapaApp {
         this.currentWordIndex = parseInt(this.elements.progressNumber?.textContent) || 1;
     }
 
-    async loadUtteranceSequence() {
+    async loadMantraPattern() {
         try {
             const response = await fetch('/api/japa/get_pattern');
             const data = await response.json();
 
             if (data.success) {
-                this.utteranceSequence = data.data.utterance_sequence;
+                this.mantraPattern = data.data.pattern;
                 this.totalWordsInMantra = data.data.total_utterances;
-                console.log('Loaded utterance sequence:', this.utteranceSequence);
+                console.log('Loaded mantra pattern:', this.mantraPattern);
                 console.log('Total utterances in one round:', this.totalWordsInMantra);
             }
         } catch (error) {
-            console.error('Error loading utterance sequence:', error);
-            // Fallback to default if loading fails
+            console.error('Error loading mantra pattern:', error);
+            // Fallback to default if pattern loading fails
             this.totalWordsInMantra = 16;
         }
     }
@@ -275,7 +278,7 @@ class JapaApp {
                 this.updateStatus('नेटवर्क त्रुटि, कनेक्शन जांचें');
                 break;
             case 'service-not-allowed':
-                this.updateStatus('वॉइस सर्विस उपलब्ध नहीं');
+                this.updateStatus('वॉइस सेवा उपलब्ध नहीं');
                 this.stopJapaSession();
                 break;
             default:
@@ -309,17 +312,20 @@ class JapaApp {
                     this.sessionCount = data.new_count;
                     this.currentWordIndex = data.current_word_index;
 
-                    // Success message with clearer repetition feedback
+                    // Enhanced success message with clearer repetition feedback
                     let successMessage = `सही! "${data.recognized_word}"`;
                     if (data.next_word && data.next_word.repetition_info) {
                         const [current, total] = data.next_word.repetition_info.split('/');
                         if (parseInt(total) > 1) {
                             if (parseInt(current) === 1) {
+                                // Just completed a word group, starting new one
                                 successMessage += ` - अब "${data.next_word.word_english}" बोलें (${data.next_word.repetition_info})`;
                             } else {
+                                // Within a repetition group
                                 successMessage += ` - फिर से "${data.next_word.word_english}" बोलें (${data.next_word.repetition_info})`;
                             }
                         } else {
+                            // Single repetition word
                             successMessage += ` - अब "${data.next_word.word_english}" बोलें`;
                         }
                     }
@@ -334,15 +340,17 @@ class JapaApp {
 
                     this.updateDisplay();
 
-                    // Update status with next word info
+                    // Update status with next word info and clear repetition guidance
                     if (data.next_word && data.next_word.repetition_info) {
                         const [current, total] = data.next_word.repetition_info.split('/');
                         let statusMessage;
 
                         if (parseInt(total) > 1) {
                             if (parseInt(current) === 1) {
+                                // Starting a new repetition group
                                 statusMessage = `सुन रहा है... "${data.next_word.word_english}" बोलें (${total} बार में से ${current} बार)`;
                             } else {
+                                // Continuing repetitions
                                 statusMessage = `सुन रहा है... "${data.next_word.word_english}" फिर से बोलें (${total} बार में से ${current} बार)`;
                             }
                         } else {
@@ -458,18 +466,19 @@ class JapaApp {
     }
 
     updateDisplay() {
-        // Update current expected word using utterance sequence
-        if (this.utteranceSequence && this.currentWordIndex <= this.utteranceSequence.length) {
-            const currentUtterance = this.utteranceSequence[this.currentWordIndex - 1];
-            if (currentUtterance) {
+        // Update current expected word - this logic is now handled by the backend
+        // We'll get the correct word info from the API responses
+        if (this.mantraWords && this.currentWordIndex <= this.mantraWords.length) {
+            const currentWord = this.mantraWords[this.currentWordIndex - 1];
+            if (currentWord) {
                 if (this.elements.expectedDevanagari) {
-                    this.elements.expectedDevanagari.textContent = currentUtterance.word_devanagari;
+                    this.elements.expectedDevanagari.textContent = currentWord.word_devanagari;
                 }
                 if (this.elements.expectedEnglish) {
-                    let englishText = `(${currentUtterance.word_english})`;
-                    // Add repetition info if it's a repetition
-                    if (currentUtterance.total_repetitions > 1) {
-                        englishText += ` [${currentUtterance.repetition_number}/${currentUtterance.total_repetitions}]`;
+                    let englishText = `(${currentWord.word_english})`;
+                    // Add repetition info if available
+                    if (currentWord.repetition_number && currentWord.total_repetitions > 1) {
+                        englishText += ` [${currentWord.repetition_number}/${currentWord.total_repetitions}]`;
                     }
                     this.elements.expectedEnglish.textContent = englishText;
                 }
@@ -559,10 +568,10 @@ class JapaApp {
         }
     }
 
-    // Utility method to get current expected utterance
-    getCurrentExpectedUtterance() {
-        if (this.utteranceSequence && this.currentWordIndex <= this.utteranceSequence.length) {
-            return this.utteranceSequence[this.currentWordIndex - 1];
+    // Utility method to get current expected word
+    getCurrentExpectedWord() {
+        if (this.mantraWords && this.currentWordIndex <= this.mantraWords.length) {
+            return this.mantraWords[this.currentWordIndex - 1];
         }
         return null;
     }
@@ -580,14 +589,14 @@ class JapaApp {
 
     // Method to show detailed pattern information
     showPatternInfo() {
-        if (this.utteranceSequence) {
-            console.log('Utterance Sequence:', this.utteranceSequence);
+        if (this.mantraPattern) {
+            console.log('Mantra Pattern:', this.mantraPattern);
             console.log('Current Position:', this.currentWordIndex);
             console.log('Total Utterances:', this.totalWordsInMantra);
 
-            const currentUtterance = this.getCurrentExpectedUtterance();
-            if (currentUtterance) {
-                console.log('Current Utterance Info:', currentUtterance);
+            const currentWord = this.getCurrentExpectedWord();
+            if (currentWord) {
+                console.log('Current Word Info:', currentWord);
             }
         }
     }
