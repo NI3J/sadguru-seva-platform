@@ -19,12 +19,36 @@ MANTRA_PATTERN = [
     {'word': 'radhe', 'devanagari': 'राधे', 'repetitions': 1},
     {'word': 'shyama', 'devanagari': 'श्यामा', 'repetitions': 1},
     {'word': 'shyam', 'devanagari': 'श्याम', 'repetitions': 1},
-    {'word': 'shyama', 'devanagari': 'शामा', 'repetitions': 1},
+    {'word': 'shyama', 'devanagari': 'श्यामा', 'repetitions': 1},
     {'word': 'radhe', 'devanagari': 'राधे', 'repetitions': 2}
 ]
 
 # Calculate total utterances in one complete round
 TOTAL_UTTERANCES = sum(item['repetitions'] for item in MANTRA_PATTERN)
+
+# Create utterance-based sequence for easier tracking
+def create_utterance_sequence():
+    """Create a flat sequence of utterances with their metadata."""
+    utterances = []
+    utterance_index = 1
+    
+    for pattern_index, pattern_item in enumerate(MANTRA_PATTERN):
+        for rep in range(pattern_item['repetitions']):
+            utterances.append({
+                'utterance_index': utterance_index,
+                'pattern_index': pattern_index,
+                'word_english': pattern_item['word'],
+                'word_devanagari': pattern_item['devanagari'],
+                'repetition_number': rep + 1,
+                'total_repetitions': pattern_item['repetitions'],
+                'is_repetition': rep > 0
+            })
+            utterance_index += 1
+    
+    return utterances
+
+# Global utterance sequence
+UTTERANCE_SEQUENCE = create_utterance_sequence()
 
 # ---------- Helpers ----------
 def get_or_create_user_token() -> str:
@@ -47,77 +71,35 @@ def get_or_create_user_token() -> str:
 def get_cursor(conn):
     return conn.cursor(pymysql.cursors.DictCursor)
 
-def get_pattern_info_from_position(position):
-    """Get pattern information based on position - now tracks pattern groups, not individual utterances."""
-    if position < 1:
-        position = 1
-    elif position > len(MANTRA_PATTERN):
-        position = 1  # Reset to beginning
-
-    pattern_index = position - 1
-    pattern_item = MANTRA_PATTERN[pattern_index]
-
-    return {
-        'pattern_index': pattern_index,
-        'word_english': pattern_item['word'],
-        'word_devanagari': pattern_item['devanagari'],
-        'total_repetitions': pattern_item['repetitions'],
-        'pattern_position': position
-    }
-
-def get_expected_word_from_session(current_pattern_position, current_repetition_count):
-    """Get expected word details based on current pattern position and repetition count."""
-    pattern_info = get_pattern_info_from_position(current_pattern_position)
-
-    return {
-        'word_english': pattern_info['word_english'],
-        'word_devanagari': pattern_info['word_devanagari'],
-        'repetition_number': current_repetition_count,
-        'total_repetitions': pattern_info['total_repetitions'],
-        'pattern_position': current_pattern_position,
-        'pattern_index': pattern_info['pattern_index']
-    }
-
-def advance_position(current_pattern_position, current_repetition_count):
-    """Advance to next position in pattern. Returns (new_pattern_position, new_repetition_count, completed_round)."""
-    pattern_info = get_pattern_info_from_position(current_pattern_position)
-
-    if current_repetition_count < pattern_info['total_repetitions']:
-        # Still need more repetitions of current word
-        return current_pattern_position, current_repetition_count + 1, False
-    else:
-        # Completed all repetitions, move to next word in pattern
-        new_pattern_position = current_pattern_position + 1
-        if new_pattern_position > len(MANTRA_PATTERN):
-            # Completed full round
-            return 1, 1, True
-        else:
-            return new_pattern_position, 1, False
+def get_utterance_info(utterance_index):
+    """Get utterance information by index (1-16)."""
+    if utterance_index < 1:
+        utterance_index = 1
+    elif utterance_index > TOTAL_UTTERANCES:
+        utterance_index = 1  # Reset to beginning
+    
+    return UTTERANCE_SEQUENCE[utterance_index - 1]
 
 def create_display_mantra():
     """Create the mantra display with repetitions shown."""
     display_words = []
-    word_order = 1
-
-    for pattern_item in MANTRA_PATTERN:
-        for rep in range(pattern_item['repetitions']):
-            display_words.append({
-                'word_order': word_order,
-                'word_english': pattern_item['word'],
-                'word_devanagari': pattern_item['devanagari'],
-                'is_repetition': rep > 0,
-                'repetition_number': rep + 1,
-                'total_repetitions': pattern_item['repetitions']
-            })
-            word_order += 1
-
+    
+    for utterance in UTTERANCE_SEQUENCE:
+        display_words.append({
+            'word_order': utterance['utterance_index'],
+            'word_english': utterance['word_english'],
+            'word_devanagari': utterance['word_devanagari'],
+            'is_repetition': utterance['is_repetition'],
+            'repetition_number': utterance['repetition_number'],
+            'total_repetitions': utterance['total_repetitions']
+        })
+    
     return display_words
 
 def fetch_active_session(cursor, user_token):
-    """Return dict with id, total_count, current_pattern_position, current_repetition_count or None."""
+    """Return dict with id, total_count, current_word_index or None."""
     cursor.execute("""
-        SELECT id, total_count, current_word_index as current_pattern_position,
-               COALESCE(current_repetition_count, 1) as current_repetition_count
+        SELECT id, total_count, current_word_index
         FROM japa_sessions
         WHERE user_id = %s AND session_active = 1
         ORDER BY session_start DESC LIMIT 1
@@ -155,7 +137,7 @@ def is_word_match(recognized_word, expected_word):
         ],
         'krishna': [
             'krishna', 'कृष्णा', 'कृष्णा', 'krishna', 'krisha', 'krishnana', 'krisna',
-            'krishnaa', 'krishnaha', 'krsna', 'कृष्णाय', 'कृष्णा', 'कृषणा'
+            'krishnaa', 'krishnaha', 'krsna', 'कृष्णाय', 'कृष्णा', 'कृष्णा'
         ],
         'shyam': [
             'shyam', 'श्याम', 'sham', 'shaam', 'shyam', 'श्याम', 'syam',
@@ -207,25 +189,13 @@ def japa_page():
 
         user_token = get_or_create_user_token()
 
-        # Use our pattern-based mantra words
+        # Use our utterance-based mantra words
         mantra_words = create_display_mantra()
 
         # Current session stats
         session_row = fetch_active_session(cursor, user_token)
         current_count = int(session_row['total_count']) if session_row else 0
-
-        # For display purposes, calculate word index from pattern position and repetition
-        if session_row:
-            current_pattern_position = int(session_row['current_pattern_position'])
-            current_repetition_count = int(session_row['current_repetition_count'])
-
-            # Calculate display word index (for the visual progress)
-            current_word_index = 0
-            for i in range(current_pattern_position - 1):
-                current_word_index += MANTRA_PATTERN[i]['repetitions']
-            current_word_index += current_repetition_count
-        else:
-            current_word_index = 1
+        current_word_index = int(session_row['current_word_index']) if session_row else 1
 
         # Daily stats
         today = date.today()
@@ -287,42 +257,21 @@ def start_japa_session():
 
         row = fetch_active_session(cursor, user_token)
         if row:
-            # Calculate display word index for existing session
-            current_pattern_position = int(row['current_pattern_position'])
-            current_repetition_count = int(row['current_repetition_count'])
-
-            current_word_index = 0
-            for i in range(current_pattern_position - 1):
-                current_word_index += MANTRA_PATTERN[i]['repetitions']
-            current_word_index += current_repetition_count
-
             return jsonify({
                 'success': True,
                 'data': {
                     'total_count': int(row['total_count']),
-                    'current_word_index': current_word_index,
+                    'current_word_index': int(row['current_word_index']),
                     'session_id': int(row['id'])
                 }
             }), 200
 
-        # Add the new column if it doesn't exist
-        try:
-            cursor.execute("""
-                ALTER TABLE japa_sessions
-                ADD COLUMN current_repetition_count INT DEFAULT 1
-            """)
-            conn.commit()
-        except pymysql.Error as e:
-            # Column might already exist, that's fine
-            if "Duplicate column name" not in str(e):
-                print("Warning: Could not add current_repetition_count column:", e)
-
         cursor.execute("""
             INSERT INTO japa_sessions
-                (user_id, session_start, total_count, current_word_index, current_repetition_count, session_active, last_updated)
+                (user_id, session_start, total_count, current_word_index, session_active, last_updated)
             VALUES
-                (%s, NOW(), %s, %s, %s, %s, NOW())
-        """, (user_token, 0, 1, 1, 1))
+                (%s, NOW(), %s, %s, %s, NOW())
+        """, (user_token, 0, 1, 1))
         conn.commit()
         return jsonify({
             'success': True,
@@ -358,13 +307,12 @@ def update_japa_count():
             return jsonify({'success': False, 'error': 'No active session found'}), 409
 
         session_total_count = int(current_session['total_count'])
-        current_pattern_position = int(current_session['current_pattern_position'])
-        current_repetition_count = int(current_session['current_repetition_count'])
+        current_utterance_index = int(current_session['current_word_index'])
 
-        # Get expected word using our new pattern logic
-        expected_word_data = get_expected_word_from_session(current_pattern_position, current_repetition_count)
-        expected_english = expected_word_data['word_english']
-        expected_devanagari = expected_word_data['word_devanagari']
+        # Get expected word using utterance index
+        expected_utterance = get_utterance_info(current_utterance_index)
+        expected_english = expected_utterance['word_english']
+        expected_devanagari = expected_utterance['word_devanagari']
 
         # Enhanced matching
         is_match = is_word_match(recognized_word, expected_english)
@@ -376,7 +324,7 @@ def update_japa_count():
                 'expected_word': {
                     'word_english': expected_english,
                     'word_devanagari': expected_devanagari,
-                    'repetition_info': f"{expected_word_data['repetition_number']}/{expected_word_data['total_repetitions']}"
+                    'repetition_info': f"{expected_utterance['repetition_number']}/{expected_utterance['total_repetitions']}"
                 },
                 'recognized_word': recognized_word,
                 'similarity_score': difflib.SequenceMatcher(None,
@@ -385,14 +333,17 @@ def update_japa_count():
                 ).ratio()
             }), 200
 
-        # Advance counters using new logic
+        # Advance to next utterance
         new_count = session_total_count + 1
-        new_pattern_position, new_repetition_count, completed_round = advance_position(
-            current_pattern_position, current_repetition_count
-        )
+        new_utterance_index = current_utterance_index + 1
+        completed_round = False
 
-        # If completed full cycle, update daily stats
-        if completed_round:
+        if new_utterance_index > TOTAL_UTTERANCES:
+            # Completed full round
+            new_utterance_index = 1
+            completed_round = True
+            
+            # Update daily stats
             today = date.today()
             cursor.execute("""
                 INSERT INTO japa_daily_counts (user_id, japa_date, total_rounds, total_words)
@@ -402,32 +353,26 @@ def update_japa_count():
                     total_words = total_words + %s
             """, (user_token, today, TOTAL_UTTERANCES, TOTAL_UTTERANCES))
 
-        # Update session with new position and repetition count
+        # Update session
         cursor.execute("""
             UPDATE japa_sessions
-            SET total_count = %s, current_word_index = %s, current_repetition_count = %s, last_updated = NOW()
+            SET total_count = %s, current_word_index = %s, last_updated = NOW()
             WHERE user_id = %s AND session_active = 1
-        """, (new_count, new_pattern_position, new_repetition_count, user_token))
+        """, (new_count, new_utterance_index, user_token))
         conn.commit()
 
         # Get next word info
-        next_word_data = get_expected_word_from_session(new_pattern_position, new_repetition_count)
-
-        # Calculate display word index
-        current_word_index = 0
-        for i in range(new_pattern_position - 1):
-            current_word_index += MANTRA_PATTERN[i]['repetitions']
-        current_word_index += new_repetition_count
+        next_utterance = get_utterance_info(new_utterance_index)
 
         return jsonify({
             'success': True,
             'matched': True,
             'new_count': new_count,
-            'current_word_index': current_word_index,
+            'current_word_index': new_utterance_index,
             'next_word': {
-                'word_english': next_word_data['word_english'],
-                'word_devanagari': next_word_data['word_devanagari'],
-                'repetition_info': f"{next_word_data['repetition_number']}/{next_word_data['total_repetitions']}"
+                'word_english': next_utterance['word_english'],
+                'word_devanagari': next_utterance['word_devanagari'],
+                'repetition_info': f"{next_utterance['repetition_number']}/{next_utterance['total_repetitions']}"
             },
             'completed_round': completed_round,
             'recognized_word': recognized_word,
@@ -529,7 +474,7 @@ def get_mantra_pattern():
         'data': {
             'pattern': MANTRA_PATTERN,
             'total_utterances': TOTAL_UTTERANCES,
-            'display_words': create_display_mantra()
+            'display_words': create_display_mantra(),
+            'utterance_sequence': UTTERANCE_SEQUENCE
         }
     }), 200
-
