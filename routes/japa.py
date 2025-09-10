@@ -8,10 +8,6 @@ import re
 
 japa_bp = Blueprint('japa', __name__)
 
-# ==============================================================================
-# CONFIGURATION & CONSTANTS
-# ==============================================================================
-
 # Define the mantra pattern with repetitions
 MANTRA_PATTERN = [
     {'word': 'radhe', 'devanagari': 'राधे', 'repetitions': 1},
@@ -30,36 +26,9 @@ MANTRA_PATTERN = [
 # Calculate total utterances in one complete round
 TOTAL_UTTERANCES = sum(item['repetitions'] for item in MANTRA_PATTERN)
 
-# Word recognition mappings - precise variations for each word
-WORD_MAPPINGS = {
-    'radhe': [
-        'radhe', 'राधे', 'radhey', 'radhai', 'rade', 'radey'
-    ],
-    'krishna': [
-        'krishna', 'कृष्णा', 'krisha', 'krisna', 'krishnaa', 'krsna'
-    ],
-    'shyam': [
-        'shyam', 'श्याम', 'sham', 'shaam', 'syam', 'shym'
-    ],
-    'shyama': [
-        'shyama', 'श्यामा', 'shyamaa'
-    ]
-}
-
-# Cross-match prevention pairs
-CROSS_MATCH_PAIRS = [
-    ('shyam', 'shyama'),
-    ('shyama', 'shyam'),
-    ('radhe', 'krishna'),
-    ('krishna', 'radhe')
-]
-
-# ==============================================================================
-# UTILITY FUNCTIONS
-# ==============================================================================
-
+# ---------- Helpers ----------
 def get_or_create_user_token() -> str:
-    """Get authenticated user_id or create temporary token."""
+    """Get authenticated user_id or redirect to auth if not authenticated."""
     # Check if user is authenticated via the auth system
     if session.get('authenticated') and session.get('user_id'):
         return session.get('user_id')
@@ -69,63 +38,21 @@ def get_or_create_user_token() -> str:
     if token and isinstance(token, str) and token.strip():
         return token
 
-    # Create temporary token for testing
+    # If no authentication, create a temporary token (for testing)
+    # In production, you should redirect to /auth instead
     token = str(uuid.uuid4())
     session['japa_user_token'] = token
     return token
 
 def get_cursor(conn):
-    """Get database cursor with dictionary format."""
     return conn.cursor(pymysql.cursors.DictCursor)
 
-def normalize_word(word):
-    """Normalize word for better matching."""
-    if not word:
-        return ""
-    
-    word = word.lower().strip()
-    word = re.sub(r'[^\w\s]', '', word)
-    word = re.sub(r'\s+', ' ', word).strip()
-    return word
-
-def is_word_match(recognized_word, expected_word):
-    """Enhanced word matching with precise word-specific variations."""
-    recognized = normalize_word(recognized_word)
-    expected = normalize_word(expected_word)
-
-    # Direct match
-    if recognized == expected:
-        return True
-
-    # Check exact variations for the expected word
-    if expected in WORD_MAPPINGS:
-        for variation in WORD_MAPPINGS[expected]:
-            if recognized == normalize_word(variation):
-                return True
-
-    # Restrictive fuzzy matching with cross-match prevention
-    if len(recognized) >= 4 and len(expected) >= 4:
-        similarity = difflib.SequenceMatcher(None, recognized, expected).ratio()
-        
-        if similarity >= 0.85:  # High threshold to prevent false matches
-            # Prevent cross-matches between similar words
-            for word1, word2 in CROSS_MATCH_PAIRS:
-                if (expected == word1 and word2 in recognized) or (expected == word2 and word1 in recognized):
-                    return False
-            return True
-
-    return False
-
-# ==============================================================================
-# PATTERN & POSITION MANAGEMENT
-# ==============================================================================
-
 def get_pattern_info_from_position(position):
-    """Get pattern information based on position."""
+    """Get pattern information based on position - now tracks pattern groups, not individual utterances."""
     if position < 1:
         position = 1
     elif position > len(MANTRA_PATTERN):
-        position = 1
+        position = 1  # Reset to beginning
 
     pattern_index = position - 1
     pattern_item = MANTRA_PATTERN[pattern_index]
@@ -152,46 +79,21 @@ def get_expected_word_from_session(current_pattern_position, current_repetition_
     }
 
 def advance_position(current_pattern_position, current_repetition_count):
-    """
-    Advance to next position in pattern.
-    Returns (new_pattern_position, new_repetition_count, completed_round).
-    """
+    """Advance to next position in pattern. Returns (new_pattern_position, new_repetition_count, completed_round)."""
     pattern_info = get_pattern_info_from_position(current_pattern_position)
     
-    print(f"DEBUG: Current position: {current_pattern_position}, repetition: {current_repetition_count}")
-    print(f"DEBUG: Expected repetitions for this word: {pattern_info['total_repetitions']}")
-    
-    # Check if we need more repetitions of the current word
+    # FIXED: Only advance if ALL repetitions are completed
     if current_repetition_count < pattern_info['total_repetitions']:
-        # Stay on the same word, increment repetition count
-        new_repetition_count = current_repetition_count + 1
-        print(f"DEBUG: Staying on same word, new repetition count: {new_repetition_count}")
-        return current_pattern_position, new_repetition_count, False
+        # Still need more repetitions of current word - stay on same word
+        return current_pattern_position, current_repetition_count + 1, False
     else:
-        # All repetitions completed for current word, move to next word
+        # Completed all repetitions, move to next word in pattern
         new_pattern_position = current_pattern_position + 1
-        
         if new_pattern_position > len(MANTRA_PATTERN):
-            # Completed full round, reset to beginning
-            print(f"DEBUG: Completed full round, resetting to position 1")
+            # Completed full round
             return 1, 1, True
         else:
-            # Move to next word in pattern
-            print(f"DEBUG: Moving to next word at position: {new_pattern_position}")
             return new_pattern_position, 1, False
-
-def calculate_display_word_index(pattern_position, repetition_count):
-    """Calculate the display word index for frontend based on pattern position and repetition count."""
-    display_index = 0
-    
-    # Add all complete words before current position
-    for i in range(pattern_position - 1):
-        display_index += MANTRA_PATTERN[i]['repetitions']
-    
-    # Add current repetition count
-    display_index += repetition_count
-    
-    return display_index
 
 def create_display_mantra():
     """Create the mantra display with repetitions shown."""
@@ -212,12 +114,8 @@ def create_display_mantra():
 
     return display_words
 
-# ==============================================================================
-# DATABASE OPERATIONS
-# ==============================================================================
-
 def fetch_active_session(cursor, user_token):
-    """Return active session data or None."""
+    """Return dict with id, total_count, current_pattern_position, current_repetition_count or None."""
     cursor.execute("""
         SELECT id, total_count, current_word_index as current_pattern_position,
                COALESCE(current_repetition_count, 1) as current_repetition_count
@@ -227,84 +125,128 @@ def fetch_active_session(cursor, user_token):
     """, (user_token,))
     return cursor.fetchone()
 
-def ensure_session_table_updated(cursor, conn):
-    """Ensure the session table has required columns."""
-    try:
-        cursor.execute("""
-            ALTER TABLE japa_sessions
-            ADD COLUMN current_repetition_count INT DEFAULT 1
-        """)
-        conn.commit()
-    except pymysql.Error as e:
-        if "Duplicate column name" not in str(e):
-            print("Warning: Could not add current_repetition_count column:", e)
+def normalize_word(word):
+    """Normalize word for better matching."""
+    if not word:
+        return ""
 
-def get_daily_stats(cursor, user_token):
-    """Get daily statistics for user."""
-    today = date.today()
-    cursor.execute("""
-        SELECT total_rounds, total_words
-        FROM japa_daily_counts
-        WHERE user_id = %s AND japa_date = %s
-    """, (user_token, today))
-    return cursor.fetchone()
+    # Convert to lowercase and strip
+    word = word.lower().strip()
 
-def get_lifetime_stats(cursor, user_token):
-    """Get lifetime statistics for user."""
-    cursor.execute("""
-        SELECT SUM(total_rounds) AS lifetime_rounds,
-               SUM(total_words) AS lifetime_words
-        FROM japa_daily_counts
-        WHERE user_id = %s
-    """, (user_token,))
-    return cursor.fetchone()
+    # Remove punctuation and extra spaces
+    word = re.sub(r'[^\w\s]', '', word)
+    word = re.sub(r'\s+', ' ', word).strip()
 
-def update_daily_stats(cursor, user_token):
-    """Update daily statistics after completing a round."""
-    today = date.today()
-    cursor.execute("""
-        INSERT INTO japa_daily_counts (user_id, japa_date, total_rounds, total_words)
-        VALUES (%s, %s, 1, %s)
-        ON DUPLICATE KEY UPDATE
-            total_rounds = total_rounds + 1,
-            total_words = total_words + %s
-    """, (user_token, today, TOTAL_UTTERANCES, TOTAL_UTTERANCES))
+    return word
 
-# ==============================================================================
-# ROUTE HANDLERS
-# ==============================================================================
+def is_word_match(recognized_word, expected_word):
+    """Enhanced word matching with fuzzy logic and multiple variations."""
+    recognized = normalize_word(recognized_word)
+    expected = normalize_word(expected_word)
 
+    # Direct match
+    if recognized == expected:
+        return True
+
+    # Enhanced word mappings with more variations
+    word_mappings = {
+        'radhe': [
+            'radhe', 'राधे', 'राधे', 'radhe', 'radhe', 'ready', 'radi', 'radhi',
+            'rade', 'radey', 'radhai', 'radhey', 'राधे', 'राधेय'
+        ],
+        'krishna': [
+            'krishna', 'कृष्णा', 'कृष्णा', 'krishna', 'krisha', 'krishnana', 'krisna',
+            'krishnaa', 'krishnaha', 'krsna', 'कृष्णाय', 'कृष्णा', 'कृषणा'
+        ],
+        'shyam': [
+            'shyam', 'श्याम', 'sham', 'shaam', 'shyam', 'श्याम', 'syam',
+            'shyam', 'shyamah', 'श्यामाय', 'shyamal', 'श्यामल', 'shym'
+        ],
+        'shyama': [
+            'shyama', 'श्यामा', 'shyama', 'shyama', 'shyama', 'श्यामा', 'shyama',
+            'shyama', 'shyama', 'श्यामा', 'shyama', 'श्यामा'
+        ]
+    }
+
+    # Check if recognized word matches any variation of expected word
+    if expected in word_mappings:
+        for variation in word_mappings[expected]:
+            if recognized == normalize_word(variation):
+                return True
+
+    # Check reverse mapping (if recognized word is a variation of expected)
+    for base_word, variations in word_mappings.items():
+        if base_word == expected:
+            for variation in variations:
+                if recognized == normalize_word(variation):
+                    return True
+
+    # Fuzzy matching for close pronunciations
+    similarity_threshold = 0.7
+    if len(recognized) >= 3 and len(expected) >= 3:
+        similarity = difflib.SequenceMatcher(None, recognized, expected).ratio()
+        if similarity >= similarity_threshold:
+            return True
+
+    # Check for partial matches (useful for longer words)
+    if len(expected) >= 4:
+        if recognized in expected or expected in recognized:
+            min_length = min(len(recognized), len(expected))
+            if min_length >= 3:
+                return True
+
+    return False
+
+# ---------- Routes ----------
 @japa_bp.route('/japa')
 def japa_page():
-    """Main japa page with current session and statistics."""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = get_cursor(conn)
+
         user_token = get_or_create_user_token()
 
-        # Load mantra words for display
+        # Use our pattern-based mantra words
         mantra_words = create_display_mantra()
 
-        # Get current session stats
+        # Current session stats
         session_row = fetch_active_session(cursor, user_token)
         current_count = int(session_row['total_count']) if session_row else 0
 
-        # Calculate display word index
+        # For display purposes, calculate word index from pattern position and repetition
         if session_row:
             current_pattern_position = int(session_row['current_pattern_position'])
             current_repetition_count = int(session_row['current_repetition_count'])
-            current_word_index = calculate_display_word_index(current_pattern_position, current_repetition_count)
+
+            # Calculate display word index (for the visual progress)
+            current_word_index = 0
+            for i in range(current_pattern_position - 1):
+                current_word_index += MANTRA_PATTERN[i]['repetitions']
+            current_word_index += current_repetition_count
         else:
             current_word_index = 1
 
-        # Get statistics
-        daily = get_daily_stats(cursor, user_token)
+        # Daily stats
+        today = date.today()
+        cursor.execute("""
+            SELECT total_rounds, total_words
+            FROM japa_daily_counts
+            WHERE user_id = %s AND japa_date = %s
+        """, (user_token, today))
+        daily = cursor.fetchone()
         daily_rounds = int(daily['total_rounds']) if daily else 0
         daily_words = int(daily['total_words']) if daily else 0
 
-        lifetime = get_lifetime_stats(cursor, user_token)
+        # Lifetime stats
+        cursor.execute("""
+            SELECT SUM(total_rounds) AS lifetime_rounds,
+                   SUM(total_words) AS lifetime_words
+            FROM japa_daily_counts
+            WHERE user_id = %s
+        """, (user_token,))
+        lifetime = cursor.fetchone()
         lifetime_rounds = int(lifetime['lifetime_rounds']) if lifetime and lifetime['lifetime_rounds'] else 0
         lifetime_words = int(lifetime['lifetime_words']) if lifetime and lifetime['lifetime_words'] else 0
 
@@ -337,7 +279,6 @@ def japa_page():
 
 @japa_bp.route('/api/japa/start_session', methods=['POST'])
 def start_japa_session():
-    """Start a new japa session or resume existing one."""
     conn = None
     cursor = None
     try:
@@ -345,12 +286,16 @@ def start_japa_session():
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
-        # Check for existing active session
         row = fetch_active_session(cursor, user_token)
         if row:
+            # Calculate display word index for existing session
             current_pattern_position = int(row['current_pattern_position'])
             current_repetition_count = int(row['current_repetition_count'])
-            current_word_index = calculate_display_word_index(current_pattern_position, current_repetition_count)
+
+            current_word_index = 0
+            for i in range(current_pattern_position - 1):
+                current_word_index += MANTRA_PATTERN[i]['repetitions']
+            current_word_index += current_repetition_count
 
             return jsonify({
                 'success': True,
@@ -361,10 +306,18 @@ def start_japa_session():
                 }
             }), 200
 
-        # Ensure table has required columns
-        ensure_session_table_updated(cursor, conn)
+        # Add the new column if it doesn't exist
+        try:
+            cursor.execute("""
+                ALTER TABLE japa_sessions
+                ADD COLUMN current_repetition_count INT DEFAULT 1
+            """)
+            conn.commit()
+        except pymysql.Error as e:
+            # Column might already exist, that's fine
+            if "Duplicate column name" not in str(e):
+                print("Warning: Could not add current_repetition_count column:", e)
 
-        # Create new session
         cursor.execute("""
             INSERT INTO japa_sessions
                 (user_id, session_start, total_count, current_word_index, current_repetition_count, session_active, last_updated)
@@ -372,7 +325,6 @@ def start_japa_session():
                 (%s, NOW(), %s, %s, %s, %s, NOW())
         """, (user_token, 0, 1, 1, 1))
         conn.commit()
-
         return jsonify({
             'success': True,
             'data': {
@@ -390,13 +342,11 @@ def start_japa_session():
 
 @japa_bp.route('/api/japa/update_count', methods=['POST'])
 def update_japa_count():
-    """Process recognized word and update session count."""
     conn = None
     cursor = None
     try:
         data = request.get_json(silent=True) or {}
         recognized_word = (data.get('word') or '').strip()
-        
         if not recognized_word or len(recognized_word) > 100:
             return jsonify({'success': False, 'error': 'Invalid word'}), 400
 
@@ -404,7 +354,6 @@ def update_japa_count():
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
-        # Get current session
         current_session = fetch_active_session(cursor, user_token)
         if not current_session:
             return jsonify({'success': False, 'error': 'No active session found'}), 409
@@ -413,18 +362,13 @@ def update_japa_count():
         current_pattern_position = int(current_session['current_pattern_position'])
         current_repetition_count = int(current_session['current_repetition_count'])
 
-        print(f"DEBUG: Processing word '{recognized_word}' at position {current_pattern_position}, repetition {current_repetition_count}")
-
-        # Get expected word
+        # Get expected word using our new pattern logic
         expected_word_data = get_expected_word_from_session(current_pattern_position, current_repetition_count)
         expected_english = expected_word_data['word_english']
         expected_devanagari = expected_word_data['word_devanagari']
 
-        print(f"DEBUG: Expected word: {expected_english}")
-
-        # Check word match
+        # Enhanced matching
         is_match = is_word_match(recognized_word, expected_english)
-        print(f"DEBUG: Word match result: {is_match}")
 
         if not is_match:
             return jsonify({
@@ -442,19 +386,24 @@ def update_japa_count():
                 ).ratio()
             }), 200
 
-        # Word matched! Advance position
+        # FIXED: Advance counters using corrected logic
         new_count = session_total_count + 1
         new_pattern_position, new_repetition_count, completed_round = advance_position(
             current_pattern_position, current_repetition_count
         )
 
-        print(f"DEBUG: Advanced to position {new_pattern_position}, repetition {new_repetition_count}, completed_round: {completed_round}")
-
-        # Update daily stats if round completed
+        # If completed full cycle, update daily stats
         if completed_round:
-            update_daily_stats(cursor, user_token)
+            today = date.today()
+            cursor.execute("""
+                INSERT INTO japa_daily_counts (user_id, japa_date, total_rounds, total_words)
+                VALUES (%s, %s, 1, %s)
+                ON DUPLICATE KEY UPDATE
+                    total_rounds = total_rounds + 1,
+                    total_words = total_words + %s
+            """, (user_token, today, TOTAL_UTTERANCES, TOTAL_UTTERANCES))
 
-        # Update session
+        # Update session with new position and repetition count
         cursor.execute("""
             UPDATE japa_sessions
             SET total_count = %s, current_word_index = %s, current_repetition_count = %s, last_updated = NOW()
@@ -464,9 +413,12 @@ def update_japa_count():
 
         # Get next word info
         next_word_data = get_expected_word_from_session(new_pattern_position, new_repetition_count)
-        current_word_index = calculate_display_word_index(new_pattern_position, new_repetition_count)
-        
-        print(f"DEBUG: Display word index: {current_word_index}")
+
+        # Calculate display word index for frontend
+        current_word_index = 0
+        for i in range(new_pattern_position - 1):
+            current_word_index += MANTRA_PATTERN[i]['repetitions']
+        current_word_index += new_repetition_count
 
         return jsonify({
             'success': True,
@@ -492,7 +444,6 @@ def update_japa_count():
 
 @japa_bp.route('/api/japa/end_session', methods=['POST'])
 def end_japa_session():
-    """End the current japa session."""
     conn = None
     cursor = None
     try:
@@ -517,7 +468,6 @@ def end_japa_session():
 
 @japa_bp.route('/api/japa/get_stats', methods=['GET'])
 def get_japa_stats():
-    """Get current japa statistics."""
     conn = None
     cursor = None
     try:
@@ -525,13 +475,25 @@ def get_japa_stats():
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
-        # Get daily stats
-        daily_stats = get_daily_stats(cursor, user_token)
+        today = date.today()
+        cursor.execute("""
+            SELECT total_rounds, total_words
+            FROM japa_daily_counts
+            WHERE user_id = %s AND japa_date = %s
+        """, (user_token, today))
+        daily_stats = cursor.fetchone()
+
         daily_rounds = int(daily_stats['total_rounds']) if daily_stats else 0
         daily_words = int(daily_stats['total_words']) if daily_stats else 0
 
-        # Get lifetime stats
-        lifetime = get_lifetime_stats(cursor, user_token)
+        # Lifetime stats
+        cursor.execute("""
+            SELECT SUM(total_rounds) AS lifetime_rounds,
+                   SUM(total_words) AS lifetime_words
+            FROM japa_daily_counts
+            WHERE user_id = %s
+        """, (user_token,))
+        lifetime = cursor.fetchone()
         lifetime_rounds = int(lifetime['lifetime_rounds']) if lifetime and lifetime['lifetime_rounds'] else 0
         lifetime_words = int(lifetime['lifetime_words']) if lifetime and lifetime['lifetime_words'] else 0
 
@@ -559,6 +521,7 @@ def get_japa_stats():
         if cursor: cursor.close()
         if conn: conn.close()
 
+# New API endpoint to get pattern information
 @japa_bp.route('/api/japa/get_pattern', methods=['GET'])
 def get_mantra_pattern():
     """Return the complete mantra pattern with repetition information."""
