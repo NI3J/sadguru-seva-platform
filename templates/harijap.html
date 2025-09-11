@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>जप साधना - Hari Jap</title>
+    <link rel="stylesheet" href="../static/css/harijap.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🕉️ जप साधना 🕉️</h1>
+        
+        <div class="mantra-container">
+            <div class="mantra">जय जय राम कृष्ण हरि</div>
+        </div>
+
+        <div class="counter-section">
+            <div class="count-display" id="countDisplay">0</div>
+            <div class="mala-status" id="malaStatus">जप शुरू करें</div>
+            <div class="total-malas" id="totalMalas">कुल माला: 0</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn">🎤 जप शुरू करें</button>
+            <button class="btn btn-secondary" id="stopBtn" disabled>⏹️ रोकें</button>
+            <button class="btn btn-manual" id="manualBtn">➕ मैन्युअल गिनती</button>
+            <button class="btn btn-danger" id="resetBtn">🔄 रीसेट</button>
+        </div>
+
+        <div class="status-section">
+            <div class="listening-status" id="listeningStatus">माइक्रोफोन तैयार है</div>
+            <div class="recognition-text" id="recognitionText"></div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">108 जप तक: <span id="remainingCount">108</span></div>
+        </div>
+
+        <div class="celebration" id="celebration" style="display: none;">
+            <div class="celebration-text">🎉 एक माला पूर्ण हुई! 🎉</div>
+            <div class="celebration-subtext">जय जय राम कृष्ण हरि</div>
+        </div>
+    </div>
+
+    <script src="../static/js/harijap.js"></script>
+</body>
+</html>
