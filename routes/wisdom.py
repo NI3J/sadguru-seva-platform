@@ -625,3 +625,11 @@ def debug_page_calculation():
     <p><a href="/knowledge/satsang?page={page_number}">View Page {page_number}</a></p>
     <p><a href="/knowledge/satsang?page=5">View Page 5 (has data)</a></p>
     """
+
+@wisdom_bp.route('/harijap')
+def harijap():
+    """
+    🕉️ हरि जप साधना - Voice-based jap counter
+    Accessible to all users without authentication
+    """
+    return render_template('harijap.html')
