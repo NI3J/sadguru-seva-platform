@@ -12,7 +12,7 @@
         <h1 class="title">🕉️ जप साधना 🕉️</h1>
         
         <div class="mantra-container">
-            <div class="mantra">जय जय राम कृष्ण हरि</div>
+            <div class="mantra">जय जय राम कृष्णा हारी</div>
         </div>
 
         <div class="counter-section">
@@ -46,6 +46,8 @@
         </div>
     </div>
 
-    <script src="../static/js/harijap.js"></script>
-</body>
-</html>
+{% endblock %}
+
+{% block footer_scripts %}
+<script src="{{ url_for('static', filename='js/harijap.js') }}"></script>
+{% endblock %}

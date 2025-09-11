@@ -1,4 +1,94 @@
-// जप साधना - Hari Jap Counter JavaScript
+initializeSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            
+            // Try multiple language settings
+            this.recognition.lang = 'hi-IN'; // Hindi first
+            
+            // Add alternative language fallback
+            this.recognition.onstart = () => {
+                this.isListening = true;
+                this.listeningStatus.textContent = '🎤 सुन रहा हूँ... (कृपया स्पष्ट बोलें)';
+                this.listeningStatus.classList.add('listening');
+                this.startBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                console.log('🎤 Speech recognition started with language:', this.recognition.lang);
+            };
+            
+            this.recognition.onend = () => {
+                this.isListening = false;
+                this.listeningStatus.textContent = 'माइक्रोफोन बंद है';
+                this.listeningStatus.classList.remove('listening');
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.recognitionText.textContent = '';
+                console.log('🎤 Speech recognition ended');
+            };
+            
+            this.recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    const confidence = event.results[i][0].confidence;
+                    
+                    console.log(`🎤 Result ${i}:`, transcript, `(confidence: ${confidence})`);
+                    
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                        console.log('🎤 Final transcript:', transcript);
+                    } else {
+                        interimTranscript += transcript;
+                        console.log('🎤 Interim transcript:', transcript);
+                    }
+                }
+                
+                // Display what's being recognized
+                const displayText = finalTranscript || interimTranscript;
+                this.recognitionText.textContent = displayText;
+                
+                // Check both interim and final results
+                if (finalTranscript) {
+                    this.checkForTargetPhrase(finalTranscript);
+                } else if (interimTranscript) {
+                    // Also check interim results for faster response
+                    this.checkForTargetPhrase(interimTranscript);
+                }
+            };
+            
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.listeningStatus.textContent = 'त्रुटि: ' + event.error;
+                
+                // Try to restart with different language if language error
+                if (event.error === 'language-not-supported') {
+                    console.log('🔄 Trying English language...');
+                    this.recognition.lang = 'en-US';
+                    setTimeout(() => {
+                        if (!this.isListening) {
+                            this.startListening();
+                        }
+                    }, 1000);
+                }
+                
+                this.isListening = false;
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+            };
+            
+            this.recognition.onnomatch = () => {
+                console.log('🎤 No match found by speech recognition');
+                this.recognitionText.textContent = 'कुछ समझ नहीं आया, फिर कोशिश करें';
+            };
+            
+        } else {
+            this.listeningStatus.textContent = 'Speech Recognition उपलब्ध नहीं है';
+            this.start// जप साधना - Hari Jap Counter JavaScript
 class HariJapCounter {
     constructor() {
         this.count = 0;
