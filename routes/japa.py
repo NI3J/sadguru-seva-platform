@@ -140,7 +140,7 @@ def normalize_word(word):
     return word
 
 def is_word_match(recognized_word, expected_word):
-    """Enhanced word matching with fuzzy logic and multiple variations."""
+    """Enhanced word matching with strict separation between different words."""
     recognized = normalize_word(recognized_word)
     expected = normalize_word(expected_word)
 
@@ -148,52 +148,46 @@ def is_word_match(recognized_word, expected_word):
     if recognized == expected:
         return True
 
-    # Enhanced word mappings with more variations
+    # STRICT word mappings - each word has completely distinct variations
     word_mappings = {
         'radhe': [
-            'radhe', 'राधे', 'राधे', 'radhe', 'radhe', 'ready', 'radi', 'radhi',
-            'rade', 'radey', 'radhai', 'radhey', 'राधे', 'राधेय'
+            'radhe', 'राधे', 'radhey', 'radhai', 'rade', 'radey'
         ],
         'krishna': [
-            'krishna', 'कृष्णा', 'कृष्णा', 'krishna', 'krisha', 'krishnana', 'krisna',
-            'krishnaa', 'krishnaha', 'krsna', 'कृष्णाय', 'कृष्णा', 'कृषणा'
+            'krishna', 'कृष्णा', 'krisha', 'krisna', 'krishnaa', 'krsna'
         ],
         'shyam': [
-            'shyam', 'श्याम', 'sham', 'shaam', 'shyam', 'श्याम', 'syam',
-            'shyam', 'shyamah', 'श्यामाय', 'shyamal', 'श्यामल', 'shym'
+            'shyam', 'श्याम', 'sham', 'shaam', 'syam', 'shym'
+            # NO variations that could match shyama
         ],
         'shyama': [
-            'shyama', 'श्यामा', 'shyama', 'shyama', 'shyama', 'श्यामा', 'shyama',
-            'shyama', 'shyama', 'श्यामा', 'shyama', 'श्यामा'
+            'shyama', 'श्यामा', 'shyamaa'
+            # NO variations that could match shyam
         ]
     }
 
-    # Check if recognized word matches any variation of expected word
+    # STRICT CHECK: Only allow exact variations for expected word
     if expected in word_mappings:
         for variation in word_mappings[expected]:
             if recognized == normalize_word(variation):
                 return True
 
-    # Check reverse mapping (if recognized word is a variation of expected)
-    for base_word, variations in word_mappings.items():
-        if base_word == expected:
-            for variation in variations:
-                if recognized == normalize_word(variation):
-                    return True
-
-    # Fuzzy matching for close pronunciations
-    similarity_threshold = 0.7
-    if len(recognized) >= 3 and len(expected) >= 3:
+    # DISABLED fuzzy matching between shyam and shyama completely
+    if len(recognized) >= 4 and len(expected) >= 4:
+        # STRICT prevention: Never allow shyam/shyama cross-match
+        if (expected == 'shyam' and 'shyama' in recognized) or \
+           (expected == 'shyama' and 'shyam' in recognized):
+            return False
+        
+        # Additional strict checks for other similar words
+        if (expected == 'radhe' and 'krishna' in recognized) or \
+           (expected == 'krishna' and 'radhe' in recognized):
+            return False
+        
+        # Only very high similarity for non-conflicting words
         similarity = difflib.SequenceMatcher(None, recognized, expected).ratio()
-        if similarity >= similarity_threshold:
+        if similarity >= 0.90:  # Very high threshold
             return True
-
-    # Check for partial matches (useful for longer words)
-    if len(expected) >= 4:
-        if recognized in expected or expected in recognized:
-            min_length = min(len(recognized), len(expected))
-            if min_length >= 3:
-                return True
 
     return False
 
