@@ -4,7 +4,7 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import sys, os
-from datetime import datetime, timedelta
+from datetime import datetime
 import locale
 from flask import Flask
 from flask_mail import Mail
@@ -38,15 +38,6 @@ from routes.harijap_auth import harijap_auth_bp, require_harijap_auth
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.secret_key = os.getenv("SECRET_KEY", os.urandom(24).hex())
-
-    # 🔧 Session Configuration - CRITICAL FOR HARI JAP AUTH
-    app.config.update({
-        'PERMANENT_SESSION_LIFETIME': timedelta(hours=24),  # 24 hours session
-        'SESSION_COOKIE_SAMESITE': 'Lax',  # Allow cross-site requests
-        'SESSION_COOKIE_SECURE': False,    # Allow HTTP (not HTTPS only)
-        'SESSION_COOKIE_HTTPONLY': True,  # Prevent XSS attacks
-        'SESSION_COOKIE_NAME': 'harijap_session',  # Custom session name
-    })
 
     # 🔧 Mail Configuration
     app.config.update({
@@ -130,7 +121,7 @@ def register_marathi_filters(app):
         return f"{date.day} {marathi_month} {date.year}"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# �� Debug Template Route
+# 🧪 Debug Template Route
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def register_debug_route(app):
@@ -147,7 +138,7 @@ def register_debug_route(app):
                         files.append(rel_path)
 
             return f"""
-            <h1>�� Debug: Template Files</h1>
+            <h1>🔍 Debug: Template Files</h1>
             <p><strong>Template Folder:</strong> {template_folder}</p>
             <p><strong>Found {len(files)} HTML templates:</strong></p>
             <ul>
@@ -173,10 +164,6 @@ if __name__ == '__main__':
     print("🕉️ Spiritual Flask app launching...")
     print(f"📁 Template folder: {app.template_folder}")
     print(f"📁 Static folder: {app.static_folder}")
-    print("🔧 Session configuration:")
-    print(f"  - PERMANENT_SESSION_LIFETIME: {app.config.get('PERMANENT_SESSION_LIFETIME')}")
-    print(f"  - SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
-    print(f"  - SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
 
     template_check = os.path.join(app.template_folder, 'program', 'program.html')
     if os.path.exists(template_check):

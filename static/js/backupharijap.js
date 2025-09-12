@@ -1,6 +1,6 @@
 /**
  * 🕉️ हरि जप साधना - Voice-based Jap Counter
- * Complete spiritual chanting application with database persistence
+ * A spiritual chanting application with voice recognition
  * Author: Sadguru Seva Platform
  * Version: 2.0
  */
@@ -21,21 +21,11 @@ class HariJapCounter {
             fallbackLang: 'en-US',
             similarityThreshold: 0.7,
             celebrationDuration: 3000,
-            pulseAnimationDuration: 300,
-            autoSaveInterval: 5000, // Auto-save every 5 seconds
-            sessionCheckInterval: 30000 // Check session every 30 seconds
+            pulseAnimationDuration: 300
         };
         
         // DOM elements
         this.elements = {};
-        
-        // State management
-        this.state = {
-            isInitialized: false,
-            isSaving: false,
-            autoSaveTimer: null,
-            sessionCheckTimer: null
-        };
         
         // Initialize the application
         this.init();
@@ -44,21 +34,13 @@ class HariJapCounter {
     /**
      * Initialize the application
      */
-    async init() {
-        try {
-            this.initializeElements();
-            this.initializeSpeechRecognition();
-            this.setupEventListeners();
-            await this.loadSavedData();
-            this.updateDisplay();
-            this.startAutoSave();
-            this.startSessionMonitoring();
-            this.state.isInitialized = true;
-            this.logActivity('HARI_JAP_INITIALIZED');
-        } catch (error) {
-            console.error('Error initializing Hari Jap Counter:', error);
-            this.showError('प्रारंभिकरण में त्रुटि। पृष्ठ को पुनः लोड करें।');
-        }
+    init() {
+        this.initializeElements();
+        this.initializeSpeechRecognition();
+        this.setupEventListeners();
+        this.loadSavedData();
+        this.updateDisplay();
+        this.logInitialization();
     }
     
     /**
@@ -135,7 +117,7 @@ class HariJapCounter {
         this.isListening = true;
         this.updateListeningStatus('🎤 सुन रहा हूँ... (कृपया स्पष्ट बोलें)', true);
         this.toggleButtons(true);
-        this.logActivity('SPEECH_RECOGNITION_STARTED');
+        console.log('�� Speech recognition started with language:', this.recognition.lang);
     }
     
     /**
@@ -146,7 +128,7 @@ class HariJapCounter {
         this.updateListeningStatus('माइक्रोफोन बंद है', false);
         this.toggleButtons(false);
         this.clearRecognitionText();
-        this.logActivity('SPEECH_RECOGNITION_ENDED');
+        console.log('�� Speech recognition ended');
     }
     
     /**
@@ -176,15 +158,14 @@ class HariJapCounter {
             const transcript = result[0].transcript;
             const confidence = result[0].confidence;
             
-            this.logActivity('SPEECH_RESULT', { 
-                transcript: transcript.substring(0, 20) + '...', 
-                confidence: confidence.toFixed(2) 
-            });
+            console.log(`🎤 Result ${i}:`, transcript, `(confidence: ${confidence})`);
             
             if (result.isFinal) {
                 finalTranscript += transcript;
+                console.log('🎤 Final transcript:', transcript);
             } else {
                 interimTranscript += transcript;
+                console.log('🎤 Interim transcript:', transcript);
             }
         }
         
@@ -204,7 +185,6 @@ class HariJapCounter {
         
         this.isListening = false;
         this.toggleButtons(false);
-        this.logActivity('SPEECH_RECOGNITION_ERROR', { error: event.error });
     }
     
     /**
@@ -224,6 +204,7 @@ class HariJapCounter {
      * Handle recognition no match
      */
     handleRecognitionNoMatch() {
+        console.log('🎤 No match found by speech recognition');
         this.updateRecognitionText('कुछ समझ नहीं आया, फिर कोशिश करें');
     }
     
@@ -232,9 +213,7 @@ class HariJapCounter {
      */
     handleSpeechRecognitionUnavailable() {
         this.updateListeningStatus('Speech Recognition उपलब्ध नहीं है', false);
-        if (this.elements.startBtn) {
-            this.elements.startBtn.disabled = true;
-        }
+        this.elements.startBtn.disabled = true;
     }
     
     /**
@@ -243,7 +222,6 @@ class HariJapCounter {
     setupEventListeners() {
         this.setupButtonEventListeners();
         this.setupKeyboardEventListeners();
-        this.setupWindowEventListeners();
     }
     
     /**
@@ -269,8 +247,6 @@ class HariJapCounter {
      */
     setupKeyboardEventListeners() {
         document.addEventListener('keydown', (e) => {
-            if (this.state.isSaving) return; // Prevent actions while saving
-            
             switch (e.code) {
                 case 'Space':
                     if (!this.isListening) {
@@ -287,33 +263,6 @@ class HariJapCounter {
                     e.preventDefault();
                     this.incrementCount();
                     break;
-                case 'KeyR':
-                    if (e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        this.resetCounter();
-                    }
-                    break;
-            }
-        });
-    }
-    
-    /**
-     * Setup window event listeners
-     */
-    setupWindowEventListeners() {
-        window.addEventListener('beforeunload', () => {
-            this.saveData();
-        });
-        
-        window.addEventListener('focus', () => {
-            this.checkSessionStatus();
-        });
-        
-        window.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.saveData();
-            } else {
-                this.checkSessionStatus();
             }
         });
     }
@@ -333,7 +282,6 @@ class HariJapCounter {
         if (isMatch) {
             this.incrementCount();
             this.showRecognitionSuccess();
-            this.logActivity('MANTRA_DETECTED', { transcript: transcript.substring(0, 30) });
         }
     }
     
@@ -420,19 +368,15 @@ class HariJapCounter {
     /**
      * Increment the count
      */
-    async incrementCount() {
-        if (this.state.isSaving) return; // Prevent increment while saving
-        
+    incrementCount() {
         this.count++;
         this.updateDisplay();
-        await this.saveData();
+        this.saveData();
         this.animateCountIncrement();
         
         if (this.isMalaComplete()) {
-            await this.completeMala();
+            this.completeMala();
         }
-        
-        this.logActivity('COUNT_INCREMENTED', { newCount: this.count });
     }
     
     /**
@@ -445,23 +389,21 @@ class HariJapCounter {
     /**
      * Complete a mala
      */
-    async completeMala() {
+    completeMala() {
         this.totalMalas++;
         this.showCelebration();
-        await this.saveData();
-        this.logActivity('MALA_COMPLETED', { totalMalas: this.totalMalas });
+        this.saveData();
     }
     
     /**
      * Reset the counter
      */
-    async resetCounter() {
+    resetCounter() {
         if (confirm('क्या आप वाकई काउंटर को रीसेट करना चाहते हैं?')) {
             this.count = 0;
             this.totalMalas = 0;
             this.updateDisplay();
-            await this.saveData();
-            this.logActivity('COUNTER_RESET');
+            this.saveData();
         }
     }
     
@@ -623,190 +565,81 @@ class HariJapCounter {
     }
     
     /**
-     * Load saved data from database
+     * Save data to storage
      */
-    async loadSavedData() {
-        try {
-            const response = await fetch('/harijap/api/state', { 
-                credentials: 'same-origin' 
-            });
-            const data = await response.json();
-            
-            if (data && data.success) {
-                this.count = Number(data.count || 0);
-                this.totalMalas = Number(data.total_malas || 0);
-                this.logActivity('DATA_LOADED', { count: this.count, totalMalas: this.totalMalas });
-            } else {
-                this.logActivity('DATA_LOAD_FAILED', { error: data.error });
-            }
-        } catch (error) {
-            console.log('Could not load saved data:', error);
-            this.logActivity('DATA_LOAD_ERROR', { error: error.message });
-        }
-    }
-    
-    /**
-     * Save data to database
-     */
-    async saveData() {
-        if (this.state.isSaving) return; // Prevent concurrent saves
+    saveData() {
+        const data = {
+            count: this.count,
+            totalMalas: this.totalMalas,
+            lastSaved: new Date().toISOString()
+        };
         
-        this.state.isSaving = true;
+        // Use localStorage if available, otherwise use global variable
+        if (typeof Storage !== 'undefined') {
+            localStorage.setItem('hariJapData', JSON.stringify(data));
+        } else {
+            window.hariJapData = data;
+        }
+    }
+    
+    /**
+     * Load saved data from storage
+     */
+    loadSavedData() {
+        let data = null;
         
-        try {
-            const payload = {
-                count: this.count,
-                totalMalas: this.totalMalas
-            };
-            
-            const response = await fetch('/harijap/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify(payload)
-            });
-            
-            const data = await response.json();
-            
-            if (data && data.success) {
-                this.logActivity('DATA_SAVED', { count: this.count, totalMalas: this.totalMalas });
-            } else {
-                this.logActivity('DATA_SAVE_FAILED', { error: data.error });
+        // Try localStorage first, then global variable
+        if (typeof Storage !== 'undefined') {
+            const savedData = localStorage.getItem('hariJapData');
+            if (savedData) {
+                try {
+                    data = JSON.parse(savedData);
+                } catch (e) {
+                    console.warn('Error parsing saved data:', e);
+                }
             }
-        } catch (error) {
-            console.log('Could not save data:', error);
-            this.logActivity('DATA_SAVE_ERROR', { error: error.message });
-        } finally {
-            this.state.isSaving = false;
+        } else if (window.hariJapData) {
+            data = window.hariJapData;
+        }
+        
+        if (data) {
+            this.count = data.count || 0;
+            this.totalMalas = data.totalMalas || 0;
         }
     }
     
     /**
-     * Start auto-save functionality
+     * Log initialization message
      */
-    startAutoSave() {
-        this.state.autoSaveTimer = setInterval(() => {
-            if (this.state.isInitialized && !this.state.isSaving) {
-                this.saveData();
-            }
-        }, this.config.autoSaveInterval);
-    }
-    
-    /**
-     * Start session monitoring
-     */
-    startSessionMonitoring() {
-        this.state.sessionCheckTimer = setInterval(() => {
-            this.checkSessionStatus();
-        }, this.config.sessionCheckInterval);
-    }
-    
-    /**
-     * Check session status
-     */
-    async checkSessionStatus() {
-        try {
-            const response = await fetch('/harijap/auth/check_session', {
-                credentials: 'same-origin'
-            });
-            const data = await response.json();
-            
-            if (!data.authenticated) {
-                this.handleSessionExpired();
-            }
-        } catch (error) {
-            console.log('Session check failed:', error);
-        }
-    }
-    
-    /**
-     * Handle session expired
-     */
-    handleSessionExpired() {
-        alert('सत्र समाप्त हो गया। कृपया दोबारा लॉगिन करें।');
-        window.location.href = '/harijap/auth';
-    }
-    
-    /**
-     * Show error message
-     */
-    showError(message) {
-        console.error(message);
-        // You can add a toast notification here if needed
-    }
-    
-    /**
-     * Log activity
-     */
-    logActivity(activity, details = {}) {
-        console.log(`[HariJapCounter] ${activity}:`, details);
-    }
-    
-    /**
-     * Cleanup method
-     */
-    destroy() {
-        if (this.state.autoSaveTimer) {
-            clearInterval(this.state.autoSaveTimer);
-        }
-        if (this.state.sessionCheckTimer) {
-            clearInterval(this.state.sessionCheckTimer);
-        }
-        if (this.recognition && this.isListening) {
-            this.recognition.stop();
-        }
-        this.logActivity('HARI_JAP_DESTROYED');
-    }
-}
-
-// Global functions for onclick handlers (backward compatibility)
-function sendOTP() {
-    if (window.hariJapLogin) {
-        window.hariJapLogin.sendOTP();
-    }
-}
-
-function verifyOTP() {
-    if (window.hariJapLogin) {
-        window.hariJapLogin.verifyOTP();
-    }
-}
-
-function resendOTP() {
-    if (window.hariJapLogin) {
-        window.hariJapLogin.resendOTP();
-    }
-}
-
-function goBack() {
-    if (window.hariJapLogin) {
-        window.hariJapLogin.goBack();
-    }
-}
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        window.hariJapCounter = new HariJapCounter();
-        console.log('🕉️ हरि जप साधना initialized successfully!');
+    logInitialization() {
+        console.log('��️ जप साधना initialized successfully!');
         console.log('Shortcuts:');
         console.log('- Space: Start listening');
         console.log('- Escape: Stop listening');
         console.log('- Enter: Manual count increment');
-        console.log('- Ctrl+R: Reset counter');
+    }
+}
+
+/**
+ * Initialize the application when DOM is loaded
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const hariJapCounter = new HariJapCounter();
+        
+        // Make it globally accessible for debugging
+        window.hariJapCounter = hariJapCounter;
+        
+        console.log('��️ हरि जप साधना loaded successfully!');
+        
     } catch (error) {
         console.error('Error initializing Hari Jap Counter:', error);
     }
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.hariJapCounter) {
-        window.hariJapCounter.destroy();
-    }
-});
-
-// Service Worker registration for offline functionality (optional)
+/**
+ * Service Worker registration for offline functionality
+ */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')

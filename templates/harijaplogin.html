@@ -1,0 +1,42 @@
+<!-- templates/harijaplogin.html -->
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>हरि जप साधना - प्रवेश</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/harijaplogin.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="login-card">
+      <div class="header">
+        <h1 class="title">🕉️ हरि जप साधना</h1>
+        <p class="subtitle">आध्यात्मिक यात्रा शुरू करें</p>
+      </div>
+
+      <div id="messageContainer"></div>
+
+      <div id="loginForm" class="form-section">
+        <div class="form-group">
+          <label for="name">नाम *</label>
+          <input type="text" id="name" placeholder="अपना नाम दर्ज करें" maxlength="50">
+        </div>
+
+        <div class="form-group">
+          <label for="mobile">मोबाइल नंबर *</label>
+          <input type="tel" id="mobile" placeholder="10 अंकों का मोबाइल नंबर" maxlength="14">
+        </div>
+
+        <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">
+          <span class="btn-text">प्रवेश करें</span>
+          <span class="loading">जाँच रहे हैं…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/harijaplogin.js') }}"></script>
+</body>
+</html>
