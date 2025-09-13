@@ -869,9 +869,44 @@ class HariJapCounter {
     }
     
     /**
-     * Get current statistics
+     * Data recovery from your current state
+     * Call this function to recover from the reset
      */
-    getStatistics() {
+    recoverFromReset() {
+        // Based on your database showing total_malas = 3, let's recover
+        const malasFromDB = 3; // From your database query
+        
+        if (malasFromDB > 0) {
+            // Calculate approximate jap count from completed malas
+            // 3 complete malas = 3 × 108 = 324 japs
+            // Plus the current mala progress shown in UI (84/108)
+            const completedJaps = malasFromDB * this.config.japsPerMala;
+            const currentMalaProgress = 84; // From your UI screenshot
+            
+            this.japCount = completedJaps + currentMalaProgress;
+            this.totalMalas = Math.floor(this.japCount / this.config.japsPerMala);
+            this.currentMalaJaps = this.japCount % this.config.japsPerMala;
+            
+            console.log('🔧 Data recovered!');
+            console.log('Recovered state:', {
+                japCount: this.japCount,
+                totalMalas: this.totalMalas,
+                currentMalaJaps: this.currentMalaJaps,
+                displayCount: this.japCount * this.config.wordsPerJap
+            });
+            
+            this.updateDisplay();
+            this.saveData();
+            
+            return {
+                success: true,
+                recoveredJapCount: this.japCount,
+                recoveredDisplayCount: this.japCount * this.config.wordsPerJap
+            };
+        }
+        
+        return { success: false, message: 'No data to recover' };
+    }
         return {
             japCount: this.japCount,
             totalWords: this.japCount * this.config.wordsPerJap,
@@ -980,4 +1015,43 @@ window.getHariJapStats = function() {
         return stats;
     }
     return null;
+};
+
+// Manual recovery functions
+window.recoverHariJapData = function() {
+    if (window.hariJapCounter) {
+        return window.hariJapCounter.recoverFromReset();
+    }
+    return { success: false, message: 'Counter not initialized' };
+};
+
+window.restoreFromBackup = function() {
+    if (window.hariJapCounter) {
+        return window.hariJapCounter.restoreFromBackup();
+    }
+    return false;
+};
+
+// Emergency manual set function (use with caution)
+window.setHariJapCount = function(japCount, saveToDb = true) {
+    if (window.hariJapCounter && typeof japCount === 'number' && japCount >= 0) {
+        window.hariJapCounter.japCount = japCount;
+        window.hariJapCounter.totalMalas = Math.floor(japCount / window.hariJapCounter.config.japsPerMala);
+        window.hariJapCounter.currentMalaJaps = japCount % window.hariJapCounter.config.japsPerMala;
+        window.hariJapCounter.updateDisplay();
+        
+        if (saveToDb) {
+            window.hariJapCounter.saveData();
+        }
+        
+        console.log('Manual count set to:', {
+            japCount: japCount,
+            displayCount: japCount * 5,
+            totalMalas: window.hariJapCounter.totalMalas,
+            currentMalaJaps: window.hariJapCounter.currentMalaJaps
+        });
+        
+        return true;
+    }
+    return false;
 };
