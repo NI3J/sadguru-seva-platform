@@ -1,29 +1,32 @@
 /**
- * 🕉️ हरि जप साधना - Voice-based Jap Counter
- * Complete spiritual chanting application with database persistence
- * Author: Sadguru Seva Platform
- * Version: 2.0
+ * 🕉️ हरि जप साधना - Voice-based Jap Counter (Improved Version)
+ * 5-word mantra: "जय जय राम कृष्णा हारी" = 5 words
+ * Mala calculation: 5 words = 1 mala
+ * Total count: 108 malas × 5 words = 540 total count
  */
 
 class HariJapCounter {
     constructor() {
         // Core properties
-        this.count = 0;
-        this.totalMalas = 0;
+        this.count = 0;           // Total word count
+        this.totalMalas = 0;      // Total malas completed
+        this.currentMalaWords = 0; // Words in current mala (0-5)
         this.isListening = false;
         this.recognition = null;
-        this.targetPhrase = 'जय जय राम कृष्ण हरि';
+        this.targetPhrase = 'जय जय राम कृष्णा हारी';
         
         // Configuration
         this.config = {
-            malaSize: 108,
+            wordsPerMala: 5,           // 5 words = 1 mala
+            malasPerRound: 108,        // 108 malas per round
+            totalWordsPerRound: 540,   // 108 × 5 = 540 words
             recognitionLang: 'hi-IN',
             fallbackLang: 'en-US',
             similarityThreshold: 0.7,
             celebrationDuration: 3000,
             pulseAnimationDuration: 300,
-            autoSaveInterval: 5000, // Auto-save every 5 seconds
-            sessionCheckInterval: 30000 // Check session every 30 seconds
+            autoSaveInterval: 5000,
+            sessionCheckInterval: 30000
         };
         
         // DOM elements
@@ -34,7 +37,9 @@ class HariJapCounter {
             isInitialized: false,
             isSaving: false,
             autoSaveTimer: null,
-            sessionCheckTimer: null
+            sessionCheckTimer: null,
+            lastRecognizedTime: 0,     // Prevent double counting
+            recognitionCooldown: 2000  // 2 seconds cooldown between recognitions
         };
         
         // Initialize the application
@@ -269,7 +274,7 @@ class HariJapCounter {
      */
     setupKeyboardEventListeners() {
         document.addEventListener('keydown', (e) => {
-            if (this.state.isSaving) return; // Prevent actions while saving
+            if (this.state.isSaving) return;
             
             switch (e.code) {
                 case 'Space':
@@ -331,6 +336,14 @@ class HariJapCounter {
         });
         
         if (isMatch) {
+            // Prevent double counting with cooldown
+            const now = Date.now();
+            if (now - this.state.lastRecognizedTime < this.state.recognitionCooldown) {
+                console.log('�� Ignoring duplicate recognition (cooldown)');
+                return;
+            }
+            
+            this.state.lastRecognizedTime = now;
             this.incrementCount();
             this.showRecognitionSuccess();
             this.logActivity('MANTRA_DETECTED', { transcript: transcript.substring(0, 30) });
@@ -342,12 +355,12 @@ class HariJapCounter {
      */
     getPhraseVariations() {
         return [
-            'जय जय राम कृष्ण हरि',
+            'जय जय राम कृष्णा हारी',
             'जय जय राम कृष्ण हारी',
             'jai jai ram krishna hari',
             'jai jai rama krishna hari',
-            'जय राम कृष्ण हरि',
-            'राम कृष्ण हरि'
+            'जय राम कृष्ण हारी',
+            'राम कृष्ण हारी'
         ];
     }
     
@@ -418,38 +431,43 @@ class HariJapCounter {
     }
     
     /**
-     * Increment the count
+     * Increment the count (5 words = 1 mala)
      */
     async incrementCount() {
-        if (this.state.isSaving) return; // Prevent increment while saving
+        if (this.state.isSaving) return;
         
+        // Increment word count
         this.count++;
+        this.currentMalaWords++;
+        
+        // Check if current mala is complete (5 words)
+        if (this.currentMalaWords >= this.config.wordsPerMala) {
+            this.completeMala();
+        }
+        
         this.updateDisplay();
         await this.saveData();
         this.animateCountIncrement();
         
-        if (this.isMalaComplete()) {
-            await this.completeMala();
-        }
-        
-        this.logActivity('COUNT_INCREMENTED', { newCount: this.count });
+        this.logActivity('COUNT_INCREMENTED', { 
+            newCount: this.count, 
+            currentMalaWords: this.currentMalaWords,
+            totalMalas: this.totalMalas
+        });
     }
     
     /**
-     * Check if mala is complete
-     */
-    isMalaComplete() {
-        return this.count % this.config.malaSize === 0;
-    }
-    
-    /**
-     * Complete a mala
+     * Complete a mala (5 words = 1 mala)
      */
     async completeMala() {
         this.totalMalas++;
+        this.currentMalaWords = 0; // Reset current mala words
         this.showCelebration();
         await this.saveData();
-        this.logActivity('MALA_COMPLETED', { totalMalas: this.totalMalas });
+        this.logActivity('MALA_COMPLETED', { 
+            totalMalas: this.totalMalas,
+            totalWords: this.count
+        });
     }
     
     /**
@@ -459,6 +477,7 @@ class HariJapCounter {
         if (confirm('क्या आप वाकई काउंटर को रीसेट करना चाहते हैं?')) {
             this.count = 0;
             this.totalMalas = 0;
+            this.currentMalaWords = 0;
             this.updateDisplay();
             await this.saveData();
             this.logActivity('COUNTER_RESET');
@@ -491,14 +510,12 @@ class HariJapCounter {
     updateMalaStatus() {
         if (!this.elements.malaStatus) return;
         
-        const currentMalaCount = this.count % this.config.malaSize;
-        
         if (this.count === 0) {
             this.elements.malaStatus.textContent = 'जप शुरू करें';
-        } else if (currentMalaCount === 0) {
+        } else if (this.currentMalaWords === 0 && this.totalMalas > 0) {
             this.elements.malaStatus.textContent = `${this.totalMalas} माला पूर्ण!`;
         } else {
-            this.elements.malaStatus.textContent = `वर्तमान माला: ${currentMalaCount}/${this.config.malaSize}`;
+            this.elements.malaStatus.textContent = `वर्तमान माला: ${this.currentMalaWords}/${this.config.wordsPerMala}`;
         }
     }
     
@@ -517,8 +534,7 @@ class HariJapCounter {
     updateProgressBar() {
         if (!this.elements.progressFill) return;
         
-        const currentMalaCount = this.count % this.config.malaSize;
-        const progressPercentage = (currentMalaCount / this.config.malaSize) * 100;
+        const progressPercentage = (this.currentMalaWords / this.config.wordsPerMala) * 100;
         this.elements.progressFill.style.width = `${progressPercentage}%`;
     }
     
@@ -528,9 +544,8 @@ class HariJapCounter {
     updateRemainingCount() {
         if (!this.elements.remainingCount) return;
         
-        const currentMalaCount = this.count % this.config.malaSize;
-        const remainingInCurrentMala = this.config.malaSize - currentMalaCount;
-        this.elements.remainingCount.textContent = remainingInCurrentMala === this.config.malaSize ? this.config.malaSize : remainingInCurrentMala;
+        const remainingInCurrentMala = this.config.wordsPerMala - this.currentMalaWords;
+        this.elements.remainingCount.textContent = remainingInCurrentMala === this.config.wordsPerMala ? this.config.wordsPerMala : remainingInCurrentMala;
     }
     
     /**
@@ -635,7 +650,13 @@ class HariJapCounter {
             if (data && data.success) {
                 this.count = Number(data.count || 0);
                 this.totalMalas = Number(data.total_malas || 0);
-                this.logActivity('DATA_LOADED', { count: this.count, totalMalas: this.totalMalas });
+                // Calculate current mala words from total count
+                this.currentMalaWords = this.count % this.config.wordsPerMala;
+                this.logActivity('DATA_LOADED', { 
+                    count: this.count, 
+                    totalMalas: this.totalMalas,
+                    currentMalaWords: this.currentMalaWords
+                });
             } else {
                 this.logActivity('DATA_LOAD_FAILED', { error: data.error });
             }
@@ -649,7 +670,7 @@ class HariJapCounter {
      * Save data to database
      */
     async saveData() {
-        if (this.state.isSaving) return; // Prevent concurrent saves
+        if (this.state.isSaving) return;
         
         this.state.isSaving = true;
         
@@ -732,7 +753,6 @@ class HariJapCounter {
      */
     showError(message) {
         console.error(message);
-        // You can add a toast notification here if needed
     }
     
     /**
