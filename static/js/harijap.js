@@ -1,32 +1,36 @@
 /**
- * 🕉️ हरि जप साधना - Voice-based Jap Counter (Improved Version)
- * 5-word mantra: "जय जय राम कृष्णा हारी" = 5 words
- * Mala calculation: 5 words = 1 mala
- * Total count: 108 malas × 5 words = 540 total count
+ * 🕉️ हरि जप साधना - Voice-based Jap Counter (Fixed Version)
+ * 1 pronunciation of "जय जय राम कृष्णा हारी" = 1 jap count
+ * 1 mala = 108 japs
+ * Total count shows: japs × 5 (since each jap has 5 words)
+ * Total for 108 malas = 108 × 108 × 5 = 58,320 words
  */
 
 class HariJapCounter {
     constructor() {
-        // Core properties
-        this.count = 0;           // Total word count
-        this.totalMalas = 0;      // Total malas completed
-        this.currentMalaWords = 0; // Words in current mala (0-5)
+        // Core properties - Fixed Logic
+        this.japCount = 0;           // Total jap pronunciations
+        this.totalMalas = 0;         // Total malas completed (108 japs each)
+        this.currentMalaJaps = 0;    // Japs in current mala (0-108)
         this.isListening = false;
         this.recognition = null;
         this.targetPhrase = 'जय जय राम कृष्णा हारी';
         
         // Configuration
         this.config = {
-            wordsPerMala: 5,           // 5 words = 1 mala
-            malasPerRound: 108,        // 108 malas per round
-            totalWordsPerRound: 540,   // 108 × 5 = 540 words
+            wordsPerJap: 5,              // Each jap = 5 words (for display only)
+            japsPerMala: 108,            // 108 japs = 1 mala
+            totalMalasTarget: 108,       // Target: 108 malas
             recognitionLang: 'hi-IN',
             fallbackLang: 'en-US',
-            similarityThreshold: 0.7,
+            similarityThreshold: 0.6,
             celebrationDuration: 3000,
             pulseAnimationDuration: 300,
             autoSaveInterval: 5000,
-            sessionCheckInterval: 30000
+            sessionCheckInterval: 30000,
+            recognitionCooldown: 2000,   // 2 seconds cooldown
+            autoRestart: true,
+            maxRecognitionAttempts: 10   // Maximum restart attempts
         };
         
         // DOM elements
@@ -38,8 +42,10 @@ class HariJapCounter {
             isSaving: false,
             autoSaveTimer: null,
             sessionCheckTimer: null,
-            lastRecognizedTime: 0,     // Prevent double counting
-            recognitionCooldown: 2000  // 2 seconds cooldown between recognitions
+            lastRecognizedTime: 0,
+            isProcessing: false,
+            recognitionAttempts: 0,
+            restartTimeout: null
         };
         
         // Initialize the application
@@ -118,8 +124,9 @@ class HariJapCounter {
      */
     setupRecognitionProperties() {
         this.recognition.continuous = true;
-        this.recognition.interimResults = true;
+        this.recognition.interimResults = false;
         this.recognition.lang = this.config.recognitionLang;
+        this.recognition.maxAlternatives = 3;
     }
     
     /**
@@ -138,6 +145,7 @@ class HariJapCounter {
      */
     handleRecognitionStart() {
         this.isListening = true;
+        this.state.recognitionAttempts = 0; // Reset attempts on successful start
         this.updateListeningStatus('🎤 सुन रहा हूँ... (कृपया स्पष्ट बोलें)', true);
         this.toggleButtons(true);
         this.logActivity('SPEECH_RECOGNITION_STARTED');
@@ -150,50 +158,56 @@ class HariJapCounter {
         this.isListening = false;
         this.updateListeningStatus('माइक्रोफोन बंद है', false);
         this.toggleButtons(false);
-        this.clearRecognitionText();
-        this.logActivity('SPEECH_RECOGNITION_ENDED');
+        
+        // Auto-restart with attempt limit
+        if (this.config.autoRestart && this.state.recognitionAttempts < this.config.maxRecognitionAttempts) {
+            this.state.restartTimeout = setTimeout(() => {
+                if (!this.isListening && this.elements.startBtn && !this.elements.startBtn.disabled) {
+                    console.log(`Auto-restarting recognition... (attempt ${this.state.recognitionAttempts + 1})`);
+                    this.state.recognitionAttempts++;
+                    this.startListening();
+                }
+            }, 1000);
+        } else if (this.state.recognitionAttempts >= this.config.maxRecognitionAttempts) {
+            this.updateListeningStatus('माइक्रोफोन सेवा रुक गई। मैन्युअल रूप से दोबारा शुरू करें।', false);
+            this.config.autoRestart = false;
+        }
+        
+        this.logActivity('SPEECH_RECOGNITION_ENDED', { attempts: this.state.recognitionAttempts });
     }
     
     /**
      * Handle recognition result
      */
     handleRecognitionResult(event) {
-        const { interimTranscript, finalTranscript } = this.processRecognitionResults(event);
-        
-        this.displayRecognitionText(finalTranscript || interimTranscript);
-        
-        if (finalTranscript) {
-            this.checkForTargetPhrase(finalTranscript);
-        } else if (interimTranscript) {
-            this.checkForTargetPhrase(interimTranscript);
+        // Prevent processing if already processing
+        if (this.state.isProcessing) {
+            console.log('⏳ Already processing, skipping...');
+            return;
         }
-    }
-    
-    /**
-     * Process recognition results
-     */
-    processRecognitionResults(event) {
-        let interimTranscript = '';
-        let finalTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const result = event.results[i];
-            const transcript = result[0].transcript;
-            const confidence = result[0].confidence;
-            
-            this.logActivity('SPEECH_RESULT', { 
-                transcript: transcript.substring(0, 20) + '...', 
-                confidence: confidence.toFixed(2) 
-            });
             
             if (result.isFinal) {
-                finalTranscript += transcript;
-            } else {
-                interimTranscript += transcript;
+                // Check all alternatives
+                for (let j = 0; j < result.length && j < 3; j++) {
+                    const transcript = result[j].transcript;
+                    const confidence = result[j].confidence || 0;
+                    
+                    this.logActivity('SPEECH_RESULT', { 
+                        transcript: transcript.substring(0, 50) + '...', 
+                        confidence: confidence.toFixed(2),
+                        alternative: j
+                    });
+                    
+                    // Process the transcript
+                    if (this.checkForTargetPhrase(transcript)) {
+                        break; // Stop checking alternatives if match found
+                    }
+                }
             }
         }
-        
-        return { interimTranscript, finalTranscript };
     }
     
     /**
@@ -201,10 +215,24 @@ class HariJapCounter {
      */
     handleRecognitionError(event) {
         console.error('Speech recognition error:', event.error);
-        this.updateListeningStatus('त्रुटि: ' + event.error, false);
+        
+        // Don't show error for aborted (happens during restart)
+        if (event.error !== 'aborted') {
+            this.updateListeningStatus('त्रुटि: ' + event.error, false);
+        }
         
         if (event.error === 'language-not-supported') {
             this.handleLanguageNotSupported();
+        } else if (event.error === 'no-speech') {
+            // Auto-restart on no-speech error with attempt limit
+            if (this.config.autoRestart && this.state.recognitionAttempts < this.config.maxRecognitionAttempts) {
+                this.state.restartTimeout = setTimeout(() => {
+                    if (!this.isListening) {
+                        this.state.recognitionAttempts++;
+                        this.startListening();
+                    }
+                }, 1500);
+            }
         }
         
         this.isListening = false;
@@ -218,7 +246,7 @@ class HariJapCounter {
     handleLanguageNotSupported() {
         console.log('🔄 Trying English language...');
         this.recognition.lang = this.config.fallbackLang;
-        setTimeout(() => {
+        this.state.restartTimeout = setTimeout(() => {
             if (!this.isListening) {
                 this.startListening();
             }
@@ -258,7 +286,7 @@ class HariJapCounter {
         const buttonHandlers = {
             startBtn: () => this.startListening(),
             stopBtn: () => this.stopListening(),
-            manualBtn: () => this.incrementCount(),
+            manualBtn: () => this.incrementJapCount(),
             resetBtn: () => this.resetCounter()
         };
         
@@ -290,7 +318,7 @@ class HariJapCounter {
                     break;
                 case 'Enter':
                     e.preventDefault();
-                    this.incrementCount();
+                    this.incrementJapCount();
                     break;
                 case 'KeyR':
                     if (e.ctrlKey || e.metaKey) {
@@ -317,6 +345,9 @@ class HariJapCounter {
         window.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 this.saveData();
+                if (this.isListening) {
+                    this.stopListening();
+                }
             } else {
                 this.checkSessionStatus();
             }
@@ -330,24 +361,49 @@ class HariJapCounter {
         const normalizedTranscript = transcript.toLowerCase().trim();
         const variations = this.getPhraseVariations();
         
+        // Check for matches
         const isMatch = variations.some(variation => {
-            return normalizedTranscript.includes(variation.toLowerCase()) ||
-                   this.calculateSimilarity(normalizedTranscript, variation.toLowerCase()) > this.config.similarityThreshold;
+            const similarity = this.calculateSimilarity(normalizedTranscript, variation.toLowerCase());
+            if (similarity > this.config.similarityThreshold) {
+                console.log(`✅ Match found: "${normalizedTranscript}" ~ "${variation}" (${(similarity * 100).toFixed(1)}%)`);
+                return true;
+            }
+            return normalizedTranscript.includes(variation.toLowerCase());
         });
         
         if (isMatch) {
-            // Prevent double counting with cooldown
+            // Check cooldown to prevent multiple detections
             const now = Date.now();
-            if (now - this.state.lastRecognizedTime < this.state.recognitionCooldown) {
-                console.log('�� Ignoring duplicate recognition (cooldown)');
-                return;
+            const timeSinceLastRecognition = now - this.state.lastRecognizedTime;
+            
+            if (timeSinceLastRecognition < this.config.recognitionCooldown) {
+                console.log(`⏸️ Cooldown active (${timeSinceLastRecognition}ms < ${this.config.recognitionCooldown}ms)`);
+                return false;
             }
             
+            // Set processing flag
+            this.state.isProcessing = true;
+            
+            // Update last recognized time
             this.state.lastRecognizedTime = now;
-            this.incrementCount();
+            
+            // Increment jap count (1 pronunciation = 1 jap)
+            this.incrementJapCount();
             this.showRecognitionSuccess();
-            this.logActivity('MANTRA_DETECTED', { transcript: transcript.substring(0, 30) });
+            this.logActivity('MANTRA_DETECTED', { 
+                transcript: transcript.substring(0, 30),
+                timeSinceLastRecognition
+            });
+            
+            // Clear processing flag after a delay
+            setTimeout(() => {
+                this.state.isProcessing = false;
+            }, 1000);
+            
+            return true;
         }
+        
+        return false;
     }
     
     /**
@@ -360,6 +416,10 @@ class HariJapCounter {
             'jai jai ram krishna hari',
             'jai jai rama krishna hari',
             'जय राम कृष्ण हारी',
+            'राम कृष्ण हारी',
+            'जय जय राम कृष्णा हरि',
+            'जय जय राम कृष्ण हरि',
+            'राम कृष्णा हारी',
             'राम कृष्ण हारी'
         ];
     }
@@ -373,7 +433,8 @@ class HariJapCounter {
         
         if (longer.length === 0) return 1.0;
         
-        return (longer.length - this.levenshteinDistance(longer, shorter)) / longer.length;
+        const editDistance = this.levenshteinDistance(longer, shorter);
+        return (longer.length - editDistance) / longer.length;
     }
     
     /**
@@ -413,6 +474,16 @@ class HariJapCounter {
     startListening() {
         if (this.recognition && !this.isListening) {
             try {
+                // Clear any existing restart timeout
+                if (this.state.restartTimeout) {
+                    clearTimeout(this.state.restartTimeout);
+                    this.state.restartTimeout = null;
+                }
+                
+                // Reset processing state
+                this.state.isProcessing = false;
+                // Enable continuous listening
+                this.config.autoRestart = true;
                 this.recognition.start();
             } catch (error) {
                 console.error('Error starting recognition:', error);
@@ -425,48 +496,64 @@ class HariJapCounter {
      * Stop listening for speech
      */
     stopListening() {
-        if (this.recognition && this.isListening) {
-            this.recognition.stop();
+        if (this.recognition) {
+            // Clear any restart timeout
+            if (this.state.restartTimeout) {
+                clearTimeout(this.state.restartTimeout);
+                this.state.restartTimeout = null;
+            }
+            
+            // Disable auto-restart
+            this.config.autoRestart = false;
+            this.state.recognitionAttempts = 0;
+            
+            if (this.isListening) {
+                this.recognition.stop();
+            }
         }
     }
     
     /**
-     * Increment the count (5 words = 1 mala)
+     * Increment the jap count (each pronunciation = 1 jap)
      */
-    async incrementCount() {
+    async incrementJapCount() {
         if (this.state.isSaving) return;
         
-        // Increment word count
-        this.count++;
-        this.currentMalaWords++;
+        // Add 1 jap to the count
+        this.japCount++;
+        this.currentMalaJaps++;
         
-        // Check if current mala is complete (5 words)
-        if (this.currentMalaWords >= this.config.wordsPerMala) {
-            this.completeMala();
+        // Check if current mala is complete (108 japs)
+        if (this.currentMalaJaps >= this.config.japsPerMala) {
+            await this.completeMala();
         }
         
         this.updateDisplay();
         await this.saveData();
         this.animateCountIncrement();
         
-        this.logActivity('COUNT_INCREMENTED', { 
-            newCount: this.count, 
-            currentMalaWords: this.currentMalaWords,
-            totalMalas: this.totalMalas
+        this.logActivity('JAP_COUNT_INCREMENTED', { 
+            newJapCount: this.japCount, 
+            currentMalaJaps: this.currentMalaJaps,
+            totalMalas: this.totalMalas,
+            displayCount: this.japCount * this.config.wordsPerJap
         });
     }
     
     /**
-     * Complete a mala (5 words = 1 mala)
+     * Complete a mala (108 japs)
      */
     async completeMala() {
         this.totalMalas++;
-        this.currentMalaWords = 0; // Reset current mala words
+        // Handle overflow japs
+        this.currentMalaJaps = this.currentMalaJaps - this.config.japsPerMala;
         this.showCelebration();
         await this.saveData();
         this.logActivity('MALA_COMPLETED', { 
             totalMalas: this.totalMalas,
-            totalWords: this.count
+            totalJaps: this.japCount,
+            totalWords: this.japCount * this.config.wordsPerJap,
+            overflowJaps: this.currentMalaJaps
         });
     }
     
@@ -475,9 +562,9 @@ class HariJapCounter {
      */
     async resetCounter() {
         if (confirm('क्या आप वाकई काउंटर को रीसेट करना चाहते हैं?')) {
-            this.count = 0;
+            this.japCount = 0;
             this.totalMalas = 0;
-            this.currentMalaWords = 0;
+            this.currentMalaJaps = 0;
             this.updateDisplay();
             await this.saveData();
             this.logActivity('COUNTER_RESET');
@@ -496,11 +583,12 @@ class HariJapCounter {
     }
     
     /**
-     * Update count display
+     * Update count display - shows total words (japs × 5)
      */
     updateCountDisplay() {
         if (this.elements.countDisplay) {
-            this.elements.countDisplay.textContent = this.count;
+            const totalWords = this.japCount * this.config.wordsPerJap;
+            this.elements.countDisplay.textContent = totalWords;
         }
     }
     
@@ -510,12 +598,12 @@ class HariJapCounter {
     updateMalaStatus() {
         if (!this.elements.malaStatus) return;
         
-        if (this.count === 0) {
+        if (this.japCount === 0) {
             this.elements.malaStatus.textContent = 'जप शुरू करें';
-        } else if (this.currentMalaWords === 0 && this.totalMalas > 0) {
+        } else if (this.currentMalaJaps === 0 && this.totalMalas > 0) {
             this.elements.malaStatus.textContent = `${this.totalMalas} माला पूर्ण!`;
         } else {
-            this.elements.malaStatus.textContent = `वर्तमान माला: ${this.currentMalaWords}/${this.config.wordsPerMala}`;
+            this.elements.malaStatus.textContent = `वर्तमान माला: ${this.currentMalaJaps}/${this.config.japsPerMala}`;
         }
     }
     
@@ -534,7 +622,7 @@ class HariJapCounter {
     updateProgressBar() {
         if (!this.elements.progressFill) return;
         
-        const progressPercentage = (this.currentMalaWords / this.config.wordsPerMala) * 100;
+        const progressPercentage = (this.currentMalaJaps / this.config.japsPerMala) * 100;
         this.elements.progressFill.style.width = `${progressPercentage}%`;
     }
     
@@ -544,8 +632,8 @@ class HariJapCounter {
     updateRemainingCount() {
         if (!this.elements.remainingCount) return;
         
-        const remainingInCurrentMala = this.config.wordsPerMala - this.currentMalaWords;
-        this.elements.remainingCount.textContent = remainingInCurrentMala === this.config.wordsPerMala ? this.config.wordsPerMala : remainingInCurrentMala;
+        const remainingInCurrentMala = this.config.japsPerMala - this.currentMalaJaps;
+        this.elements.remainingCount.textContent = remainingInCurrentMala;
     }
     
     /**
@@ -555,6 +643,12 @@ class HariJapCounter {
         if (!this.elements.celebration) return;
         
         this.elements.celebration.style.display = 'block';
+        this.elements.celebration.innerHTML = `
+            <div style="font-size: 48px;">🎉</div>
+            <div style="font-size: 24px; margin-top: 10px;">माला पूर्ण!</div>
+            <div style="font-size: 18px; margin-top: 5px;">${this.totalMalas} माला संपन्न</div>
+            <div style="font-size: 16px; margin-top: 5px;">कुल शब्द: ${this.japCount * this.config.wordsPerJap}</div>
+        `;
         
         setTimeout(() => {
             this.elements.celebration.style.display = 'none';
@@ -581,10 +675,10 @@ class HariJapCounter {
      * Show recognition success
      */
     showRecognitionSuccess() {
-        this.updateRecognitionText('✅ ' + this.targetPhrase);
+        this.updateRecognitionText(`✅ ${this.targetPhrase} (+${this.config.wordsPerJap})`);
         setTimeout(() => {
             this.clearRecognitionText();
-        }, 1000);
+        }, 1500);
     }
     
     /**
@@ -619,13 +713,6 @@ class HariJapCounter {
     }
     
     /**
-     * Display recognition text
-     */
-    displayRecognitionText(text) {
-        this.updateRecognitionText(text);
-    }
-    
-    /**
      * Toggle buttons state
      */
     toggleButtons(listening) {
@@ -648,14 +735,24 @@ class HariJapCounter {
             const data = await response.json();
             
             if (data && data.success) {
-                this.count = Number(data.count || 0);
-                this.totalMalas = Number(data.total_malas || 0);
-                // Calculate current mala words from total count
-                this.currentMalaWords = this.count % this.config.wordsPerMala;
+                // Load jap count (convert from old word count if needed)
+                const savedCount = Number(data.count || 0);
+                if (data.japCount) {
+                    // New format: direct jap count
+                    this.japCount = Number(data.japCount || 0);
+                } else {
+                    // Old format: convert from word count
+                    this.japCount = Math.floor(savedCount / this.config.wordsPerJap);
+                }
+                
+                this.totalMalas = Math.floor(this.japCount / this.config.japsPerMala);
+                this.currentMalaJaps = this.japCount % this.config.japsPerMala;
+                
                 this.logActivity('DATA_LOADED', { 
-                    count: this.count, 
+                    japCount: this.japCount, 
                     totalMalas: this.totalMalas,
-                    currentMalaWords: this.currentMalaWords
+                    currentMalaJaps: this.currentMalaJaps,
+                    displayCount: this.japCount * this.config.wordsPerJap
                 });
             } else {
                 this.logActivity('DATA_LOAD_FAILED', { error: data.error });
@@ -676,7 +773,8 @@ class HariJapCounter {
         
         try {
             const payload = {
-                count: this.count,
+                japCount: this.japCount,
+                count: this.japCount * this.config.wordsPerJap, // For backward compatibility
                 totalMalas: this.totalMalas
             };
             
@@ -690,7 +788,11 @@ class HariJapCounter {
             const data = await response.json();
             
             if (data && data.success) {
-                this.logActivity('DATA_SAVED', { count: this.count, totalMalas: this.totalMalas });
+                this.logActivity('DATA_SAVED', { 
+                    japCount: this.japCount, 
+                    totalMalas: this.totalMalas,
+                    displayCount: this.japCount * this.config.wordsPerJap
+                });
             } else {
                 this.logActivity('DATA_SAVE_FAILED', { error: data.error });
             }
@@ -753,28 +855,56 @@ class HariJapCounter {
      */
     showError(message) {
         console.error(message);
+        if (this.elements.listeningStatus) {
+            this.elements.listeningStatus.textContent = message;
+        }
     }
     
     /**
      * Log activity
      */
     logActivity(activity, details = {}) {
-        console.log(`[HariJapCounter] ${activity}:`, details);
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[${timestamp}] [HariJapCounter] ${activity}:`, details);
+    }
+    
+    /**
+     * Get current statistics
+     */
+    getStatistics() {
+        return {
+            japCount: this.japCount,
+            totalWords: this.japCount * this.config.wordsPerJap,
+            totalMalas: this.totalMalas,
+            currentMalaJaps: this.currentMalaJaps,
+            currentMalaProgress: ((this.currentMalaJaps / this.config.japsPerMala) * 100).toFixed(1) + '%',
+            remainingJapsInCurrentMala: this.config.japsPerMala - this.currentMalaJaps,
+            totalTargetWords: this.config.totalMalasTarget * this.config.japsPerMala * this.config.wordsPerJap,
+            overallProgress: ((this.japCount / (this.config.totalMalasTarget * this.config.japsPerMala)) * 100).toFixed(1) + '%'
+        };
     }
     
     /**
      * Cleanup method
      */
     destroy() {
+        // Clear timers
         if (this.state.autoSaveTimer) {
             clearInterval(this.state.autoSaveTimer);
         }
         if (this.state.sessionCheckTimer) {
             clearInterval(this.state.sessionCheckTimer);
         }
+        if (this.state.restartTimeout) {
+            clearTimeout(this.state.restartTimeout);
+        }
+        
+        // Stop recognition
         if (this.recognition && this.isListening) {
+            this.config.autoRestart = false;
             this.recognition.stop();
         }
+        
         this.logActivity('HARI_JAP_DESTROYED');
     }
 }
@@ -809,11 +939,27 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         window.hariJapCounter = new HariJapCounter();
         console.log('🕉️ हरि जप साधना initialized successfully!');
-        console.log('Shortcuts:');
-        console.log('- Space: Start listening');
+        console.log('='.repeat(60));
+        console.log('📊 FIXED CONFIGURATION:');
+        console.log('- 1 pronunciation ("जय जय राम कृष्णा हारी") = 1 jap count');
+        console.log('- 1 jap = 5 words (for display calculation only)');
+        console.log('- 1 mala = 108 jap pronunciations');
+        console.log('- Display count = jap count × 5');
+        console.log('- Target = 108 malas = 11,664 jap pronunciations = 58,320 words');
+        console.log('='.repeat(60));
+        console.log('⌨️ KEYBOARD SHORTCUTS:');
+        console.log('- Space: Start continuous listening');
         console.log('- Escape: Stop listening');
-        console.log('- Enter: Manual count increment');
+        console.log('- Enter: Manual jap increment (+1 jap, +5 display count)');
         console.log('- Ctrl+R: Reset counter');
+        console.log('='.repeat(60));
+        console.log('🔧 IMPROVEMENTS MADE:');
+        console.log('✅ Fixed: Each pronunciation now correctly adds 1 to mala count');
+        console.log('✅ Fixed: Continuous listening until manually stopped');
+        console.log('✅ Fixed: Prevents duplicate detection with cooldown');
+        console.log('✅ Fixed: Display shows total words (japs × 5)');
+        console.log('✅ Fixed: Proper mala completion at 108 japs (540 display count)');
+        console.log('='.repeat(60));
     } catch (error) {
         console.error('Error initializing Hari Jap Counter:', error);
     }
@@ -826,15 +972,12 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-// Service Worker registration for offline functionality (optional)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-                console.log('SW registration failed: ', registrationError);
-            });
-    });
-}
+// Debug function to get current statistics
+window.getHariJapStats = function() {
+    if (window.hariJapCounter) {
+        const stats = window.hariJapCounter.getStatistics();
+        console.table(stats);
+        return stats;
+    }
+    return null;
+};
