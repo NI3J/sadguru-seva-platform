@@ -14,19 +14,8 @@
   <!-- 🎨 Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Updated font imports for Krishna Lila support -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome for icons -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  
-  <!-- Base CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  
-  <!-- Krishna Lila specific CSS -->
-  {% if request.endpoint and 'krishna_lila' in request.endpoint %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/lila.css') }}">
-  {% endif %}
-  
   {% block head_styles %}{% endblock %}
 
   <!-- 🔗 Favicon and App Icons -->
@@ -123,10 +112,6 @@
           </a>
           <div class="dropdown" role="menu" aria-label="ज्ञान मेनू">
             <a href="/wisdom" role="menuitem">बाबांचे विचार आणि भागवत कथा</a>
-            <!-- ✅ NEW: Krishna Lila Menu Item -->
-            <a href="{{ url_for('krishna_lila.index') }}" role="menuitem">
-              🌸 कृष्ण लिला
-            </a>
             <a href="/knowledge/mantra" role="menuitem">🔱 रुद्राष्टकम श्रवण</a>
             <a href="/knowledge/shivtandav" role="menuitem">🕉️ शिवतांडव व्हिडिओ</a>
             <a href="/knowledge/audio_flow" role="menuitem">🎵 भक्तिगीत आणि भजन</a>
@@ -182,8 +167,6 @@
         <ul>
           <li><a href="/">मुख्य पृष्ठ</a></li>
           <li><a href="/about">आमच्याविषयी</a></li>
-          <!-- ✅ NEW: Krishna Lila Footer Link -->
-          <li><a href="{{ url_for('krishna_lila.index') }}">🌸 कृष्ण लिला</a></li>
           <li><a href="/contact">संपर्क</a></li>
         </ul>
       </div>
@@ -202,13 +185,6 @@
   <!-- 📜 JavaScript Files -->
   <!-- Core Scripts -->
   <script src="{{ url_for('static', filename='js/menu-toggle.js') }}" defer></script>
-
-  <!-- ✅ NEW: Krishna Lila JavaScript -->
-  {% if request.endpoint and 'krishna_lila' in request.endpoint %}
-  <!-- AOS Animation Library for Krishna Lila -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-  <script src="{{ url_for('static', filename='js/lila.js') }}"></script>
-  {% endif %}
 
   <!-- Common Utility Scripts -->
   <script>
