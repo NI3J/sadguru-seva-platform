@@ -57,23 +57,47 @@ class HariJapCounter {
         ];
 
         elementIds.forEach(id => {
-            this.elements[id] = document.getElementById(id);
+            const element = document.getElementById(id);
+            if (element) {
+                this.elements[id] = element;
+            } else {
+                console.warn(`Element with id '${id}' not found`);
+            }
         });
+        
+        // Verify critical elements are present
+        const criticalElements = ['countDisplay', 'startBtn', 'stopBtn'];
+        const missingElements = criticalElements.filter(id => !this.elements[id]);
+        
+        if (missingElements.length > 0) {
+            throw new Error(`Critical elements missing: ${missingElements.join(', ')}`);
+        }
     }
 
     initializeSpeechRecognition() {
         try {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                throw new Error('Speech Recognition API not available');
+            }
+            
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
             this.recognition.interimResults = false;
             this.recognition.maxAlternatives = 1;
+            this.recognition.continuous = true;
 
             this.recognition.onresult = (event) => this.handleRecognitionResult(event);
             this.recognition.onend = () => this.handleRecognitionEnd();
+            this.recognition.onerror = (event) => this.handleRecognitionError(event);
+            this.recognition.onstart = () => this.handleRecognitionStart();
+            
+            console.log('✅ Speech Recognition initialized successfully');
         } catch (error) {
             console.error('Speech Recognition not supported:', error);
             this.showError('आपका ब्राउज़र आवाज पहचानने का समर्थन नहीं करता।');
+            this.recognition = null;
         }
     }
 
@@ -95,18 +119,46 @@ class HariJapCounter {
     }
 
     updateDisplay() {
-        this.elements.countDisplay.textContent = this.count;
-        this.elements.totalMalas.textContent = this.totalMalas;
-        this.elements.malaStatus.textContent = `${this.currentMalaWords} / ${this.config.wordsPerMala}`;
-        this.elements.remainingCount.textContent = `${this.config.totalMalasTarget - this.totalMalas} malas remaining`;
-        this.elements.listeningStatus.textContent = this.isListening ? 'Listening...' : 'Not Listening';
+        // Safely update display elements with null checks
+        if (this.elements.countDisplay) {
+            this.elements.countDisplay.textContent = this.count;
+        }
+        if (this.elements.totalMalas) {
+            this.elements.totalMalas.textContent = `कुल माला: ${this.totalMalas}`;
+        }
+        if (this.elements.malaStatus) {
+            this.elements.malaStatus.textContent = `${this.currentMalaWords} / ${this.config.wordsPerMala}`;
+        }
+        if (this.elements.remainingCount) {
+            this.elements.remainingCount.textContent = `${this.config.wordsPerMala - this.currentMalaWords}`;
+        }
+        if (this.elements.listeningStatus) {
+            this.elements.listeningStatus.textContent = this.isListening ? 'सुन रहा है...' : 'माइक्रोफोन तैयार है';
+        }
+        
+        // Update progress bar
+        if (this.elements.progressFill) {
+            const progress = (this.currentMalaWords / this.config.wordsPerMala) * 100;
+            this.elements.progressFill.style.width = `${Math.min(progress, 100)}%`;
+        }
     }
 
     startRecognition() {
+        if (!this.recognition) {
+            this.showError('आवाज पहचान सेवा उपलब्ध नहीं है।');
+            return;
+        }
+        
         if (!this.isListening) {
-            this.recognition.start();
-            this.isListening = true;
-            this.updateDisplay();
+            try {
+                this.recognition.start();
+                this.isListening = true;
+                this.updateDisplay();
+                this.logActivity('RECOGNITION_STARTED');
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                this.showError('आवाज पहचान शुरू करने में त्रुटि।');
+            }
         }
     }
 
@@ -191,6 +243,66 @@ class HariJapCounter {
             }));
             this.state.isSaving = false;
         }
+    }
+
+    // Event handlers for speech recognition
+    handleRecognitionStart() {
+        console.log('🎤 Speech recognition started');
+        if (this.elements.listeningStatus) {
+            this.elements.listeningStatus.textContent = 'सुन रहा है...';
+            this.elements.listeningStatus.classList.add('listening');
+        }
+    }
+
+    handleRecognitionEnd() {
+        console.log('🎤 Speech recognition ended');
+        this.isListening = false;
+        if (this.elements.listeningStatus) {
+            this.elements.listeningStatus.textContent = 'माइक्रोफोन तैयार है';
+            this.elements.listeningStatus.classList.remove('listening');
+        }
+        
+        // Auto-restart recognition if it was manually started
+        if (this.state.isInitialized) {
+            setTimeout(() => {
+                if (!this.isListening) {
+                    this.startRecognition();
+                }
+            }, 100);
+        }
+    }
+
+    handleRecognitionError(event) {
+        console.error('Speech recognition error:', event.error);
+        this.isListening = false;
+        
+        let errorMessage = 'आवाज पहचान में त्रुटि।';
+        switch (event.error) {
+            case 'no-speech':
+                errorMessage = 'कोई आवाज नहीं सुनी गई।';
+                break;
+            case 'audio-capture':
+                errorMessage = 'माइक्रोफोन तक पहुंच नहीं मिली।';
+                break;
+            case 'not-allowed':
+                errorMessage = 'माइक्रोफोन की अनुमति नहीं मिली।';
+                break;
+            case 'network':
+                errorMessage = 'नेटवर्क त्रुटि।';
+                break;
+        }
+        
+        this.showError(errorMessage);
+        this.updateDisplay();
+    }
+
+    logActivity(activity) {
+        console.log(`📊 Activity: ${activity}`, {
+            count: this.count,
+            totalMalas: this.totalMalas,
+            currentMalaWords: this.currentMalaWords,
+            timestamp: new Date().toISOString()
+        });
     }
 }
 
