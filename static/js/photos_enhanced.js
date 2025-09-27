@@ -78,12 +78,7 @@ class EnhancedPhotoGallery {
             retryBtn: document.getElementById('retry-btn')
         };
 
-        // Templates
-        this.templates = {
-            photoCard: document.getElementById('photo-card-template'),
-            photoList: document.getElementById('photo-list-template'),
-            pageNumber: document.getElementById('page-number-template')
-        };
+        // Templates will be accessed when needed
 
         // Initialize the gallery
         this.init();
@@ -245,7 +240,10 @@ class EnhancedPhotoGallery {
      * Render photos based on current view mode
      */
     renderPhotos() {
-        if (!this.elements.photosGrid) return;
+        if (!this.elements.photosGrid) {
+            this.log('❌ Photos grid element not found', 'error');
+            return;
+        }
 
         this.elements.photosGrid.innerHTML = '';
 
@@ -256,10 +254,17 @@ class EnhancedPhotoGallery {
 
         // Set grid class based on view mode
         this.elements.photosGrid.className = `photos-grid ${this.state.currentView}-view`;
+        this.log(`🔄 Setting grid class to: photos-grid ${this.state.currentView}-view`);
 
         this.state.photos.forEach((photo, index) => {
+            this.log(`🖼️ Creating element for photo ${index + 1}: ${photo.title}`);
             const element = this.createPhotoElement(photo, index);
-            this.elements.photosGrid.appendChild(element);
+            if (element && element.nodeType === Node.ELEMENT_NODE) {
+                this.elements.photosGrid.appendChild(element);
+                this.log(`✅ Added photo element ${index + 1} to grid`);
+            } else {
+                this.log(`❌ Failed to create element for photo ${index + 1}`, 'error');
+            }
         });
 
         this.log(`📸 Rendered ${this.state.photos.length} photos in ${this.state.currentView} view`);
@@ -269,13 +274,25 @@ class EnhancedPhotoGallery {
      * Create photo element based on view mode
      */
     createPhotoElement(photo, index) {
-        const template = this.state.currentView === 'list' 
-            ? this.templates.photoList.content.cloneNode(true)
-            : this.templates.photoCard.content.cloneNode(true);
-
-        const element = template.querySelector(this.state.currentView === 'list' ? '.photo-list-item' : '.photo-card');
+        const templateElement = this.state.currentView === 'list' 
+            ? document.getElementById('photo-list-template')
+            : document.getElementById('photo-card-template');
         
-        if (!element) return document.createElement('div');
+        if (!templateElement) {
+            this.log(`❌ Template not found for view: ${this.state.currentView}`, 'error');
+            return document.createElement('div');
+        }
+        
+        const template = templateElement.content.cloneNode(true);
+
+        const element = this.state.currentView === 'list' 
+            ? template.querySelector('.photo-list-item')
+            : template.querySelector('.photo-card');
+        
+        if (!element) {
+            this.log(`❌ Template element not found for view: ${this.state.currentView}`, 'error');
+            return document.createElement('div');
+        }
 
         // Set photo data
         element.setAttribute('data-photo-id', photo.id);
@@ -283,6 +300,7 @@ class EnhancedPhotoGallery {
         // Set image
         const img = element.querySelector('.photo-image, .list-image');
         if (img) {
+            this.log(`🖼️ Setting image source: ${photo.image_path}`);
             img.src = photo.image_path;
             img.alt = photo.alt_text || photo.title;
             img.loading = 'lazy';
@@ -296,6 +314,8 @@ class EnhancedPhotoGallery {
                 this.log(`❌ Failed to load image: ${photo.image_path}`, 'error');
                 img.src = this.createPlaceholderImage(photo.title);
             });
+        } else {
+            this.log(`❌ Image element not found in template for view: ${this.state.currentView}`, 'error');
         }
 
         // Set text content
@@ -622,7 +642,10 @@ class EnhancedPhotoGallery {
         const endPage = Math.min(this.state.totalPages, this.state.currentPage + 2);
 
         for (let i = startPage; i <= endPage; i++) {
-            const pageBtn = this.templates.pageNumber.content.cloneNode(true);
+            const pageTemplate = document.getElementById('page-number-template');
+            if (!pageTemplate) continue;
+            
+            const pageBtn = pageTemplate.content.cloneNode(true);
             const button = pageBtn.querySelector('.page-number-btn');
             button.textContent = i;
             button.setAttribute('data-page', i);

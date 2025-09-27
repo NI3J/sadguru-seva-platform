@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Photos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .photo-card { border: 1px solid #ccc; padding: 10px; border-radius: 5px; }
+        .photo-image { width: 100%; height: 200px; object-fit: cover; }
+        .list-view { display: flex; flex-direction: column; gap: 10px; }
+        .photo-list-item { display: flex; gap: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; }
+        .list-image { width: 100px; height: 80px; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <h1>Debug Photos Gallery</h1>
+    
+    <div class="debug-info">
+        <h3>Debug Information</h3>
+        <div id="debug-log"></div>
+    </div>
+    
+    <div class="debug-info">
+        <h3>Controls</h3>
+        <button onclick="testAPI()">Test API</button>
+        <button onclick="testTemplates()">Test Templates</button>
+        <button onclick="testRendering()">Test Rendering</button>
+        <button onclick="switchView('grid')">Grid View</button>
+        <button onclick="switchView('list')">List View</button>
+    </div>
+    
+    <div id="photos-grid" class="photos-grid">
+        <!-- Photos will be loaded here -->
+    </div>
+    
+    <!-- Templates -->
+    <template id="photo-card-template">
+        <div class="photo-card" data-photo-id="">
+            <img class="photo-image" src="" alt="" loading="lazy">
+            <h3 class="photo-title"></h3>
+            <p class="photo-description"></p>
+            <div class="photo-meta">
+                <span class="photo-category"></span>
+                <span class="photo-date"></span>
+            </div>
+        </div>
+    </template>
+    
+    <template id="photo-list-template">
+        <div class="photo-list-item" data-photo-id="">
+            <div class="list-image-container">
+                <img class="list-image" src="" alt="" loading="lazy">
+            </div>
+            <div class="list-info">
+                <h3 class="list-title"></h3>
+                <p class="list-description"></p>
+                <div class="list-meta">
+                    <span class="list-category"></span>
+                    <span class="list-date"></span>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <script>
+        let currentView = 'grid';
+        let photos = [];
+        
+        function log(message) {
+            const debugLog = document.getElementById('debug-log');
+            debugLog.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            console.log(message);
+        }
+        
+        async function testAPI() {
+            log('Testing API...');
+            try {
+                const response = await fetch('/api/photos');
+                const data = await response.json();
+                log(`API Response: ${JSON.stringify(data, null, 2)}`);
+                if (data.success) {
+                    photos = data.data.photos;
+                    log(`Loaded ${photos.length} photos`);
+                }
+            } catch (error) {
+                log(`API Error: ${error.message}`);
+            }
+        }
+        
+        function testTemplates() {
+            log('Testing templates...');
+            const cardTemplate = document.getElementById('photo-card-template');
+            const listTemplate = document.getElementById('photo-list-template');
+            
+            log(`Card template found: ${!!cardTemplate}`);
+            log(`List template found: ${!!listTemplate}`);
+            
+            if (cardTemplate) {
+                const cardContent = cardTemplate.content.cloneNode(true);
+                const cardElement = cardContent.querySelector('.photo-card');
+                log(`Card element found: ${!!cardElement}`);
+            }
+            
+            if (listTemplate) {
+                const listContent = listTemplate.content.cloneNode(true);
+                const listElement = listContent.querySelector('.photo-list-item');
+                log(`List element found: ${!!listElement}`);
+            }
+        }
+        
+        function createPhotoElement(photo, view) {
+            log(`Creating photo element for: ${photo.title} in ${view} view`);
+            
+            const template = view === 'list' 
+                ? document.getElementById('photo-list-template').content.cloneNode(true)
+                : document.getElementById('photo-card-template').content.cloneNode(true);
+            
+            const element = view === 'list' 
+                ? template.querySelector('.photo-list-item')
+                : template.querySelector('.photo-card');
+            
+            if (!element) {
+                log(`❌ Template element not found for view: ${view}`);
+                return document.createElement('div');
+            }
+            
+            // Set image
+            const img = element.querySelector('.photo-image, .list-image');
+            if (img) {
+                img.src = photo.image_path;
+                img.alt = photo.alt_text || photo.title;
+                log(`Set image source: ${photo.image_path}`);
+            } else {
+                log(`❌ Image element not found in template`);
+            }
+            
+            // Set text content
+            const title = element.querySelector('.photo-title, .list-title');
+            if (title) title.textContent = photo.title || 'Untitled';
+            
+            const description = element.querySelector('.photo-description, .list-description');
+            if (description) description.textContent = photo.description || '';
+            
+            const category = element.querySelector('.photo-category, .list-category');
+            if (category) category.textContent = photo.category || '';
+            
+            return element;
+        }
+        
+        function renderPhotos() {
+            log(`Rendering ${photos.length} photos in ${currentView} view`);
+            
+            const grid = document.getElementById('photos-grid');
+            grid.innerHTML = '';
+            grid.className = `photos-grid ${currentView}-view`;
+            
+            photos.forEach((photo, index) => {
+                const element = createPhotoElement(photo, currentView);
+                grid.appendChild(element);
+                log(`Added photo ${index + 1} to grid`);
+            });
+        }
+        
+        function testRendering() {
+            if (photos.length === 0) {
+                log('No photos loaded. Please test API first.');
+                return;
+            }
+            renderPhotos();
+        }
+        
+        function switchView(view) {
+            currentView = view;
+            log(`Switched to ${view} view`);
+            if (photos.length > 0) {
+                renderPhotos();
+            }
+        }
+        
+        // Initialize
+        log('Debug page loaded');
+    </script>
+</body>
+</html>

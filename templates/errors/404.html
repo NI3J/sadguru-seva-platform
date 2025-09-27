@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - Sadguru Seva Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 50px;
+            max-width: 600px;
+            margin: 100px auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        .error-container h1 {
+            color: #d84315;
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .error-container p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>404 - Page Not Found</h1>
+        <p>आपण शोधत असलेले पृष्ठ सापडले नाही.</p>
+        <a href="/" class="btn">मुख्य पृष्ठावर जा</a>
+    </div>
+</body>
+</html>

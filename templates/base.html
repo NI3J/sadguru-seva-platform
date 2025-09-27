@@ -71,7 +71,7 @@
             🛠️ व्यवस्थापक
           </a>
           <div class="dropdown" role="menu" aria-label="व्यवस्थापक मेनू">
-            <a href="{{ url_for('admin.admin_dashboard') }}" role="menuitem">🛠️ व्यवस्थापक नोंदणी</a>
+            <a href="/admin_dashboard" role="menuitem">🛠️ व्यवस्थापक नोंदणी</a>
           </div>
         </li>
 
@@ -124,7 +124,7 @@
           <div class="dropdown" role="menu" aria-label="ज्ञान मेनू">
             <a href="/wisdom" role="menuitem">बाबांचे विचार आणि भागवत कथा</a>
             <!-- ✅ NEW: Krishna Lila Menu Item -->
-            <a href="{{ url_for('krishna_lila.index') }}" role="menuitem">
+            <a href="/krishna-lila/" role="menuitem">
               🌸 कृष्ण लिला
             </a>
             <a href="/knowledge/mantra" role="menuitem">🔱 रुद्राष्टकम श्रवण</a>
@@ -183,7 +183,7 @@
           <li><a href="/">मुख्य पृष्ठ</a></li>
           <li><a href="/about">आमच्याविषयी</a></li>
           <!-- ✅ NEW: Krishna Lila Footer Link -->
-          <li><a href="{{ url_for('krishna_lila.index') }}">🌸 कृष्ण लिला</a></li>
+          <li><a href="/krishna-lila/">🌸 कृष्ण लिला</a></li>
           <li><a href="/contact">संपर्क</a></li>
         </ul>
       </div>
