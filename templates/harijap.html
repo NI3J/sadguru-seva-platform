@@ -3,49 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>जप साधना - Hari Jap</title>
+    <title>हरि जप साधना - Divine Chanting Counter</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/harijap.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
 </head>
 <body>
+    <!-- Divine glow effect -->
+    <div class="divine-glow"></div>
+    
+    <!-- Floating Om symbols -->
+    <div class="floating-om om-1">🕉️</div>
+    <div class="floating-om om-2">🕉️</div>
+    <div class="floating-om om-3">🕉️</div>
+    <div class="floating-om om-4">🕉️</div>
+    <div class="floating-om om-5">🕉️</div>
+
     <div class="container">
-        <h1 class="title">🕉️ जप साधना 🕉️</h1>
-        
-        <div class="mantra-container">
-            <div class="mantra"> जय जय राम कृष्णा हारी</div>
+        <!-- User Info Section -->
+        <div class="user-info">
+            <div class="user-name" id="userName">🙏 भक्त</div>
+            <button class="logout-btn" id="logoutBtn">लॉगआउट</button>
         </div>
 
+        <!-- Title -->
+        <h1 class="title">🕉️ हरि जप साधना 🕉️</h1>
+        
+        <!-- Mantra Display -->
+        <div class="mantra-container">
+            <div class="mantra">जय जय राम कृष्णा हारी</div>
+        </div>
+
+        <!-- Counter Section -->
         <div class="counter-section">
             <div class="count-display" id="countDisplay">0</div>
             <div class="mala-status" id="malaStatus">जप शुरू करें</div>
             <div class="total-malas" id="totalMalas">कुल माला: 0</div>
         </div>
 
-        <div class="controls">
-            <button class="btn btn-primary" id="startBtn">🎤 जप शुरू करें</button>
-            <button class="btn btn-secondary" id="stopBtn" disabled>⏹️ रोकें</button>
-            <button class="btn btn-manual" id="manualBtn">➕ मैन्युअल गिनती</button>
-            <button class="btn btn-danger" id="resetBtn">🔄 रीसेट</button>
-        </div>
-
-        <div class="status-section">
-            <div class="listening-status" id="listeningStatus">माइक्रोफोन तैयार है</div>
-            <div class="recognition-text" id="recognitionText"></div>
-        </div>
-
+        <!-- Progress Bar -->
         <div class="progress-section">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
-            <div class="progress-text">108 जप तक: <span id="remainingCount">108</span></div>
+            <div class="progress-text">
+                <span id="remainingCount">108 जप</span> बाकी
+            </div>
         </div>
 
-        <div class="celebration" id="celebration" style="display: none;">
-            <div class="celebration-text">🎉 एक माला पूर्ण हुई! 🎉</div>
-            <div class="celebration-subtext">जय जय राम कृष्ण हरि</div>
+        <!-- Control Buttons -->
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn">
+                🎤 जप शुरू करें
+            </button>
+            <button class="btn btn-secondary" id="stopBtn" disabled>
+                ⏹️ रोकें
+            </button>
+            <button class="btn btn-manual" id="manualBtn">
+                ➕ मैन्युअल गिनती
+            </button>
+            <button class="btn btn-danger" id="resetBtn">
+                🔄 रीसेट
+            </button>
+        </div>
+
+        <!-- Status Section -->
+        <div class="status-section">
+            <div class="listening-status" id="listeningStatus">
+                🎤 माइक्रोफोन तैयार है
+            </div>
+            <div class="recognition-text" id="recognitionText">
+                मंत्र बोलना शुरू करें...
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">सत्र समय</div>
+                <div class="stat-value" id="sessionTime">0 मिनट</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">आज के जप</div>
+                <div class="stat-value" id="todayCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">इस सप्ताह</div>
+                <div class="stat-value" id="weekCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">सटीकता</div>
+                <div class="stat-value" id="accuracy">--</div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Info -->
+        <div style="margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="color: #ffd700; margin-bottom: 10px; font-size: 1.1rem;">⌨️ कीबोर्ड शॉर्टकट:</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Space</kbd> - जप शुरू करें</div>
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Esc</kbd> - जप रोकें</div>
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Ctrl + Enter</kbd> - मैन्युअल गिनती</div>
+            </div>
         </div>
     </div>
 
+    <!-- Celebration Overlay -->
+    <div class="celebration" id="celebration" style="display: none;">
+        <div class="celebration-text">🎉 माला पूर्ण हुई! 🎉</div>
+        <div class="celebration-subtext">जय श्री राम!</div>
+    </div>
+
+    <!-- Load JavaScript -->
     <script src="{{ url_for('static', filename='js/harijap.js') }}"></script>
 </body>
 </html>
