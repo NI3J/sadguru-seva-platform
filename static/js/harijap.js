@@ -1,9 +1,10 @@
 class HariJapCounter {
     constructor() {
         // Core properties
-        this.count = 0;
-        this.totalMalas = 0;
-        this.currentMalaWords = 0;
+        this.totalWords = 0;  // Total word count (5 per pronunciation)
+        this.currentMalaPronunciations = 0;  // Current pronunciations in this mala (0-108)
+        this.totalMalas = 0;  // Total completed malas
+        this.totalPronunciations = 0;  // Total number of times mantra was said
         this.isListening = false;
         this.recognition = null;
         this.targetPhrases = [
@@ -15,9 +16,8 @@ class HariJapCounter {
 
         // Configuration
         this.config = {
-            wordsPerPronunciation: 5,
-            wordsPerMala: 108,
-            totalMalasTarget: 108,
+            wordsPerPronunciation: 5,  // Each pronunciation counts as 5 words
+            pronunciationsPerMala: 108,  // 108 pronunciations make 1 mala
             recognitionLang: 'hi-IN',
             celebrationDuration: 3000,
             autoSaveInterval: 10000,
@@ -200,10 +200,27 @@ class HariJapCounter {
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    this.count = data.count || 0;
-                    this.totalMalas = data.total_malas || 0;
-                    this.currentMalaWords = this.count % this.config.wordsPerMala;
-                    console.log('✅ State loaded from server:', data);
+                    // Load total word count
+                    this.totalWords = data.count || 0;
+                    
+                    // Calculate pronunciations from word count
+                    this.totalPronunciations = Math.floor(this.totalWords / this.config.wordsPerPronunciation);
+                    
+                    // Calculate completed malas (540 words = 1 mala)
+                    this.totalMalas = Math.floor(this.totalWords / (this.config.pronunciationsPerMala * this.config.wordsPerPronunciation));
+                    
+                    // Calculate current position in mala (1-108, not 0-107)
+                    const pronunciationsInCurrentMala = this.totalPronunciations % this.config.pronunciationsPerMala;
+                    this.currentMalaPronunciations = pronunciationsInCurrentMala === 0 && this.totalPronunciations > 0 
+                        ? this.config.pronunciationsPerMala 
+                        : pronunciationsInCurrentMala;
+                    
+                    console.log('✅ State loaded from server:', {
+                        totalWords: this.totalWords,
+                        totalPronunciations: this.totalPronunciations,
+                        totalMalas: this.totalMalas,
+                        currentMalaPronunciations: this.currentMalaPronunciations
+                    });
                 }
             }
         } catch (error) {
@@ -218,9 +235,19 @@ class HariJapCounter {
         if (savedData) {
             try {
                 const data = JSON.parse(savedData);
-                this.count = data.count || 0;
-                this.totalMalas = data.totalMalas || 0;
-                this.currentMalaWords = data.currentMalaWords || 0;
+                this.totalWords = data.totalWords || data.count || 0;
+                this.totalPronunciations = data.totalPronunciations || Math.floor(this.totalWords / this.config.wordsPerPronunciation);
+                
+                // Calculate malas based on 540 words per mala
+                this.totalMalas = data.totalMalas || Math.floor(this.totalWords / (this.config.pronunciationsPerMala * this.config.wordsPerPronunciation));
+                
+                // Calculate current position (1-108)
+                const pronunciationsInCurrentMala = this.totalPronunciations % this.config.pronunciationsPerMala;
+                this.currentMalaPronunciations = data.currentMalaPronunciations || 
+                    (pronunciationsInCurrentMala === 0 && this.totalPronunciations > 0 
+                        ? this.config.pronunciationsPerMala 
+                        : pronunciationsInCurrentMala);
+                
                 console.log('✅ State loaded from local storage:', data);
             } catch (error) {
                 console.error('❌ Error parsing local storage data:', error);
@@ -229,29 +256,31 @@ class HariJapCounter {
     }
 
     updateDisplay() {
-        // Update count display with animation
+        // Update total word count display
         if (this.elements.countDisplay) {
             const currentValue = parseInt(this.elements.countDisplay.textContent);
-            if (currentValue !== this.count) {
+            if (currentValue !== this.totalWords) {
                 this.elements.countDisplay.classList.add('pulse');
-                this.elements.countDisplay.textContent = this.count;
+                this.elements.countDisplay.textContent = this.totalWords;
                 setTimeout(() => {
                     this.elements.countDisplay.classList.remove('pulse');
                 }, 500);
             }
         }
 
-        // Update mala status
+        // Update total malas completed
         if (this.elements.totalMalas) {
             this.elements.totalMalas.textContent = `कुल माला: ${this.totalMalas}`;
         }
         
+        // Update current mala status (pronunciations, not words)
         if (this.elements.malaStatus) {
-            this.elements.malaStatus.textContent = `वर्तमान माला: ${this.currentMalaWords} / ${this.config.wordsPerMala}`;
+            this.elements.malaStatus.textContent = `वर्तमान माला: ${this.currentMalaPronunciations} / ${this.config.pronunciationsPerMala}`;
         }
         
+        // Update remaining pronunciations in current mala
         if (this.elements.remainingCount) {
-            const remaining = this.config.wordsPerMala - this.currentMalaWords;
+            const remaining = this.config.pronunciationsPerMala - this.currentMalaPronunciations;
             this.elements.remainingCount.textContent = `शेष: ${remaining} जप`;
         }
 
@@ -266,9 +295,9 @@ class HariJapCounter {
             }
         }
 
-        // Update progress bar
+        // Update progress bar based on pronunciations in current mala
         if (this.elements.progressFill) {
-            const progress = (this.currentMalaWords / this.config.wordsPerMala) * 100;
+            const progress = (this.currentMalaPronunciations / this.config.pronunciationsPerMala) * 100;
             this.elements.progressFill.style.width = `${Math.min(progress, 100)}%`;
         }
 
@@ -297,7 +326,7 @@ class HariJapCounter {
 
         // Update today's count
         if (this.elements.todayCount) {
-            this.elements.todayCount.textContent = this.count;
+            this.elements.todayCount.textContent = this.totalWords;
         }
 
         // Update accuracy
@@ -448,11 +477,21 @@ class HariJapCounter {
     }
 
     incrementCount() {
-        this.count += this.config.wordsPerPronunciation;
-        this.currentMalaWords += this.config.wordsPerPronunciation;
+        // Increment word count by 5
+        this.totalWords += this.config.wordsPerPronunciation;
         
-        if (this.currentMalaWords >= this.config.wordsPerMala) {
-            this.completeMala();
+        // Increment total pronunciations by 1
+        this.totalPronunciations++;
+        
+        // Calculate current mala position based on total pronunciations
+        // Reset to 1 after completing 108 (not 0)
+        const positionInMala = ((this.totalPronunciations - 1) % this.config.pronunciationsPerMala) + 1;
+        this.currentMalaPronunciations = positionInMala;
+        
+        // Check if mala is complete (when we reach exactly 108)
+        if (positionInMala === this.config.pronunciationsPerMala) {
+            // Complete mala after the count reaches 108
+            setTimeout(() => this.completeMala(), 100);
         }
         
         this.updateDisplay();
@@ -461,9 +500,12 @@ class HariJapCounter {
 
     completeMala() {
         this.totalMalas++;
-        this.currentMalaWords = this.currentMalaWords % this.config.wordsPerMala;
+        // After completing a mala, the next pronunciation will show as 1/108
         this.triggerMalaCelebration();
-        this.logActivity('MALA_COMPLETED', { totalMalas: this.totalMalas });
+        this.logActivity('MALA_COMPLETED', { 
+            totalMalas: this.totalMalas,
+            totalWords: this.totalWords 
+        });
         
         // Check for milestone achievements
         this.checkMilestones();
@@ -627,9 +669,10 @@ class HariJapCounter {
     }
 
     resetCounter() {
-        this.count = 0;
+        this.totalWords = 0;
+        this.totalPronunciations = 0;
         this.totalMalas = 0;
-        this.currentMalaWords = 0;
+        this.currentMalaPronunciations = 0;
         this.updateDisplay();
         this.saveToLocalStorage();
         this.saveToServer();
@@ -741,9 +784,10 @@ class HariJapCounter {
 
     saveToLocalStorage() {
         const data = {
-            count: this.count,
+            totalWords: this.totalWords,
+            totalPronunciations: this.totalPronunciations,
             totalMalas: this.totalMalas,
-            currentMalaWords: this.currentMalaWords,
+            currentMalaPronunciations: this.currentMalaPronunciations,
             lastSaved: Date.now()
         };
         localStorage.setItem('hariJapData', JSON.stringify(data));
@@ -762,7 +806,7 @@ class HariJapCounter {
                 },
                 credentials: 'same-origin',
                 body: JSON.stringify({
-                    count: this.count,
+                    count: this.totalWords,  // Send total word count
                     totalMalas: this.totalMalas
                 })
             });
@@ -799,9 +843,10 @@ class HariJapCounter {
         const logEntry = {
             activity,
             timestamp: new Date().toISOString(),
-            count: this.count,
+            totalWords: this.totalWords,
+            totalPronunciations: this.totalPronunciations,
             totalMalas: this.totalMalas,
-            currentMalaWords: this.currentMalaWords,
+            currentMalaPronunciations: this.currentMalaPronunciations,
             ...data
         };
         
