@@ -15,7 +15,7 @@ body {
     padding: 20px;
     color: #fff;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* Animated background particles */
@@ -32,6 +32,7 @@ body::before {
         radial-gradient(circle at 40% 60%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
     animation: cosmic-drift 30s ease-in-out infinite;
     pointer-events: none;
+    z-index: 0;
 }
 
 @keyframes cosmic-drift {
@@ -45,6 +46,7 @@ body::before {
         rgba(255, 255, 255, 0.1) 0%, 
         rgba(255, 255, 255, 0.05) 100%);
     backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-radius: 30px;
     padding: 40px;
     box-shadow: 
@@ -56,6 +58,7 @@ body::before {
     width: 100%;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1;
 }
 
 .divine-glow {
@@ -71,6 +74,7 @@ body::before {
     filter: blur(60px);
     animation: divine-pulse 4s ease-in-out infinite;
     pointer-events: none;
+    z-index: -1;
 }
 
 @keyframes divine-pulse {
@@ -88,13 +92,12 @@ body::before {
     font-weight: 700;
     position: relative;
     z-index: 1;
-    text-shadow: 0 0 40px rgba(255, 193, 7, 0.5);
     animation: title-glow 3s ease-in-out infinite;
 }
 
 @keyframes title-glow {
     0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.2) drop-shadow(0 0 20px rgba(255, 193, 7, 0.8)); }
+    50% { filter: brightness(1.2); }
 }
 
 .user-info {
@@ -106,6 +109,8 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
 .user-name {
@@ -123,6 +128,7 @@ body::before {
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .logout-btn:hover {
@@ -152,6 +158,8 @@ body::before {
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    word-wrap: break-word;
 }
 
 .mantra::before {
@@ -185,7 +193,6 @@ body::before {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
     transition: all 0.3s ease;
     display: inline-block;
 }
@@ -198,7 +205,7 @@ body::before {
     0% { transform: scale(1); }
     50% { 
         transform: scale(1.2); 
-        filter: brightness(1.5) drop-shadow(0 0 30px rgba(0, 255, 136, 0.8));
+        filter: brightness(1.5);
     }
     100% { transform: scale(1); }
 }
@@ -238,7 +245,11 @@ body::before {
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     text-transform: none;
+    min-width: 140px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn::before {
@@ -266,7 +277,7 @@ body::before {
     box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(76, 175, 80, 0.6);
 }
@@ -287,7 +298,7 @@ body::before {
     box-shadow: 0 5px 20px rgba(33, 150, 243, 0.4);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
     transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(33, 150, 243, 0.6);
 }
@@ -298,7 +309,7 @@ body::before {
     box-shadow: 0 5px 20px rgba(255, 152, 0, 0.4);
 }
 
-.btn-manual:hover {
+.btn-manual:hover:not(:disabled) {
     transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(255, 152, 0, 0.6);
 }
@@ -309,7 +320,7 @@ body::before {
     box-shadow: 0 5px 20px rgba(244, 67, 54, 0.4);
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
     transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(244, 67, 54, 0.6);
 }
@@ -327,6 +338,7 @@ body::before {
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .listening-status {
@@ -362,6 +374,8 @@ body::before {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     margin-top: 10px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .progress-section {
@@ -429,6 +443,7 @@ body::before {
     border-radius: 15px;
     padding: 15px;
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .stat-label {
@@ -460,6 +475,8 @@ body::before {
     opacity: 0;
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    max-width: 90vw;
 }
 
 .celebration.show {
@@ -521,69 +538,225 @@ body::before {
 .om-4 { left: 70%; animation-delay: 15s; }
 .om-5 { left: 90%; animation-delay: 20s; }
 
-/* Responsive Design */
+/* Mobile-first responsive design */
 @media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+
     .container {
-        padding: 30px 20px;
+        padding: 25px 20px;
+        border-radius: 20px;
     }
     
     .title {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
+        margin-bottom: 15px;
     }
     
     .mantra {
-        font-size: 1.8rem;
-        padding: 20px;
+        font-size: 1.6rem;
+        padding: 20px 15px;
     }
     
     .count-display {
-        font-size: 4rem;
+        font-size: 3.5rem;
+    }
+
+    .mala-status {
+        font-size: 1.2rem;
+    }
+
+    .total-malas {
+        font-size: 1.1rem;
     }
     
     .controls {
-        gap: 10px;
+        gap: 12px;
+        margin: 25px 0;
     }
     
     .btn {
-        padding: 12px 24px;
+        padding: 12px 20px;
         font-size: 1rem;
+        min-width: 120px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+    }
+
+    .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .celebration {
+        padding: 35px 25px;
+    }
+
+    .celebration-text {
+        font-size: 2rem;
+    }
+
+    .celebration-subtext {
+        font-size: 1.2rem;
     }
 }
 
 @media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 20px 15px;
+    }
+
     .title {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     .mantra {
-        font-size: 1.5rem;
-        padding: 15px;
+        font-size: 1.3rem;
+        padding: 15px 12px;
     }
     
     .count-display {
-        font-size: 3rem;
+        font-size: 2.8rem;
+    }
+
+    .mala-status {
+        font-size: 1rem;
+    }
+
+    .total-malas {
+        font-size: 0.95rem;
     }
     
     .controls {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
     }
     
     .btn {
         width: 100%;
+        padding: 14px 20px;
+        min-width: auto;
     }
     
     .user-info {
         flex-direction: column;
         gap: 10px;
+        padding: 12px;
+    }
+
+    .user-name {
+        font-size: 1.1rem;
+    }
+
+    .logout-btn {
+        width: 100%;
+        padding: 10px 16px;
     }
     
     .celebration {
-        padding: 30px;
+        padding: 25px 20px;
         width: 90%;
     }
     
     .celebration-text {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
+    }
+
+    .celebration-subtext {
+        font-size: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .listening-status {
+        font-size: 1.1rem;
+    }
+
+    .recognition-text {
+        font-size: 1rem;
+        padding: 8px;
+    }
+
+    .progress-bar {
+        height: 16px;
+    }
+}
+
+/* Landscape orientation adjustments for phones */
+@media (max-width: 900px) and (max-height: 500px) {
+    .container {
+        padding: 15px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .title {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    .mantra {
+        font-size: 1.2rem;
+        padding: 12px;
+    }
+
+    .count-display {
+        font-size: 2.5rem;
+        margin: 10px 0;
+    }
+
+    .controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .title,
+    .mantra,
+    .count-display {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    /* Already dark, but can add additional adjustments if needed */
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
