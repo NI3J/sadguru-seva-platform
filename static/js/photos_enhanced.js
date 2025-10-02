@@ -78,8 +78,6 @@ class EnhancedPhotoGallery {
             retryBtn: document.getElementById('retry-btn')
         };
 
-        // Templates will be accessed when needed
-
         // Initialize the gallery
         this.init();
     }
@@ -252,9 +250,11 @@ class EnhancedPhotoGallery {
             return;
         }
 
-        // Set grid class based on view mode
-        this.elements.photosGrid.className = `photos-grid ${this.state.currentView}-view`;
-        this.log(`🔄 Setting grid class to: photos-grid ${this.state.currentView}-view`);
+        // FIXED: Remove existing view classes first, then add the correct one
+        this.elements.photosGrid.className = 'photos-grid';
+        this.elements.photosGrid.classList.add(`${this.state.currentView}-view`);
+        
+        this.log(`🔄 Setting view to: ${this.state.currentView}-view`);
 
         this.state.photos.forEach((photo, index) => {
             this.log(`🖼️ Creating element for photo ${index + 1}: ${photo.title}`);
@@ -280,7 +280,7 @@ class EnhancedPhotoGallery {
         
         if (!templateElement) {
             this.log(`❌ Template not found for view: ${this.state.currentView}`, 'error');
-            return document.createElement('div');
+            return this.createFallbackElement(photo, index);
         }
         
         const template = templateElement.content.cloneNode(true);
@@ -291,7 +291,7 @@ class EnhancedPhotoGallery {
         
         if (!element) {
             this.log(`❌ Template element not found for view: ${this.state.currentView}`, 'error');
-            return document.createElement('div');
+            return this.createFallbackElement(photo, index);
         }
 
         // Set photo data
@@ -300,22 +300,20 @@ class EnhancedPhotoGallery {
         // Set image
         const img = element.querySelector('.photo-image, .list-image');
         if (img) {
-            this.log(`🖼️ Setting image source: ${photo.image_path}`);
             img.src = photo.image_path;
             img.alt = photo.alt_text || photo.title;
             img.loading = 'lazy';
             
             // Handle image load events
             img.addEventListener('load', () => {
-                this.log(`✅ Image loaded: ${photo.title}`);
+                const loadingEl = element.querySelector('.photo-loading, .image-loading');
+                if (loadingEl) loadingEl.style.display = 'none';
             });
             
             img.addEventListener('error', () => {
                 this.log(`❌ Failed to load image: ${photo.image_path}`, 'error');
                 img.src = this.createPlaceholderImage(photo.title);
             });
-        } else {
-            this.log(`❌ Image element not found in template for view: ${this.state.currentView}`, 'error');
         }
 
         // Set text content
@@ -358,12 +356,43 @@ class EnhancedPhotoGallery {
             });
         }
 
-        // Add click handler to entire element
-        element.addEventListener('click', () => {
-            this.openSlideshow(index);
-        });
+        // Add click handler to entire element (except for list view actions)
+        if (this.state.currentView !== 'list') {
+            element.addEventListener('click', () => {
+                this.openSlideshow(index);
+            });
+        } else {
+            const imageContainer = element.querySelector('.list-image-container');
+            const infoContainer = element.querySelector('.list-info');
+            if (imageContainer) {
+                imageContainer.addEventListener('click', () => this.openSlideshow(index));
+            }
+            if (infoContainer) {
+                infoContainer.addEventListener('click', () => this.openSlideshow(index));
+            }
+        }
 
         return element;
+    }
+
+    /**
+     * Create fallback element if template is missing
+     */
+    createFallbackElement(photo, index) {
+        const div = document.createElement('div');
+        div.className = this.state.currentView === 'list' ? 'photo-list-item' : 'photo-card';
+        div.setAttribute('data-photo-id', photo.id);
+        div.innerHTML = `
+            <div class="${this.state.currentView === 'list' ? 'list-image-container' : 'photo-image-container'}">
+                <img src="${photo.image_path}" alt="${photo.alt_text || photo.title}" class="${this.state.currentView === 'list' ? 'list-image' : 'photo-image'}" loading="lazy">
+            </div>
+            <div class="${this.state.currentView === 'list' ? 'list-info' : 'photo-info'}">
+                <h3>${photo.title || 'Untitled'}</h3>
+                <p>${photo.description || ''}</p>
+            </div>
+        `;
+        div.addEventListener('click', () => this.openSlideshow(index));
+        return div;
     }
 
     /**
@@ -601,6 +630,7 @@ class EnhancedPhotoGallery {
         if (this.state.currentPage > 1) {
             this.setState({ currentPage: this.state.currentPage - 1 });
             this.loadPhotos();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -608,6 +638,7 @@ class EnhancedPhotoGallery {
         if (this.state.currentPage < this.state.totalPages) {
             this.setState({ currentPage: this.state.currentPage + 1 });
             this.loadPhotos();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -615,6 +646,7 @@ class EnhancedPhotoGallery {
         if (page >= 1 && page <= this.state.totalPages) {
             this.setState({ currentPage: page });
             this.loadPhotos();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -741,7 +773,10 @@ class EnhancedPhotoGallery {
     showError(message) {
         if (this.elements.errorMessage) {
             this.elements.errorMessage.style.display = 'block';
-            this.elements.errorMessage.querySelector('p').textContent = message;
+            const errorText = this.elements.errorMessage.querySelector('p');
+            if (errorText) {
+                errorText.textContent = message;
+            }
         }
         if (this.elements.loadingIndicator) {
             this.elements.loadingIndicator.style.display = 'none';
@@ -822,3 +857,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for external access
 window.EnhancedPhotoGallery = EnhancedPhotoGallery;
+
