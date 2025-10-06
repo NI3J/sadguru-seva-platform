@@ -1,7 +1,5 @@
 // static/js/mantra.js
-// Lightweight, accessible audio controller with optional track list and verse sync.
-// Works even if some elements are missing — it will gracefully skip those features.
-
+// Enhanced audio controller with verse sync, prev/next navigation
 (function () {
   'use strict';
 
@@ -11,70 +9,65 @@
     const sel = (s, r = document) => r.querySelector(s);
     const selAll = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-    // Core elements (use these IDs in mantra.html)
+    // Core elements
     const audio = sel('#mantra-audio');
     if (!audio) {
-      console.warn('[mantra.js] Missing <audio id="mantra-audio"> element');
+      console.warn('[mantra.js] Missing <audio id="mantra-audio">');
       return;
     }
 
     const playBtn = sel('#play');
     const stopBtn = sel('#stop');
-    const seek = sel('#seek');           // <input type="range" min="0" max="100" step="0.1">
-    const cur = sel('#current-time');    // <span id="current-time">
-    const dur = sel('#duration');        // <span id="duration">
-    const vol = sel('#volume');          // <input type="range" min="0" max="1" step="0.01">
+    const prevBtn = sel('#prev');
+    const nextBtn = sel('#next');
+    const seek = sel('#seek');
+    const cur = sel('#current-time');
+    const dur = sel('#duration');
+    const vol = sel('#volume');
     const muteBtn = sel('#mute');
-    const loopToggle = sel('#loop');     // <input type="checkbox" id="loop">
-    const rateSel = sel('#rate');        // <select id="rate"> e.g., 0.75, 1, 1.25
-    const trackList = sel('#track-list'); // Container with children having [data-src], optional [data-title]
-    const versesContainer = sel('#verses'); // Container with verse nodes having [data-start]
+    const loopToggle = sel('#loop');
+    const rateSel = sel('#rate');
+    const versesContainer = sel('#verses');
+    const loadingEl = sel('#loading');
 
-    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = window.matchMedia && 
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Config
-    const SEEK_STEP = 5;        // seconds for keyboard seek
-    const SEEK_STEP_LARGE = 15; // seconds for media session seek
+    const SEEK_STEP = 5;
     const VOL_STEP = 0.05;
-
-    // Local storage keys
-    const LS = {
-      src: 'mantra:lastSrc',
-      time: 'mantra:lastTime',
-      vol: 'mantra:volume',
-      muted: 'mantra:muted',
-      loop: 'mantra:loop',
-      rate: 'mantra:rate'
-    };
 
     // Restore state
     restorePersisted(audio, { vol, loopToggle, rateSel });
 
-    // Wire up controls
-    bindCoreControls({ audio, playBtn, stopBtn, muteBtn, vol, loopToggle, rateSel, seek, cur, dur });
-
-    // Track list support
-    const tracks = trackList ? selAll('[data-src]', trackList) : [];
-    if (tracks.length) {
-      initTrackList({ audio, trackList, tracks });
-    }
-
-    // Verse sync support
+    // Build verse index
     let verseIndex = null;
     if (versesContainer) {
       verseIndex = buildVerseIndex(versesContainer);
     }
 
+    // Wire up controls
+    bindCoreControls({ 
+      audio, playBtn, stopBtn, prevBtn, nextBtn, muteBtn, 
+      vol, loopToggle, rateSel, seek, cur, dur, 
+      verseIndex, versesContainer 
+    });
+
     // Media Session API
-    setupMediaSession({ audio, trackList, tracks });
+    setupMediaSession({ audio, verseIndex });
 
     // Keyboard shortcuts
     setupKeyboardShortcuts({ audio, playBtn, vol, loopToggle });
 
-    // Persist time periodically
+    // Time updates
     let lastPersist = 0;
+    let isSeeking = false;
+    
     audio.addEventListener('timeupdate', () => {
-      updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      if (!isSeeking) {
+        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      }
+      
       const now = performance.now();
       if (now - lastPersist > 1500) {
         persistTime(audio);
@@ -82,26 +75,34 @@
       }
     });
 
-    // On metadata, update duration UI and restore last time for this src
+    // On metadata loaded
     audio.addEventListener('loadedmetadata', () => {
       updateDurationUI({ audio, seek, dur });
       restoreLastTimeForSrc(audio);
+      if (loadingEl) loadingEl.style.display = 'none';
     });
 
-    // Autoplay last track if desired (comment out if not wanted)
-    // safePlay(audio);
+    // Handle seeking flag
+    if (seek) {
+      seek.addEventListener('mousedown', () => { isSeeking = true; });
+      seek.addEventListener('touchstart', () => { isSeeking = true; });
+      seek.addEventListener('mouseup', () => { isSeeking = false; });
+      seek.addEventListener('touchend', () => { isSeeking = false; });
+    }
 
-    // If a track list exists and nothing is set, load first item (no autoplay)
-    if (!audio.src && tracks.length) {
-      const first = tracks[0];
-      loadTrack(audio, first.dataset.src, first.dataset.title || first.textContent?.trim());
-      highlightActiveTrack(tracks, first);
+    // Make verses clickable for seeking
+    if (verseIndex && versesContainer) {
+      makeVersesClickable(audio, verseIndex, versesContainer);
     }
   }
 
   // ---------- Core controls ----------
 
-  function bindCoreControls({ audio, playBtn, stopBtn, muteBtn, vol, loopToggle, rateSel, seek, cur, dur }) {
+  function bindCoreControls({ 
+    audio, playBtn, stopBtn, prevBtn, nextBtn, muteBtn, 
+    vol, loopToggle, rateSel, seek, cur, dur,
+    verseIndex, versesContainer
+  }) {
     if (playBtn) {
       playBtn.addEventListener('click', () => togglePlay(audio, playBtn));
     }
@@ -114,20 +115,38 @@
       });
     }
 
+    if (prevBtn && verseIndex) {
+      prevBtn.addEventListener('click', () => {
+        const currentIdx = verseIndex.activeIdx;
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : 0;
+        seekToVerse(audio, verseIndex, prevIdx);
+      });
+    }
+
+    if (nextBtn && verseIndex) {
+      nextBtn.addEventListener('click', () => {
+        const currentIdx = verseIndex.activeIdx;
+        const nextIdx = currentIdx < verseIndex.nodes.length - 1 
+          ? currentIdx + 1 
+          : verseIndex.nodes.length - 1;
+        seekToVerse(audio, verseIndex, nextIdx);
+      });
+    }
+
     if (seek) {
-      // Update position when user drags
       let seeking = false;
       seek.addEventListener('input', () => {
         seeking = true;
         const pct = clamp(parseFloat(seek.value), 0, 100) / 100;
         if (isFinite(audio.duration)) {
           audio.currentTime = pct * audio.duration;
+          // Update current time display immediately while seeking
+          if (cur) cur.textContent = formatTime(audio.currentTime);
         }
       });
       seek.addEventListener('change', () => {
         seeking = false;
       });
-      // Keep seek in sync while not actively dragging is handled by timeupdate/UI update
     }
 
     if (vol) {
@@ -155,7 +174,6 @@
         audio.loop = !!loopToggle.checked;
         localStorage.setItem('mantra:loop', audio.loop ? '1' : '0');
       });
-      // Initialize current state
       audio.loop = !!loopToggle.checked;
     }
 
@@ -165,7 +183,6 @@
         audio.playbackRate = isFinite(r) && r > 0 ? r : 1.0;
         localStorage.setItem('mantra:rate', String(audio.playbackRate));
       });
-      // Initialize
       const r = parseFloat(rateSel.value || '1');
       audio.playbackRate = isFinite(r) && r > 0 ? r : 1.0;
     }
@@ -179,7 +196,7 @@
     updatePlayButton(playBtn, !audio.paused && !audio.ended);
     updateVolumeUI(vol, muteBtn, audio);
     updateDurationUI({ audio, seek, dur });
-    updateTimeUI({ audio, seek, cur, dur });
+    updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
   }
 
   function togglePlay(audio, playBtn) {
@@ -195,7 +212,7 @@
     const p = audio.play();
     if (p && typeof p.catch === 'function') {
       p.catch(() => {
-        // Autoplay might be blocked; no-op
+        // Autoplay blocked; no-op
       });
     }
   }
@@ -207,8 +224,10 @@
     const icon = btn.querySelector('[data-icon]');
     if (icon) {
       icon.textContent = isPlaying ? '⏸' : '▶️';
-    } else {
-      btn.textContent = isPlaying ? 'Pause' : 'Play';
+    }
+    const textEl = btn.querySelector('#play-text');
+    if (textEl) {
+      textEl.textContent = isPlaying ? 'Pause' : 'Play';
     }
   }
 
@@ -224,8 +243,6 @@
     const icon = btn.querySelector('[data-icon]');
     if (icon) {
       icon.textContent = muted ? '🔇' : '🔊';
-    } else {
-      btn.textContent = muted ? 'Unmute' : 'Mute';
     }
   }
 
@@ -279,7 +296,7 @@
         audio.playbackRate = savedRate;
       }
     } catch (e) {
-      // Storage not available; ignore
+      // Storage not available
     }
   }
 
@@ -297,56 +314,10 @@
       const lastSrc = localStorage.getItem('mantra:lastSrc');
       const lastTime = parseFloat(localStorage.getItem('mantra:lastTime') || '');
       if (lastSrc && normalizeUrl(lastSrc) === normalizeUrl(audio.src) && isFinite(lastTime)) {
-        // Seek close to last position but not to the end
         const safeTime = Math.min(lastTime, Math.max(0, audio.duration - 2));
         audio.currentTime = safeTime;
       }
     } catch (_) {}
-  }
-
-  // ---------- Track list ----------
-
-  function initTrackList({ audio, trackList, tracks }) {
-    trackList.addEventListener('click', (e) => {
-      const item = e.target.closest('[data-src]');
-      if (!item || !trackList.contains(item)) return;
-
-      const src = item.dataset.src;
-      const title = item.dataset.title || item.textContent?.trim();
-      if (!src) return;
-
-      loadTrack(audio, src, title);
-      highlightActiveTrack(tracks, item);
-      // Try to play (will be blocked until user gesture in some browsers)
-      safePlay(audio);
-    });
-  }
-
-  function loadTrack(audio, src, title) {
-    audio.src = src;
-    audio.currentTime = 0;
-    try {
-      localStorage.setItem('mantra:lastSrc', src);
-      localStorage.setItem('mantra:lastTime', '0');
-    } catch (_) {}
-
-    // Media Session metadata
-    if ('mediaSession' in navigator) {
-      try {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: title || 'Mantra',
-          artist: 'Sadguru Seva',
-          album: 'Mantras',
-          artwork: []
-        });
-      } catch (_) {}
-    }
-  }
-
-  function highlightActiveTrack(tracks, active) {
-    tracks.forEach(el => el.classList.toggle('is-active', el === active));
-    // Ensure visibility
-    active?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   // ---------- Verse sync ----------
@@ -354,18 +325,23 @@
   function buildVerseIndex(container) {
     const nodes = Array.from(container.querySelectorAll('[data-start]'))
       .map((el) => {
-        const t = parseFloat(el.getAttribute('data-start'));
-        return isFinite(t) ? { el, start: t } : null;
+        const start = parseFloat(el.getAttribute('data-start'));
+        const end = parseFloat(el.getAttribute('data-end'));
+        const verse = el.getAttribute('data-verse');
+        return isFinite(start) ? { el, start, end: isFinite(end) ? end : null, verse } : null;
       })
       .filter(Boolean)
       .sort((a, b) => a.start - b.start);
 
     if (!nodes.length) return null;
 
-    // Compute end boundaries (next start or Infinity)
+    // Set end times if not explicitly provided
     for (let i = 0; i < nodes.length; i++) {
-      nodes[i].end = i < nodes.length - 1 ? nodes[i + 1].start : Number.POSITIVE_INFINITY;
+      if (!nodes[i].end) {
+        nodes[i].end = i < nodes.length - 1 ? nodes[i + 1].start : Number.POSITIVE_INFINITY;
+      }
     }
+
     return { nodes, activeIdx: -1 };
   }
 
@@ -373,7 +349,7 @@
     if (!index) return;
     const { nodes } = index;
 
-    // Binary search for efficiency
+    // Find active verse with binary search
     let lo = 0, hi = nodes.length - 1, found = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
@@ -389,38 +365,85 @@
     }
 
     if (found !== index.activeIdx) {
-      // Update classes
-      if (index.activeIdx >= 0) nodes[index.activeIdx].el.classList.remove('is-active');
+      // Remove previous highlight
+      if (index.activeIdx >= 0) {
+        nodes[index.activeIdx].el.classList.remove('is-active');
+      }
+      
+      // Add new highlight
       if (found >= 0) {
         const el = nodes[found].el;
         el.classList.add('is-active');
-        // Auto-scroll verse into view (respect reduced motion)
+        
+        // Smooth scroll verse into view
         el.scrollIntoView({
           behavior: prefersReducedMotion ? 'auto' : 'smooth',
           block: 'center',
           inline: 'nearest'
         });
       }
+      
       index.activeIdx = found;
     }
   }
 
+  function seekToVerse(audio, verseIndex, targetIdx) {
+    if (!verseIndex || targetIdx < 0 || targetIdx >= verseIndex.nodes.length) return;
+    
+    const verse = verseIndex.nodes[targetIdx];
+    audio.currentTime = verse.start;
+    
+    // Auto-play if paused
+    if (audio.paused) {
+      safePlay(audio);
+    }
+  }
+
+  function makeVersesClickable(audio, verseIndex, container) {
+    container.addEventListener('click', (e) => {
+      const shloka = e.target.closest('.shloka[data-start]');
+      if (!shloka) return;
+
+      const start = parseFloat(shloka.getAttribute('data-start'));
+      if (isFinite(start)) {
+        audio.currentTime = start;
+        
+        // Auto-play if paused
+        if (audio.paused) {
+          safePlay(audio);
+        }
+      }
+    });
+  }
+
   // ---------- Media Session ----------
 
-  function setupMediaSession({ audio, trackList, tracks }) {
+  function setupMediaSession({ audio, verseIndex }) {
     if (!('mediaSession' in navigator)) return;
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'रुद्राष्टकम् (Rudrashtakam)',
+        artist: 'Gurudev Shri Vidyanand Baba Gategaonkar',
+        album: 'Sadguru Seva Mantras',
+        artwork: []
+      });
+    } catch (_) {}
 
     navigator.mediaSession.setActionHandler?.('play', () => safePlay(audio));
     navigator.mediaSession.setActionHandler?.('pause', () => audio.pause());
+    
     navigator.mediaSession.setActionHandler?.('seekbackward', (details) => {
       const step = details.seekOffset || 10;
       audio.currentTime = Math.max(0, audio.currentTime - step);
     });
+    
     navigator.mediaSession.setActionHandler?.('seekforward', (details) => {
       const step = details.seekOffset || 10;
       const dur = isFinite(audio.duration) ? audio.duration : Infinity;
       audio.currentTime = Math.min(dur, audio.currentTime + step);
     });
+    
     navigator.mediaSession.setActionHandler?.('seekto', (details) => {
       if (details.fastSeek && 'fastSeek' in audio) {
         audio.fastSeek(details.seekTime);
@@ -429,16 +452,19 @@
       }
     });
 
-    if (tracks.length) {
+    if (verseIndex) {
       navigator.mediaSession.setActionHandler?.('previoustrack', () => {
-        const activeIdx = tracks.findIndex(el => el.classList.contains('is-active'));
-        const prev = activeIdx > 0 ? tracks[activeIdx - 1] : tracks[0];
-        prev?.click();
+        const currentIdx = verseIndex.activeIdx;
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : 0;
+        seekToVerse(audio, verseIndex, prevIdx);
       });
+      
       navigator.mediaSession.setActionHandler?.('nexttrack', () => {
-        const activeIdx = tracks.findIndex(el => el.classList.contains('is-active'));
-        const next = activeIdx >= 0 && activeIdx < tracks.length - 1 ? tracks[activeIdx + 1] : tracks[tracks.length - 1];
-        next?.click();
+        const currentIdx = verseIndex.activeIdx;
+        const nextIdx = currentIdx < verseIndex.nodes.length - 1 
+          ? currentIdx + 1 
+          : verseIndex.nodes.length - 1;
+        seekToVerse(audio, verseIndex, nextIdx);
       });
     }
   }
@@ -447,7 +473,7 @@
 
   function setupKeyboardShortcuts({ audio, playBtn, vol, loopToggle }) {
     document.addEventListener('keydown', (e) => {
-      // Ignore when typing in inputs/selects/textareas
+      // Ignore when typing in inputs
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|SELECT|TEXTAREA/.test(tag)) return;
 
@@ -457,14 +483,16 @@
           togglePlay(audio, playBtn);
           break;
         case 'ArrowRight':
+          e.preventDefault();
           audio.currentTime = Math.min((audio.duration || Infinity), audio.currentTime + 5);
           break;
         case 'ArrowLeft':
+          e.preventDefault();
           audio.currentTime = Math.max(0, audio.currentTime - 5);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          audio.volume = clamp(audio.volume + VOL_STEP, 0, 1);
+          audio.volume = clamp(audio.volume + 0.05, 0, 1);
           if (vol) vol.value = String(audio.volume);
           if (audio.volume > 0) audio.muted = false;
           localStorage.setItem('mantra:volume', String(audio.volume));
@@ -472,7 +500,7 @@
           break;
         case 'ArrowDown':
           e.preventDefault();
-          audio.volume = clamp(audio.volume - VOL_STEP, 0, 1);
+          audio.volume = clamp(audio.volume - 0.05, 0, 1);
           if (vol) vol.value = String(audio.volume);
           if (audio.volume === 0) audio.muted = true;
           localStorage.setItem('mantra:volume', String(audio.volume));
@@ -488,9 +516,6 @@
           if (loopToggle) {
             loopToggle.checked = !loopToggle.checked;
             audio.loop = loopToggle.checked;
-            localStorage.setItem('mantra:loop', audio.loop ? '1' : '0');
-          } else {
-            audio.loop = !audio.loop;
             localStorage.setItem('mantra:loop', audio.loop ? '1' : '0');
           }
           break;
@@ -524,3 +549,4 @@
     }
   }
 })();
+

@@ -1,44 +1,131 @@
-<!-- templates/harijaplogin.html -->
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="mr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>हरि जप साधना - प्रवेश</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="हरि जप साधना - आध्यात्मिक यात्रा">
+  <title>हरि जप साधना - लॉगिन</title>
+  
+  <!-- Flask static file URLs -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/harijaplogin.css') }}">
+  
+  <!-- Google Fonts for Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Animated background decorations -->
+  <div class="bg-decoration"></div>
+  <div class="bg-decoration"></div>
+  <div class="bg-decoration"></div>
+  
   <div class="container">
     <div class="login-card">
+      <!-- Header Section -->
       <div class="header">
-        <h1 class="title">हरि जप साधना शुरु करणेसे पहीले भक्तगन नोंदणीमे आपना नाम,मोबाईल नंबर दर्ज करे।</h1>
-        <h1 class="title">🕉️ हरि जप साधना</h1>
+        <div class="om-symbol">🕉️</div>
+        <h1 class="title">हरि जप साधना</h1>
         <p class="subtitle">आध्यात्मिक यात्रा शुरू करें</p>
       </div>
-
+      
+      <!-- Information Banner -->
+      <div class="info-banner">
+        हरि जप साधना शुरु करणेसे पहीले भक्तगन नोंदणीमे आपना नाम, मोबाईल नंबर दर्ज करे।
+      </div>
+      
+      <!-- Message Container for Success/Error -->
       <div id="messageContainer"></div>
-
-      <div id="loginForm" class="form-section">
+      
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="event.preventDefault(); sendOTP();">
+        <!-- CSRF Token (if using Flask-WTF) -->
+        {% if csrf_token %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+        
+        <!-- Name Input -->
         <div class="form-group">
-          <label for="name">नाम *</label>
-          <input type="text" id="name" placeholder="अपना नाम दर्ज करें" maxlength="50">
+          <label for="name">
+            नाम (अंग्रेजी में) *
+            <span class="tooltip" data-tooltip="कृपया अपना पूरा नाम अंग्रेजी में दर्ज करें">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input 
+              type="text" 
+              id="name" 
+              name="name"
+              placeholder="अपना नाम अंग्रेजी में दर्ज करें"
+              maxlength="50"
+              required
+              autocomplete="name"
+              value="{{ name if name else '' }}"
+            >
+          </div>
+          <div class="char-count" id="nameCount">0 / 50</div>
         </div>
-
+        
+        <!-- Mobile Input -->
         <div class="form-group">
-          <label for="mobile">मोबाइल नंबर *</label>
-          <input type="tel" id="mobile" placeholder="10 अंकों का मोबाइल नंबर" maxlength="14">
+          <label for="mobile">
+            मोबाइल नंबर *
+            <span class="tooltip" data-tooltip="10 अंकों का भारतीय मोबाइल नंबर">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">📱</span>
+            <input 
+              type="tel" 
+              id="mobile" 
+              name="mobile"
+              placeholder="10 अंकों का मोबाइल नंबर"
+              maxlength="10"
+              pattern="[6-9][0-9]{9}"
+              required
+              autocomplete="tel"
+              value="{{ mobile if mobile else '' }}"
+            >
+          </div>
         </div>
-
-        <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">
-          <span class="btn-text">प्रवेश करें</span>
-          <span class="loading">जाँच रहे हैं…</span>
+        
+        <!-- Submit Button -->
+        <button type="submit" class="btn" id="sendOtpBtn">
+          <div class="btn-content">
+            <span class="btn-text">प्रवेश करें</span>
+            <div class="loading"></div>
+          </div>
         </button>
+        
+        <!-- Progress Indicator -->
+        <div class="progress-dots">
+          <div class="dot active"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </form>
+      
+      <!-- Footer -->
+      <div class="footer">
+        <p>भारतीय रेलवे की सेवा</p>
       </div>
     </div>
   </div>
-
+  
+  <!-- Flask static file URLs -->
   <script src="{{ url_for('static', filename='js/harijaplogin.js') }}"></script>
+  
+  <!-- Pass Flask messages to JavaScript -->
+  <script>
+    // Check for Flask flash messages
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        window.addEventListener('DOMContentLoaded', function() {
+          {% for category, message in messages %}
+            showMessage('{{ message | safe }}', '{{ category }}');
+          {% endfor %}
+        });
+      {% endif %}
+    {% endwith %}
+  </script>
 </body>
 </html>
-
