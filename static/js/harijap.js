@@ -56,7 +56,9 @@ class HariJapCounter {
                 'जय जय राम कृष्णा हरी',
                 'जय जय राम कृष्णो हारी',
                 'jai jai ram krishna hari',
-                'jai jai ram krishna haari'
+                'jai jai ram krishna haari',
+                'jai jai ram krishna hare',
+                'jai jai ram krishna harry'
             ],
 
             // Milestone celebrations
@@ -428,16 +430,31 @@ class HariJapCounter {
         const normalized = this.normalizeText(text);
         let maxCount = 0;
 
+        // Clean the text to remove unwanted words like "Shri", "Shree", etc.
+        const cleanedText = this.cleanMantraText(normalized);
+        
         // Try each target phrase pattern
         for (let pattern of this.config.targetPhrases) {
             const patternLower = pattern.toLowerCase();
             let count = 0;
-            let searchText = normalized;
+            let searchText = cleanedText;
 
-            // Count occurrences
+            // Count occurrences with better boundary detection
             while (searchText.includes(patternLower)) {
-                count++;
                 const index = searchText.indexOf(patternLower);
+                
+                // Check if it's a complete word match (not part of another word)
+                const beforeChar = index > 0 ? searchText.charAt(index - 1) : ' ';
+                const afterIndex = index + patternLower.length;
+                const afterChar = afterIndex < searchText.length ? searchText.charAt(afterIndex) : ' ';
+                
+                // Only count if surrounded by word boundaries
+                if ((beforeChar === ' ' || beforeChar === '।' || beforeChar === '.') && 
+                    (afterChar === ' ' || afterChar === '।' || afterChar === '.' || afterChar === '')) {
+                    count++;
+                }
+                
+                // Move past this occurrence
                 searchText = searchText.substring(index + patternLower.length);
             }
 
@@ -456,32 +473,33 @@ class HariJapCounter {
 
     isMantraPhrase(text) {
         const normalized = this.normalizeText(text);
+        const cleanedText = this.cleanMantraText(normalized);
 
-        // Exact match
+        // Exact match with cleaned text
         for (let phrase of this.config.targetPhrases) {
-            if (normalized === phrase.toLowerCase()) {
+            if (cleanedText === phrase.toLowerCase()) {
                 console.log('✓ Exact: "' + phrase + '"');
                 return true;
             }
         }
 
-        // Contains match
+        // Contains match with cleaned text
         for (let phrase of this.config.targetPhrases) {
-            if (normalized.includes(phrase.toLowerCase())) {
+            if (cleanedText.includes(phrase.toLowerCase())) {
                 console.log('✓ Contains: "' + phrase + '"');
                 return true;
             }
         }
 
-        // Fuzzy match
+        // Fuzzy match with cleaned text
         for (let phrase of this.config.targetPhrases) {
-            if (this.fuzzyMatch(normalized, phrase.toLowerCase())) {
+            if (this.fuzzyMatch(cleanedText, phrase.toLowerCase())) {
                 console.log('✓ Fuzzy: "' + phrase + '"');
                 return true;
             }
         }
 
-        console.log('✗ No match: "' + text + '"');
+        console.log('✗ No match: "' + text + '" (cleaned: "' + cleanedText + '")');
         return false;
     }
 
@@ -491,6 +509,30 @@ class HariJapCounter {
             .replace(/[।,\.\!]/g, '')
             .replace(/\s+/g, ' ')
             .trim();
+    }
+
+    cleanMantraText(text) {
+        // Remove unwanted words that might interfere with mantra recognition
+        const unwantedWords = [
+            'shri', 'shree', 'श्री', 'श्री', 'sri', 'sree',
+            'om', 'ओम', 'aum', 'औम',
+            'namah', 'नमः', 'namo', 'नमो',
+            'swami', 'स्वामी', 'guruji', 'गुरुजी',
+            'baba', 'बाबा', 'sadguru', 'सद्गुरु'
+        ];
+        
+        let cleanedText = text;
+        
+        // Remove unwanted words with word boundaries
+        unwantedWords.forEach(word => {
+            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            cleanedText = cleanedText.replace(regex, '');
+        });
+        
+        // Clean up extra spaces
+        cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
+        
+        return cleanedText;
     }
 
     fuzzyMatch(text, target) {
