@@ -38,7 +38,11 @@ class HariJapCounter {
             userId: null,
 
             // Recognition state
-            lastRecognitionTime: 0
+            lastRecognitionTime: 0,
+
+            // Mantra word tracking
+            currentWordIndex: 0,
+            mantraWords: ['जय', 'जय', 'राम', 'कृष्णा', 'हारी']
         };
 
         // ============================================================
@@ -429,17 +433,16 @@ class HariJapCounter {
         this.metrics.recognitionSuccesses++;
         this.state.lastRecognitionTime = timestamp;
 
-        // Add counts for all repetitions - each repetition counts as 5 words
+        // Handle word-by-word disappearing for each recognition
         for (let i = 0; i < count; i++) {
-            this.incrementCounter();
+            this.disappearCurrentWord();
         }
 
-        // Show appropriate notification with word count
-        const totalWordsAdded = count * this.config.wordsPerPronunciation;
+        // Show appropriate notification
         if (count === 1) {
-            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले!', 'success', 800);
+            this.showNotification('✅ मंत्र शब्द गणना झाले!', 'success', 800);
         } else {
-            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले!', 'success', 1000);
+            this.showNotification('✅ ' + count + ' वेळा मंत्र गणना झाले!', 'success', 1000);
         }
 
         this.triggerSuccessFeedback();
@@ -651,7 +654,8 @@ class HariJapCounter {
     }
 
     addManualCount() {
-        this.incrementCounter();
+        // Trigger word disappearing for manual count
+        this.disappearCurrentWord();
         this.showNotification('➕ व्यक्तिशः काउंट जोडले गेले', 'success', 1000);
         this.triggerSuccessFeedback();
     }
@@ -668,6 +672,9 @@ class HariJapCounter {
         this.state.todayPronunciations = 0;
         this.state.todayMalas = 0;
         this.state.currentMalaPronunciations = 0;
+
+        // Reset mantra display
+        this.resetMantraDisplay();
 
         this.updateUI();
         this.saveToServer(true);
@@ -782,6 +789,7 @@ class HariJapCounter {
         this.updateButtons();
         this.updateSessionStats();
         this.updateFullJapDisplay();
+        this.updateMantraDisplay();
     }
 
     updateCountDisplay() {
@@ -880,6 +888,70 @@ class HariJapCounter {
                 }, 500);
             }
         }
+    }
+
+    // ================================================================
+    // MANTRA WORD DISAPPEARING METHODS
+    // ================================================================
+
+    updateMantraDisplay() {
+        const mantraWords = document.querySelectorAll('.mantra-word');
+        mantraWords.forEach((word, index) => {
+            word.classList.remove('current', 'completed', 'disappearing');
+            
+            if (index < this.state.currentWordIndex) {
+                word.classList.add('completed');
+            } else if (index === this.state.currentWordIndex) {
+                word.classList.add('current');
+            }
+        });
+    }
+
+    disappearCurrentWord() {
+        const currentWord = document.querySelector(`.mantra-word[data-index="${this.state.currentWordIndex}"]`);
+        if (currentWord) {
+            currentWord.classList.add('disappearing');
+            
+            setTimeout(() => {
+                currentWord.classList.add('completed');
+                currentWord.classList.remove('disappearing');
+                this.state.currentWordIndex++;
+                this.updateMantraDisplay();
+                
+                // Check if all words are completed
+                if (this.state.currentWordIndex >= this.state.mantraWords.length) {
+                    this.completeMantraCycle();
+                }
+            }, 800);
+        }
+    }
+
+    completeMantraCycle() {
+        console.log('🎉 Complete mantra cycle finished!');
+        
+        // Reset word index for next cycle
+        this.state.currentWordIndex = 0;
+        
+        // Reset all words to visible state
+        const mantraWords = document.querySelectorAll('.mantra-word');
+        mantraWords.forEach(word => {
+            word.classList.remove('completed', 'current', 'disappearing');
+        });
+        
+        // Update display
+        this.updateMantraDisplay();
+        
+        // Increment counter
+        this.incrementCounter();
+    }
+
+    resetMantraDisplay() {
+        this.state.currentWordIndex = 0;
+        const mantraWords = document.querySelectorAll('.mantra-word');
+        mantraWords.forEach(word => {
+            word.classList.remove('completed', 'current', 'disappearing');
+        });
+        this.updateMantraDisplay();
     }
 
     // ================================================================
