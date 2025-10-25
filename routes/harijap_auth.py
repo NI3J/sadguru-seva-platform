@@ -621,6 +621,24 @@ def health_check():
     }), 200
 
 
+@harijap_auth_bp.route('/harijap/api/server_time', methods=['GET'])
+def get_server_time():
+    """
+    Get current server time for date calculations.
+    
+    Returns:
+        JSON with current server date and time
+    """
+    now = datetime.now()
+    return jsonify({
+        'success': True,
+        'date': now.strftime('%Y-%m-%d'),
+        'datetime': now.isoformat(),
+        'timezone': 'IST',
+        'timestamp': now.timestamp()
+    }), 200
+
+
 @harijap_auth_bp.route('/harijap/auth/test_session', methods=['GET', 'POST'])
 def test_session():
     """
