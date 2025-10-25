@@ -105,6 +105,7 @@ class HariJapCounter {
             console.log('🙏 Initializing Hari Jap Counter...');
 
             await this.authenticateUser();
+            await this.getServerTime(); // Get server time for date calculations
             this.cacheElements();
             this.initializeSpeechRecognition();
             this.attachEventListeners();
@@ -162,6 +163,14 @@ class HariJapCounter {
                 console.warn('⚠️ Element not found: ' + id);
             }
         });
+
+        // Cache the new full jap element
+        const fullJapElement = document.getElementById('fullJapCount');
+        if (fullJapElement) {
+            this.elements.fullJapCount = fullJapElement;
+        } else {
+            console.warn('⚠️ Element not found: fullJapCount');
+        }
 
         if (this.elements.userName && this.state.userName) {
             this.elements.userName.textContent = '🙏 ' + this.state.userName;
@@ -253,7 +262,17 @@ class HariJapCounter {
             this.loadStateFromServer();
         }, this.config.syncInterval);
 
-        console.log('✅ Auto-save and sync started');
+        // Server time sync (every 5 minutes)
+        setInterval(() => {
+            this.getServerTime();
+        }, 5 * 60 * 1000);
+
+        // Check for date change (every minute)
+        setInterval(() => {
+            this.checkForDateChange();
+        }, 60 * 1000);
+
+        console.log('✅ Auto-save, sync, and time sync started');
     }
 
     handleInitError(error) {
@@ -586,10 +605,14 @@ class HariJapCounter {
         // Check if it's a new day and reset today's count if needed
         const currentDate = this.getTodayDateString();
         if (this.state.todayDate !== currentDate) {
+            console.log('📅 New day detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
             this.state.todayDate = currentDate;
+            
+            // Show notification about new day
+            this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
         }
 
         // Increment both total and today's counts
@@ -634,16 +657,13 @@ class HariJapCounter {
     }
 
     confirmReset() {
-        if (confirm('खात्री आहे काय? तुमची सर्व प्रगती रिसेट होईल आणि हे क्रिया पूर्ववत केली जाऊ शकणार नाही')) {
+        if (confirm('खात्री आहे काय? आज के जप रिसेट होईल (कुल जप सुरक्षित रहेगा)')) {
             this.resetCounter();
         }
     }
 
     resetCounter() {
-        // Reset both total and today's counts
-        this.state.totalWords = 0;
-        this.state.totalPronunciations = 0;
-        this.state.totalMalas = 0;
+        // Only reset today's counts, preserve total counts
         this.state.todayWords = 0;
         this.state.todayPronunciations = 0;
         this.state.todayMalas = 0;
@@ -651,9 +671,9 @@ class HariJapCounter {
 
         this.updateUI();
         this.saveToServer(true);
-        this.showNotification('काउंटर रिसेट झाले', 'info');
+        this.showNotification('आज के जप रिसेट झाले (कुल जप सुरक्षित)', 'info');
 
-        console.log('🔄 Counter reset');
+        console.log('🔄 Today\'s counter reset (total preserved)');
     }
 
     // ================================================================
@@ -761,6 +781,7 @@ class HariJapCounter {
         this.updateListeningStatus();
         this.updateButtons();
         this.updateSessionStats();
+        this.updateFullJapDisplay();
     }
 
     updateCountDisplay() {
@@ -845,6 +866,19 @@ class HariJapCounter {
     displayRecognizedText(text) {
         if (this.elements.recognitionText) {
             this.elements.recognitionText.textContent = text;
+        }
+    }
+
+    updateFullJapDisplay() {
+        if (this.elements.fullJapCount) {
+            const current = parseInt(this.elements.fullJapCount.textContent) || 0;
+            if (current !== this.state.totalWords) {
+                this.elements.fullJapCount.classList.add('pulse');
+                this.elements.fullJapCount.textContent = this.state.totalWords;
+                setTimeout(() => {
+                    this.elements.fullJapCount.classList.remove('pulse');
+                }, 500);
+            }
         }
     }
 
@@ -965,10 +999,60 @@ class HariJapCounter {
     // ================================================================
 
     getTodayDateString() {
+        // Use cached server date if available, otherwise fallback to local time
+        if (this.serverDate) {
+            return this.serverDate;
+        }
+        
+        // Fallback to local time if server date not available
         const today = new Date();
         return today.getFullYear() + '-' + 
                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
                String(today.getDate()).padStart(2, '0');
+    }
+
+    async getServerTime() {
+        try {
+            const response = await fetch('/harijap/api/server_time', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.serverDate = data.date;
+                    console.log('🕐 Server time loaded:', data.date);
+                    return data.date;
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error getting server time:', error);
+        }
+        
+        // Fallback to local time
+        const today = new Date();
+        return today.getFullYear() + '-' + 
+               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(today.getDate()).padStart(2, '0');
+    }
+
+    checkForDateChange() {
+        const currentDate = this.getTodayDateString();
+        if (this.state.todayDate !== currentDate) {
+            console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
+            this.state.todayWords = 0;
+            this.state.todayPronunciations = 0;
+            this.state.todayMalas = 0;
+            this.state.todayDate = currentDate;
+            
+            // Show notification about new day
+            this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
+            
+            // Update UI and save
+            this.updateUI();
+            this.saveToServer();
+        }
     }
 
     isMobileDevice() {
