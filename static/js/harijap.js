@@ -13,11 +13,20 @@ class HariJapCounter {
         // STATE MANAGEMENT
         // ============================================================
         this.state = {
-            // Counting state
+            // Counting state - Total (lifetime)
             totalWords: 0,
             totalPronunciations: 0,
-            currentMalaPronunciations: 0,
             totalMalas: 0,
+            
+            // Today's counting state
+            todayWords: 0,
+            todayPronunciations: 0,
+            todayMalas: 0,
+            todayDate: this.getTodayDateString(),
+            
+            // Current session state
+            currentMalaPronunciations: 0,
+            sessionStartTime: Date.now(),
 
             // Application state
             isInitialized: false,
@@ -27,7 +36,6 @@ class HariJapCounter {
             // User state
             userName: '',
             userId: null,
-            sessionStartTime: Date.now(),
 
             // Recognition state
             lastRecognitionTime: 0
@@ -402,16 +410,17 @@ class HariJapCounter {
         this.metrics.recognitionSuccesses++;
         this.state.lastRecognitionTime = timestamp;
 
-        // Add counts for all repetitions
+        // Add counts for all repetitions - each repetition counts as 5 words
         for (let i = 0; i < count; i++) {
             this.incrementCounter();
         }
 
-        // Show appropriate notification
+        // Show appropriate notification with word count
+        const totalWordsAdded = count * this.config.wordsPerPronunciation;
         if (count === 1) {
-            this.showNotification('✅ गणना झाली!', 'success', 800);
+            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले!', 'success', 800);
         } else {
-            this.showNotification('✅ ' + count + ' वेळा गणना झाली!', 'success', 1000);
+            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले!', 'success', 1000);
         }
 
         this.triggerSuccessFeedback();
@@ -574,15 +583,29 @@ class HariJapCounter {
     // ================================================================
 
     incrementCounter() {
+        // Check if it's a new day and reset today's count if needed
+        const currentDate = this.getTodayDateString();
+        if (this.state.todayDate !== currentDate) {
+            this.state.todayWords = 0;
+            this.state.todayPronunciations = 0;
+            this.state.todayMalas = 0;
+            this.state.todayDate = currentDate;
+        }
+
+        // Increment both total and today's counts
         this.state.totalWords += this.config.wordsPerPronunciation;
         this.state.totalPronunciations++;
+        this.state.todayWords += this.config.wordsPerPronunciation;
+        this.state.todayPronunciations++;
         this.state.currentMalaPronunciations++;
 
-        console.log('📊 Count: Words=' + this.state.totalWords + ', Pronunciations=' + this.state.totalPronunciations + ', Current=' + this.state.currentMalaPronunciations);
+        console.log('📊 Total: Words=' + this.state.totalWords + ', Today: Words=' + this.state.todayWords + ', Pronunciations=' + this.state.totalPronunciations + ', Current=' + this.state.currentMalaPronunciations);
 
         // Check for mala completion
         if (this.state.currentMalaPronunciations >= this.config.pronunciationsPerMala) {
             this.state.currentMalaPronunciations = 0;
+            this.state.totalMalas++;
+            this.state.todayMalas++;
             setTimeout(() => this.completeMala(), 100);
         }
 
@@ -591,8 +614,7 @@ class HariJapCounter {
     }
 
     completeMala() {
-        this.state.totalMalas++;
-        console.log('🎉 Mala completed! Total: ' + this.state.totalMalas);
+        console.log('🎉 Mala completed! Total: ' + this.state.totalMalas + ', Today: ' + this.state.todayMalas);
 
         this.triggerMalaCelebration();
         this.checkMilestones();
@@ -618,9 +640,13 @@ class HariJapCounter {
     }
 
     resetCounter() {
+        // Reset both total and today's counts
         this.state.totalWords = 0;
         this.state.totalPronunciations = 0;
         this.state.totalMalas = 0;
+        this.state.todayWords = 0;
+        this.state.todayPronunciations = 0;
+        this.state.todayMalas = 0;
         this.state.currentMalaPronunciations = 0;
 
         this.updateUI();
@@ -654,12 +680,21 @@ class HariJapCounter {
                 this.state.totalMalas = data.total_malas || 0;
                 this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
                 this.state.totalPronunciations = data.total_pronunciations || 0;
+                
+                // Load today's data
+                this.state.todayWords = data.today_words || 0;
+                this.state.todayPronunciations = data.today_pronunciations || 0;
+                this.state.todayMalas = data.today_malas || 0;
+                this.state.todayDate = data.today_date || this.getTodayDateString();
 
                 console.log('✅ State loaded:', {
                     totalWords: this.state.totalWords,
                     totalPronunciations: this.state.totalPronunciations,
                     currentMalaPronunciations: this.state.currentMalaPronunciations,
-                    totalMalas: this.state.totalMalas
+                    totalMalas: this.state.totalMalas,
+                    todayWords: this.state.todayWords,
+                    todayPronunciations: this.state.todayPronunciations,
+                    todayMalas: this.state.todayMalas
                 });
             }
         } catch (error) {
@@ -681,7 +716,11 @@ class HariJapCounter {
                 count: this.state.totalWords,
                 totalMalas: this.state.totalMalas,
                 currentMalaPronunciations: this.state.currentMalaPronunciations,
-                totalPronunciations: this.state.totalPronunciations
+                totalPronunciations: this.state.totalPronunciations,
+                todayWords: this.state.todayWords,
+                todayPronunciations: this.state.todayPronunciations,
+                todayMalas: this.state.todayMalas,
+                todayDate: this.state.todayDate
             };
 
             console.log('💾 Saving to server:', payload);
@@ -739,7 +778,7 @@ class HariJapCounter {
 
     updateMalaStatus() {
         if (this.elements.totalMalas) {
-            this.elements.totalMalas.textContent = 'कुल माला: ' + this.state.totalMalas;
+            this.elements.totalMalas.textContent = 'कुल माला: ' + this.state.totalMalas + ' | आज: ' + this.state.todayMalas;
         }
 
         if (this.elements.malaStatus) {
@@ -792,7 +831,7 @@ class HariJapCounter {
         }
 
         if (this.elements.todayCount) {
-            this.elements.todayCount.textContent = this.state.totalWords;
+            this.elements.todayCount.textContent = this.state.todayWords;
         }
 
         if (this.elements.accuracy && this.metrics.recognitionAttempts > 0) {
@@ -924,6 +963,13 @@ class HariJapCounter {
     // ================================================================
     // UTILITY METHODS
     // ================================================================
+
+    getTodayDateString() {
+        const today = new Date();
+        return today.getFullYear() + '-' + 
+               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(today.getDate()).padStart(2, '0');
+    }
 
     isMobileDevice() {
         return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);

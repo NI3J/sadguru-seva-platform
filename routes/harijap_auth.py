@@ -281,10 +281,11 @@ def harijap_get_state():
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
-        # Get user progress with all fields
+        # Get user progress with all fields including today's data
         cursor.execute("""
             SELECT count, total_malas, current_mala_pronunciations, 
-                   total_pronunciations, last_spoken_at 
+                   total_pronunciations, last_spoken_at,
+                   today_words, today_pronunciations, today_malas, today_date
             FROM harijap_progress 
             WHERE bhaktgan_id = %s
         """, (bhaktgan_id,))
@@ -298,8 +299,9 @@ def harijap_get_state():
             cursor.execute("""
                 INSERT INTO harijap_progress 
                 (bhaktgan_id, name, phone, count, total_malas, 
-                 current_mala_pronunciations, total_pronunciations)
-                VALUES (%s, %s, %s, 0, 0, 0, 0)
+                 current_mala_pronunciations, total_pronunciations,
+                 today_words, today_pronunciations, today_malas, today_date)
+                VALUES (%s, %s, %s, 0, 0, 0, 0, 0, 0, 0, CURDATE())
             """, (bhaktgan_id, name, phone))
             conn.commit()
             
@@ -308,7 +310,11 @@ def harijap_get_state():
                 'total_malas': 0, 
                 'current_mala_pronunciations': 0,
                 'total_pronunciations': 0,
-                'last_spoken_at': None
+                'last_spoken_at': None,
+                'today_words': 0,
+                'today_pronunciations': 0,
+                'today_malas': 0,
+                'today_date': None
             }
 
         return jsonify({
@@ -317,7 +323,11 @@ def harijap_get_state():
             'total_malas': row['total_malas'],
             'current_mala_pronunciations': row.get('current_mala_pronunciations', 0),
             'total_pronunciations': row.get('total_pronunciations', 0),
-            'last_spoken_at': row['last_spoken_at']
+            'last_spoken_at': row['last_spoken_at'],
+            'today_words': row.get('today_words', 0),
+            'today_pronunciations': row.get('today_pronunciations', 0),
+            'today_malas': row.get('today_malas', 0),
+            'today_date': row.get('today_date')
         }), 200
         
     except Exception as e:
@@ -363,34 +373,66 @@ def harijap_save_state():
     try:
         data = request.get_json() or {}
         
-        # Extract all progress data
+        # Extract all progress data including today's data
         count = int(data.get('count', 0))
         total_malas = int(data.get('totalMalas', 0))
         current_mala_pronunciations = int(data.get('currentMalaPronunciations', 0))
         total_pronunciations = int(data.get('totalPronunciations', 0))
+        today_words = int(data.get('todayWords', 0))
+        today_pronunciations = int(data.get('todayPronunciations', 0))
+        today_malas = int(data.get('todayMalas', 0))
+        today_date = data.get('todayDate')
+        
+        # Convert JavaScript date string to MySQL date format if needed
+        if today_date and isinstance(today_date, str):
+            try:
+                from datetime import datetime
+                # Handle different date formats from JavaScript
+                if 'GMT' in today_date or 'UTC' in today_date:
+                    # Parse ISO date string and convert to MySQL format
+                    dt = datetime.fromisoformat(today_date.replace('Z', '+00:00'))
+                    today_date = dt.strftime('%Y-%m-%d')
+                elif 'T' in today_date:
+                    # Handle ISO format dates
+                    dt = datetime.fromisoformat(today_date.split('T')[0])
+                    today_date = dt.strftime('%Y-%m-%d')
+            except (ValueError, TypeError):
+                # If parsing fails, use current date
+                today_date = datetime.now().strftime('%Y-%m-%d')
+        elif not today_date:
+            # If no date provided, use current date
+            from datetime import datetime
+            today_date = datetime.now().strftime('%Y-%m-%d')
         
         print(f"DEBUG: Saving - count={count}, malas={total_malas}, " 
-              f"current_mala={current_mala_pronunciations}, total_pron={total_pronunciations}")
+              f"current_mala={current_mala_pronunciations}, total_pron={total_pronunciations}, "
+              f"today_words={today_words}, today_malas={today_malas}, today_date={today_date}")
 
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
-        # Insert or update with all fields
+        # Insert or update with all fields including today's data
         cursor.execute("""
             INSERT INTO harijap_progress 
             (bhaktgan_id, name, phone, count, total_malas, 
              current_mala_pronunciations, total_pronunciations, 
-             last_spoken_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+             last_spoken_at, updated_at, today_words, today_pronunciations, 
+             today_malas, today_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 count = VALUES(count),
                 total_malas = VALUES(total_malas),
                 current_mala_pronunciations = VALUES(current_mala_pronunciations),
                 total_pronunciations = VALUES(total_pronunciations),
                 last_spoken_at = NOW(),
-                updated_at = NOW()
+                updated_at = NOW(),
+                today_words = VALUES(today_words),
+                today_pronunciations = VALUES(today_pronunciations),
+                today_malas = VALUES(today_malas),
+                today_date = VALUES(today_date)
         """, (bhaktgan_id, name, phone, count, total_malas, 
-              current_mala_pronunciations, total_pronunciations))
+              current_mala_pronunciations, total_pronunciations,
+              today_words, today_pronunciations, today_malas, today_date))
         
         conn.commit()
         print("DEBUG: Successfully saved to database")
