@@ -54,7 +54,7 @@ class HariJapCounter {
 
             // Recognition settings
             recognitionLang: 'hi-IN',
-            minTimeBetweenCounts: 800,
+            minTimeBetweenCounts: 500,
 
             // Auto-save settings
             autoSaveInterval: 10000,
@@ -381,23 +381,20 @@ class HariJapCounter {
     onRecognitionEnd() {
         console.log('🔚 Recognition ended');
 
-        if (this.isMobileDevice() &&
-            this.state.isInitialized &&
-            !document.hidden &&
-            this.state.isListening) {
-
+        // Only auto-restart if user is still in listening mode
+        if (this.state.isListening && this.state.isInitialized && !document.hidden) {
             setTimeout(() => {
-                if (this.state.isListening) {
+                if (this.state.isListening && this.recognition) {
                     try {
                         this.recognition.start();
-                        console.log('🔄 Auto-restarting recognition (mobile)');
+                        console.log('🔄 Auto-restarting recognition');
                     } catch (error) {
                         console.error('❌ Auto-restart failed:', error);
                         this.state.isListening = false;
                         this.updateUI();
                     }
                 }
-            }, 500);
+            }, 1000); // Increased delay to prevent rapid restarts
         } else {
             this.state.isListening = false;
             this.updateUI();
@@ -437,11 +434,14 @@ class HariJapCounter {
             this.disappearCompleteMantra();
         }
 
-        // Show appropriate notification
+        // Calculate total words added (each mantra = 5 words)
+        const totalWordsAdded = count * this.config.wordsPerPronunciation;
+
+        // Show appropriate notification with word count
         if (count === 1) {
-            this.showNotification('✅ पूर्ण मंत्र गणना झाले!', 'success', 800);
+            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले!', 'success', 800);
         } else {
-            this.showNotification('✅ ' + count + ' वेळा पूर्ण मंत्र गणना झाले!', 'success', 1000);
+            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले!', 'success', 1000);
         }
 
         this.triggerSuccessFeedback();
@@ -548,7 +548,8 @@ class HariJapCounter {
             'om', 'ओम', 'aum', 'औम',
             'namah', 'नमः', 'namo', 'नमो',
             'swami', 'स्वामी', 'guruji', 'गुरुजी',
-            'baba', 'बाबा', 'sadguru', 'सद्गुरु'
+            'baba', 'बाबा', 'sadguru', 'सद्गुरु',
+            'hare', 'हरे', 'hari', 'हरी', 'haari', 'हारी'
         ];
         
         let cleanedText = text;
@@ -558,6 +559,9 @@ class HariJapCounter {
             const regex = new RegExp(`\\b${word}\\b`, 'gi');
             cleanedText = cleanedText.replace(regex, '');
         });
+        
+        // Remove Shri specifically from the beginning
+        cleanedText = cleanedText.replace(/^(shri|श्री|sri)\s+/gi, '');
         
         // Clean up extra spaces
         cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
@@ -933,11 +937,11 @@ class HariJapCounter {
     // ================================================================
 
     triggerSuccessFeedback() {
-        this.flashBackground('rgba(76, 175, 80, 0.3)', 400);
+        this.flashBackground('rgba(76, 175, 80, 0.1)', 200);
     }
 
     triggerWarningFeedback() {
-        this.flashBackground('rgba(255, 152, 0, 0.3)', 400);
+        this.flashBackground('rgba(255, 152, 0, 0.1)', 200);
     }
 
     flashBackground(color, duration) {
@@ -949,6 +953,7 @@ class HariJapCounter {
 
     triggerMalaCelebration() {
         this.showCelebration('🎉 एक माला पूर्ण झाली! 🎉', 'हरी बोला! आणखी एक मिळवली!');
+        // Reduced confetti for less eye irritation
         this.createConfetti();
     }
 
@@ -988,23 +993,24 @@ class HariJapCounter {
 
     createConfetti() {
         const colors = ['#ff6b35', '#ffd700', '#4caf50', '#2196f3', '#9c27b0'];
-        const confettiCount = 50;
+        const confettiCount = 20; // Reduced from 50 to 20
 
         for (let i = 0; i < confettiCount; i++) {
             const confetti = document.createElement('div');
             confetti.style.cssText = 
                 'position: fixed;' +
-                'width: 10px;' +
-                'height: 10px;' +
+                'width: 8px;' +
+                'height: 8px;' +
                 'background: ' + colors[Math.floor(Math.random() * colors.length)] + ';' +
                 'left: ' + (Math.random() * 100) + '%;' +
                 'top: -10px;' +
                 'border-radius: 50%;' +
                 'pointer-events: none;' +
                 'z-index: 9999;' +
-                'animation: confetti-fall ' + (2 + Math.random() * 2) + 's ease-out;';
+                'opacity: 0.7;' +
+                'animation: confetti-fall ' + (1.5 + Math.random() * 1) + 's ease-out;';
             document.body.appendChild(confetti);
-            setTimeout(() => confetti.remove(), 4000);
+            setTimeout(() => confetti.remove(), 3000);
         }
     }
 
