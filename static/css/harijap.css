@@ -160,6 +160,75 @@ body::before {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     word-wrap: break-word;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.mantra-word {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 4px;
+    background: rgba(255, 193, 7, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    transition: all 0.5s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.mantra-word::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.3), 
+        transparent);
+    transition: left 0.5s ease;
+}
+
+.mantra-word:hover::before {
+    left: 100%;
+}
+
+.mantra-word.current {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: rgba(76, 175, 80, 0.6);
+    color: #4caf50;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+}
+
+.mantra-word.completed {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+.mantra-word.disappearing {
+    animation: wordDisappear 0.8s ease-out forwards;
+}
+
+@keyframes wordDisappear {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
 }
 
 .mantra::before {
@@ -617,6 +686,13 @@ body::before {
     .mantra {
         font-size: 1.6rem;
         padding: 20px 15px;
+        gap: 10px;
+    }
+
+    .mantra-word {
+        padding: 6px 10px;
+        margin: 3px;
+        font-size: 1.4rem;
     }
     
     .count-display {
@@ -680,6 +756,13 @@ body::before {
     .mantra {
         font-size: 1.3rem;
         padding: 15px 12px;
+        gap: 8px;
+    }
+
+    .mantra-word {
+        padding: 4px 8px;
+        margin: 2px;
+        font-size: 1.2rem;
     }
     
     .count-display {
