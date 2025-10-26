@@ -285,7 +285,8 @@ def harijap_get_state():
         cursor.execute("""
             SELECT count, total_malas, current_mala_pronunciations, 
                    total_pronunciations, last_spoken_at,
-                   today_words, today_pronunciations, today_malas, today_date
+                   today_words, today_pronunciations, today_malas, today_date,
+                   todays_count
             FROM harijap_progress 
             WHERE bhaktgan_id = %s
         """, (bhaktgan_id,))
@@ -300,8 +301,9 @@ def harijap_get_state():
                 INSERT INTO harijap_progress 
                 (bhaktgan_id, name, phone, count, total_malas, 
                  current_mala_pronunciations, total_pronunciations,
-                 today_words, today_pronunciations, today_malas, today_date)
-                VALUES (%s, %s, %s, 0, 0, 0, 0, 0, 0, 0, CURDATE())
+                 today_words, today_pronunciations, today_malas, today_date,
+                 todays_count)
+                VALUES (%s, %s, %s, 0, 0, 0, 0, 0, 0, 0, CURDATE(), 0)
             """, (bhaktgan_id, name, phone))
             conn.commit()
             
@@ -314,7 +316,8 @@ def harijap_get_state():
                 'today_words': 0,
                 'today_pronunciations': 0,
                 'today_malas': 0,
-                'today_date': None
+                'today_date': None,
+                'todays_count': 0
             }
 
         return jsonify({
@@ -327,7 +330,8 @@ def harijap_get_state():
             'today_words': row.get('today_words', 0),
             'today_pronunciations': row.get('today_pronunciations', 0),
             'today_malas': row.get('today_malas', 0),
-            'today_date': row.get('today_date')
+            'today_date': row.get('today_date'),
+            'todays_count': row.get('todays_count', 0)
         }), 200
         
     except Exception as e:
@@ -382,6 +386,7 @@ def harijap_save_state():
         today_pronunciations = int(data.get('todayPronunciations', 0))
         today_malas = int(data.get('todayMalas', 0))
         today_date = data.get('todayDate')
+        todays_count = int(data.get('todaysCount', 0))
         
         # Convert JavaScript date string to MySQL date format if needed
         if today_date and isinstance(today_date, str):
@@ -417,8 +422,8 @@ def harijap_save_state():
             (bhaktgan_id, name, phone, count, total_malas, 
              current_mala_pronunciations, total_pronunciations, 
              last_spoken_at, updated_at, today_words, today_pronunciations, 
-             today_malas, today_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s, %s, %s)
+             today_malas, today_date, todays_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 count = VALUES(count),
                 total_malas = VALUES(total_malas),
@@ -429,10 +434,11 @@ def harijap_save_state():
                 today_words = VALUES(today_words),
                 today_pronunciations = VALUES(today_pronunciations),
                 today_malas = VALUES(today_malas),
-                today_date = VALUES(today_date)
+                today_date = VALUES(today_date),
+                todays_count = VALUES(todays_count)
         """, (bhaktgan_id, name, phone, count, total_malas, 
               current_mala_pronunciations, total_pronunciations,
-              today_words, today_pronunciations, today_malas, today_date))
+              today_words, today_pronunciations, today_malas, today_date, todays_count))
         
         conn.commit()
         print("DEBUG: Successfully saved to database")

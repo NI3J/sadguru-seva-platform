@@ -23,6 +23,7 @@ class HariJapCounter {
             todayPronunciations: 0,
             todayMalas: 0,
             todayDate: this.getTodayDateString(),
+            todaysCount: 0, // New field for persistent today's count
             
             // Current session state
             currentMalaPronunciations: 0,
@@ -54,7 +55,7 @@ class HariJapCounter {
 
             // Recognition settings
             recognitionLang: 'hi-IN',
-            minTimeBetweenCounts: 500,
+            minTimeBetweenCounts: 300, // Reduced from 500ms for faster recognition
 
             // Auto-save settings
             autoSaveInterval: 10000,
@@ -215,7 +216,7 @@ class HariJapCounter {
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
             this.recognition.interimResults = false;
-            this.recognition.maxAlternatives = 5;
+            this.recognition.maxAlternatives = 3; // Reduced from 5 for faster processing
             this.recognition.continuous = true;
 
             // Mobile optimization
@@ -421,7 +422,7 @@ class HariJapCounter {
                         this.updateUI();
                     }
                 }
-            }, 1000); // Increased delay to prevent rapid restarts
+            }, 500); // Reduced delay for faster restart
         } else {
             this.state.isListening = false;
             this.updateUI();
@@ -464,6 +465,9 @@ class HariJapCounter {
 
         // Calculate total words added (each complete sequence = 5 words)
         const totalWordsAdded = count * this.config.wordsPerPronunciation;
+
+        // Increment counter only once with the total count
+        this.incrementCounterByCount(count);
 
         // Show appropriate notification with word count
         if (count === 1) {
@@ -674,7 +678,7 @@ class HariJapCounter {
     // COUNTING LOGIC
     // ================================================================
 
-    incrementCounter() {
+    incrementCounterByCount(count) {
         // Check if it's a new day and reset today's count if needed
         const currentDate = this.getTodayDateString();
         if (this.state.todayDate !== currentDate) {
@@ -683,17 +687,23 @@ class HariJapCounter {
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
             this.state.todayDate = currentDate;
+            this.state.todaysCount = 0; // Reset persistent today's count
             
             // Show notification about new day
             this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
         }
 
+        // Calculate total words and pronunciations for this recognition
+        const wordsToAdd = count * this.config.wordsPerPronunciation;
+        const pronunciationsToAdd = count;
+
         // Increment both total and today's counts
-        this.state.totalWords += this.config.wordsPerPronunciation;
-        this.state.totalPronunciations++;
-        this.state.todayWords += this.config.wordsPerPronunciation;
-        this.state.todayPronunciations++;
-        this.state.currentMalaPronunciations++;
+        this.state.totalWords += wordsToAdd;
+        this.state.totalPronunciations += pronunciationsToAdd;
+        this.state.todayWords += wordsToAdd;
+        this.state.todayPronunciations += pronunciationsToAdd;
+        this.state.currentMalaPronunciations += pronunciationsToAdd;
+        this.state.todaysCount += wordsToAdd; // Update persistent today's count
 
         console.log('📊 Total: Words=' + this.state.totalWords + ', Today: Words=' + this.state.todayWords + ', Pronunciations=' + this.state.totalPronunciations + ', Current=' + this.state.currentMalaPronunciations);
 
@@ -707,6 +717,11 @@ class HariJapCounter {
 
         this.updateUI();
         this.saveToServer();
+    }
+
+    incrementCounter() {
+        // Legacy method - now calls incrementCounterByCount with count 1
+        this.incrementCounterByCount(1);
     }
 
     completeMala() {
@@ -727,6 +742,10 @@ class HariJapCounter {
         // Trigger complete mantra disappearing for manual count
         this.disappearCompleteMantra();
         this.updateActivity(); // Reset session timeout
+        
+        // Increment counter by 1 (single mantra)
+        this.incrementCounterByCount(1);
+        
         this.showNotification('➕ व्यक्तिशः काउंट जोडले गेले', 'success', 1000);
         this.triggerSuccessFeedback();
     }
@@ -744,6 +763,7 @@ class HariJapCounter {
         this.state.todayPronunciations = 0;
         this.state.todayMalas = 0;
         this.state.currentMalaPronunciations = 0;
+        this.state.todaysCount = 0; // Reset persistent today's count
 
         // Reset mantra display
         this.resetMantraDisplay();
@@ -785,6 +805,7 @@ class HariJapCounter {
                 this.state.todayPronunciations = data.today_pronunciations || 0;
                 this.state.todayMalas = data.today_malas || 0;
                 this.state.todayDate = data.today_date || this.getTodayDateString();
+                this.state.todaysCount = data.todays_count || 0;
 
                 console.log('✅ State loaded:', {
                     totalWords: this.state.totalWords,
@@ -819,7 +840,8 @@ class HariJapCounter {
                 todayWords: this.state.todayWords,
                 todayPronunciations: this.state.todayPronunciations,
                 todayMalas: this.state.todayMalas,
-                todayDate: this.state.todayDate
+                todayDate: this.state.todayDate,
+                todaysCount: this.state.todaysCount
             };
 
             console.log('💾 Saving to server:', payload);
@@ -987,13 +1009,10 @@ class HariJapCounter {
         });
         
         setTimeout(() => {
-            // After animation, reset all words and increment counter
+            // After animation, reset all words (no counter increment here)
             mantraWords.forEach(word => {
                 word.classList.remove('disappearing');
             });
-            
-            // Increment counter
-            this.incrementCounter();
         }, 800);
     }
 
@@ -1266,7 +1285,12 @@ class HariJapCounter {
     // ================================================================
 
     calculateTodayTotalWords() {
-        // Calculate today's total words: current mala progress + completed malas today
+        // Use todaysCount from database if available, otherwise calculate
+        if (this.state.todaysCount > 0) {
+            return this.state.todaysCount;
+        }
+        
+        // Fallback calculation: current mala progress + completed malas today
         const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
         const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
         return currentMalaWords + completedMalasWords;
@@ -1319,6 +1343,7 @@ class HariJapCounter {
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
             this.state.todayDate = currentDate;
+            this.state.todaysCount = 0; // Reset persistent today's count
             
             // Show notification about new day
             this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
