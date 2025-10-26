@@ -704,17 +704,30 @@ class HariJapCounter {
         this.state.todayPronunciations += pronunciationsToAdd;
         this.state.currentMalaPronunciations += pronunciationsToAdd;
         
-        // Calculate todaysCount correctly after increment
+        // Recalculate todaysCount after increment
         // This ensures todaysCount reflects (currentMala * 5) + (completedMalas * 108 * 5)
+        // Store calculated value for persistence
         this.state.todaysCount = this.calculateTodayTotalWords();
 
-        console.log('📊 Total: Words=' + this.state.totalWords + ', Today: Words=' + this.state.todayWords + ', Pronunciations=' + this.state.totalPronunciations + ', Current=' + this.state.currentMalaPronunciations);
+        console.log('📊 Count Update:', {
+            totalWords: this.state.totalWords,
+            todayWords: this.state.todayWords, 
+            todayPronunciations: this.state.todayPronunciations,
+            currentMalaPronunciations: this.state.currentMalaPronunciations,
+            todayMalas: this.state.todayMalas,
+            todaysCount: this.state.todaysCount
+        });
 
         // Check for mala completion
         if (this.state.currentMalaPronunciations >= this.config.pronunciationsPerMala) {
             this.state.currentMalaPronunciations = 0;
             this.state.totalMalas++;
             this.state.todayMalas++;
+            
+            // Recalculate todaysCount after mala completion
+            // When a mala is completed, todaysCount should include the completed mala's words
+            this.state.todaysCount = this.calculateTodayTotalWords();
+            
             setTimeout(() => this.completeMala(), 100);
         }
 
@@ -808,7 +821,10 @@ class HariJapCounter {
                 this.state.todayPronunciations = data.today_pronunciations || 0;
                 this.state.todayMalas = data.today_malas || 0;
                 this.state.todayDate = data.today_date || this.getTodayDateString();
-                this.state.todaysCount = data.todays_count || 0;
+                
+                // Recalculate todaysCount to ensure it matches current state
+                // This fixes any inconsistencies between database and current progress
+                this.state.todaysCount = this.calculateTodayTotalWords();
 
                 console.log('✅ State loaded:', {
                     totalWords: this.state.totalWords,
@@ -817,7 +833,8 @@ class HariJapCounter {
                     totalMalas: this.state.totalMalas,
                     todayWords: this.state.todayWords,
                     todayPronunciations: this.state.todayPronunciations,
-                    todayMalas: this.state.todayMalas
+                    todayMalas: this.state.todayMalas,
+                    todaysCount: this.state.todaysCount
                 });
             }
         } catch (error) {
@@ -1296,9 +1313,6 @@ class HariJapCounter {
         const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
         const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
         const calculatedTotal = currentMalaWords + completedMalasWords;
-        
-        // Update state with calculated value for consistency
-        this.state.todaysCount = calculatedTotal;
         
         return calculatedTotal;
     }
