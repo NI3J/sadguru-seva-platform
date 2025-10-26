@@ -458,10 +458,8 @@ class HariJapCounter {
         this.state.lastRecognitionTime = timestamp;
         this.updateActivity(); // Reset session timeout on successful recognition
 
-        // Handle complete mantra disappearing for each recognition
-        for (let i = 0; i < count; i++) {
-            this.disappearCompleteMantra();
-        }
+        // Handle complete mantra disappearing animation ONCE (not per count)
+        this.disappearCompleteMantra();
 
         // Calculate total words added (each complete sequence = 5 words)
         const totalWordsAdded = count * this.config.wordsPerPronunciation;
@@ -681,7 +679,9 @@ class HariJapCounter {
     incrementCounterByCount(count) {
         // Check if it's a new day and reset today's count if needed
         const currentDate = this.getTodayDateString();
-        if (this.state.todayDate !== currentDate) {
+        
+        // Only reset if date actually changed (prevent false positives during session)
+        if (this.state.todayDate && this.state.todayDate !== currentDate) {
             console.log('📅 New day detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
@@ -691,6 +691,9 @@ class HariJapCounter {
             
             // Show notification about new day
             this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
+        } else if (!this.state.todayDate) {
+            // If todayDate is not set, set it without resetting
+            this.state.todayDate = currentDate;
         }
 
         // Calculate total words and pronunciations for this recognition
@@ -1374,7 +1377,10 @@ class HariJapCounter {
 
     checkForDateChange() {
         const currentDate = this.getTodayDateString();
-        if (this.state.todayDate !== currentDate) {
+        
+        // Only reset if the date actually changed (e.g., midnight passed)
+        // Do NOT reset if dates are the same (prevent false positives)
+        if (this.state.todayDate && this.state.todayDate !== currentDate && currentDate !== this.state.todayDate) {
             console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
@@ -1388,6 +1394,9 @@ class HariJapCounter {
             // Update UI and save
             this.updateUI();
             this.saveToServer();
+        } else if (!this.state.todayDate) {
+            // If todayDate is not set, set it without resetting
+            this.state.todayDate = currentDate;
         }
     }
 
