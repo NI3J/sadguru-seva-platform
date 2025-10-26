@@ -697,13 +697,40 @@ class HariJapCounter {
         const wordsToAdd = count * this.config.wordsPerPronunciation;
         const pronunciationsToAdd = count;
 
+        console.log('DEBUG: Before increment - currentMala:', this.state.currentMalaPronunciations, 'todayMalas:', this.state.todayMalas, 'count to add:', count, 'pronunciationsToAdd:', pronunciationsToAdd);
+
+        // Check for mala completion BEFORE incrementing
+        // This ensures we capture the completed mala properly
+        const willCompleteMala = (this.state.currentMalaPronunciations + pronunciationsToAdd) >= this.config.pronunciationsPerMala;
+        
+        if (willCompleteMala) {
+            console.log('DEBUG: MALA WILL BE COMPLETED! Incrementing todayMalas from', this.state.todayMalas);
+            this.state.totalMalas++;
+            this.state.todayMalas++;
+            console.log('DEBUG: After mala completion - todayMalas:', this.state.todayMalas, 'totalMalas:', this.state.totalMalas);
+            
+            // Calculate remaining pronunciations for current mala
+            const remainingForCurrentMala = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
+            this.state.currentMalaPronunciations = 0;
+            
+            // Handle excess pronunciations for next mala
+            const excessPronunciations = pronunciationsToAdd - remainingForCurrentMala;
+            if (excessPronunciations > 0) {
+                this.state.currentMalaPronunciations = excessPronunciations;
+            }
+            
+            setTimeout(() => this.completeMala(), 100);
+        } else {
+            // Normal increment - no mala completion
+            this.state.currentMalaPronunciations += pronunciationsToAdd;
+        }
+
         // Increment both total and today's counts
         this.state.totalWords += wordsToAdd;
         this.state.totalPronunciations += pronunciationsToAdd;
         this.state.todayWords += wordsToAdd;
         this.state.todayPronunciations += pronunciationsToAdd;
-        this.state.currentMalaPronunciations += pronunciationsToAdd;
-        
+
         // Recalculate todaysCount after increment
         // This ensures todaysCount reflects (currentMala * 5) + (completedMalas * 108 * 5)
         // Store calculated value for persistence
@@ -717,19 +744,6 @@ class HariJapCounter {
             todayMalas: this.state.todayMalas,
             todaysCount: this.state.todaysCount
         });
-
-        // Check for mala completion
-        if (this.state.currentMalaPronunciations >= this.config.pronunciationsPerMala) {
-            this.state.currentMalaPronunciations = 0;
-            this.state.totalMalas++;
-            this.state.todayMalas++;
-            
-            // Recalculate todaysCount after mala completion
-            // When a mala is completed, todaysCount should include the completed mala's words
-            this.state.todaysCount = this.calculateTodayTotalWords();
-            
-            setTimeout(() => this.completeMala(), 100);
-        }
 
         this.updateUI();
         this.saveToServer();
@@ -826,6 +840,7 @@ class HariJapCounter {
                 // This fixes any inconsistencies between database and current progress
                 this.state.todaysCount = this.calculateTodayTotalWords();
 
+                console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
                 console.log('✅ State loaded:', {
                     totalWords: this.state.totalWords,
                     totalPronunciations: this.state.totalPronunciations,
@@ -868,6 +883,7 @@ class HariJapCounter {
             };
 
             console.log('💾 Saving to server:', payload);
+            console.log('DEBUG SAVE: todayMalas=' + payload.todayMalas + ', todaysCount=' + payload.todaysCount + ', currentMalaPron=' + payload.currentMalaPronunciations);
 
             const response = await fetch('/harijap/api/save', {
                 method: 'POST',
