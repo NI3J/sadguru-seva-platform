@@ -262,6 +262,14 @@ body::before {
     margin: 40px 0;
 }
 
+.today-label {
+    font-size: 1.2rem;
+    color: #ffd700;
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
 .count-display {
     font-size: 5rem;
     font-weight: bold;

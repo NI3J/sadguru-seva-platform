@@ -95,6 +95,18 @@ class HariJapCounter {
         // ============================================================
         this.recognition = null;
 
+        // ============================================================
+        // SESSION TIMEOUT MANAGEMENT
+        // ============================================================
+        this.sessionTimeout = {
+            duration: 5 * 60 * 1000, // 5 minutes in milliseconds
+            warningDuration: 30 * 1000, // 30 seconds warning
+            lastActivity: Date.now(),
+            timeoutId: null,
+            warningId: null,
+            isWarningShown: false
+        };
+
         // Start initialization
         this.init();
     }
@@ -114,6 +126,7 @@ class HariJapCounter {
             this.attachEventListeners();
             await this.loadStateFromServer();
             this.startAutoProcesses();
+            this.startSessionTimeout();
 
             this.state.isInitialized = true;
             this.updateUI();
@@ -232,6 +245,11 @@ class HariJapCounter {
         this.addListener('resetBtn', 'click', () => this.confirmReset());
         this.addListener('logoutBtn', 'click', () => this.logout());
 
+        // Add activity tracking for general user interactions
+        document.addEventListener('click', () => this.updateActivity());
+        document.addEventListener('keydown', () => this.updateActivity());
+        document.addEventListener('mousemove', () => this.updateActivity());
+
         // Page visibility and unload
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && this.state.isListening) {
@@ -312,6 +330,7 @@ class HariJapCounter {
                 this.recognition.start();
                 this.state.isListening = true;
                 this.updateUI();
+                this.updateActivity(); // Reset session timeout
                 console.log('🎤 Listening started');
             } catch (error) {
                 console.error('❌ Start listening error:', error);
@@ -331,6 +350,7 @@ class HariJapCounter {
                 this.recognition.stop();
                 this.state.isListening = false;
                 this.updateUI();
+                this.updateActivity(); // Reset session timeout
                 console.log('⏸️ Listening stopped');
             } catch (error) {
                 console.error('❌ Stop listening error:', error);
@@ -428,13 +448,14 @@ class HariJapCounter {
 
         this.metrics.recognitionSuccesses++;
         this.state.lastRecognitionTime = timestamp;
+        this.updateActivity(); // Reset session timeout on successful recognition
 
         // Handle complete mantra disappearing for each recognition
         for (let i = 0; i < count; i++) {
             this.disappearCompleteMantra();
         }
 
-        // Calculate total words added (each mantra = 5 words)
+        // Calculate total words added (each complete sequence = 5 words)
         const totalWordsAdded = count * this.config.wordsPerPronunciation;
 
         // Show appropriate notification with word count
@@ -659,6 +680,7 @@ class HariJapCounter {
     addManualCount() {
         // Trigger complete mantra disappearing for manual count
         this.disappearCompleteMantra();
+        this.updateActivity(); // Reset session timeout
         this.showNotification('➕ व्यक्तिशः काउंट जोडले गेले', 'success', 1000);
         this.triggerSuccessFeedback();
     }
@@ -666,6 +688,7 @@ class HariJapCounter {
     confirmReset() {
         if (confirm('खात्री आहे काय? आज के जप रिसेट होईल (कुल जप सुरक्षित रहेगा)')) {
             this.resetCounter();
+            this.updateActivity(); // Reset session timeout
         }
     }
 
@@ -797,10 +820,12 @@ class HariJapCounter {
 
     updateCountDisplay() {
         if (this.elements.countDisplay) {
+            // Show today's count instead of total count
+            const todayCount = this.state.todayWords;
             const current = parseInt(this.elements.countDisplay.textContent) || 0;
-            if (current !== this.state.totalWords) {
+            if (current !== todayCount) {
                 this.elements.countDisplay.classList.add('pulse');
-                this.elements.countDisplay.textContent = this.state.totalWords;
+                this.elements.countDisplay.textContent = todayCount;
                 setTimeout(() => {
                     this.elements.countDisplay.classList.remove('pulse');
                 }, 500);
@@ -1044,6 +1069,148 @@ class HariJapCounter {
             notification.style.animation = 'slide-out 0.3s ease-out';
             setTimeout(() => notification.remove(), 300);
         }, duration);
+    }
+
+    // ================================================================
+    // SESSION TIMEOUT METHODS
+    // ================================================================
+
+    startSessionTimeout() {
+        this.resetSessionTimeout();
+        console.log('⏰ Session timeout started (5 minutes)');
+    }
+
+    resetSessionTimeout() {
+        // Clear existing timeouts
+        if (this.sessionTimeout.timeoutId) {
+            clearTimeout(this.sessionTimeout.timeoutId);
+        }
+        if (this.sessionTimeout.warningId) {
+            clearTimeout(this.sessionTimeout.warningId);
+        }
+
+        // Update last activity
+        this.sessionTimeout.lastActivity = Date.now();
+        this.sessionTimeout.isWarningShown = false;
+
+        // Set warning timeout (4.5 minutes)
+        this.sessionTimeout.warningId = setTimeout(() => {
+            this.showSessionWarning();
+        }, this.sessionTimeout.duration - this.sessionTimeout.warningDuration);
+
+        // Set logout timeout (5 minutes)
+        this.sessionTimeout.timeoutId = setTimeout(() => {
+            this.forceLogout();
+        }, this.sessionTimeout.duration);
+    }
+
+    showSessionWarning() {
+        if (this.sessionTimeout.isWarningShown) {
+            return;
+        }
+
+        this.sessionTimeout.isWarningShown = true;
+        
+        // Create warning dialog
+        const warningDialog = document.createElement('div');
+        warningDialog.id = 'sessionWarningDialog';
+        warningDialog.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Noto Sans Devanagari', sans-serif;
+        `;
+
+        warningDialog.innerHTML = `
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                text-align: center;
+                max-width: 400px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            ">
+                <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+                <h3 style="color: #f44336; margin-bottom: 15px;">सत्र समाप्त हो रहा है</h3>
+                <p style="margin-bottom: 20px; color: #666;">
+                    आपका सत्र 30 सेकंड में समाप्त हो जाएगा।<br>
+                    जारी रखने के लिए OK बटन दबाएं।
+                </p>
+                <button id="continueSessionBtn" style="
+                    background: #4caf50;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    margin-right: 10px;
+                ">OK</button>
+                <button id="logoutNowBtn" style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    cursor: pointer;
+                ">लॉगआउट</button>
+            </div>
+        `;
+
+        document.body.appendChild(warningDialog);
+
+        // Add event listeners
+        document.getElementById('continueSessionBtn').addEventListener('click', () => {
+            this.continueSession();
+        });
+
+        document.getElementById('logoutNowBtn').addEventListener('click', () => {
+            this.logout();
+        });
+
+        console.log('⚠️ Session warning shown');
+    }
+
+    continueSession() {
+        // Remove warning dialog
+        const dialog = document.getElementById('sessionWarningDialog');
+        if (dialog) {
+            dialog.remove();
+        }
+
+        // Reset session timeout
+        this.resetSessionTimeout();
+        this.showNotification('सत्र जारी रखा गया', 'success', 2000);
+        console.log('✅ Session continued by user');
+    }
+
+    forceLogout() {
+        console.log('🚪 Force logout due to inactivity');
+        this.showNotification('सत्र समाप्त हो गया', 'error', 2000);
+        
+        // Remove warning dialog if still present
+        const dialog = document.getElementById('sessionWarningDialog');
+        if (dialog) {
+            dialog.remove();
+        }
+
+        // Logout after a short delay
+        setTimeout(() => {
+            this.logout();
+        }, 1000);
+    }
+
+    updateActivity() {
+        // This method should be called whenever user performs an activity
+        this.resetSessionTimeout();
     }
 
     // ================================================================
