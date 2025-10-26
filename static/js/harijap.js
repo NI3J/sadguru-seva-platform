@@ -66,10 +66,16 @@ class HariJapCounter {
                 'जय जय राम कृष्ण हारी',
                 'जय जय राम कृष्णा हरी',
                 'जय जय राम कृष्णो हारी',
+                'जय श्री राम कृष्ण हरि',
+                'जय श्री राम कृष्णा हारी',
+                'जय श्री राम कृष्ण हारी',
+                'जय श्री राम कृष्णा हरी',
                 'jai jai ram krishna hari',
                 'jai jai ram krishna haari',
                 'jai jai ram krishna hare',
-                'jai jai ram krishna harry'
+                'jai jai ram krishna harry',
+                'jai shri ram krishna hari',
+                'jai shri ram krishna haari'
             ],
 
             // Milestone celebrations
@@ -394,6 +400,7 @@ class HariJapCounter {
         if (matchCount > 0) {
             this.handleSuccessfulRecognition(matchCount, now);
         } else if (bestTranscript.trim().length > 0) {
+            console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
             this.handleInvalidSpeech();
         }
     }
@@ -514,12 +521,47 @@ class HariJapCounter {
             }
         }
 
-        // If no exact matches, try fuzzy matching for single phrase
+        // If no exact matches, try pattern-based matching for common variations
+        if (maxCount === 0) {
+            maxCount = this.countMantraPatterns(cleanedText);
+        }
+
+        // If still no matches, try fuzzy matching for single phrase
         if (maxCount === 0 && this.isMantraPhrase(text)) {
             return 1;
         }
 
         return maxCount;
+    }
+
+    countMantraPatterns(text) {
+        // Pattern-based matching for common mantra variations
+        // This handles cases where speech recognition substitutes words
+        
+        const patterns = [
+            // Pattern: [जय/श्री] [जय/श्री] [राम] [कृष्ण/कृष्णा] [हारी/हरी/हरि]
+            {
+                regex: /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi,
+                name: 'jai-jai-ram-krishna-hari'
+            },
+            // Pattern: [जय/श्री] [राम] [कृष्ण/कृष्णा] [हारी/हरी/हरि] (single jai)
+            {
+                regex: /(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi,
+                name: 'jai-ram-krishna-hari'
+            }
+        ];
+
+        let totalCount = 0;
+        
+        for (let pattern of patterns) {
+            const matches = text.match(pattern.regex);
+            if (matches) {
+                totalCount += matches.length;
+                console.log(`✅ Pattern "${pattern.name}" matched ${matches.length} times:`, matches);
+            }
+        }
+
+        return totalCount;
     }
 
     isMantraPhrase(text) {
@@ -569,8 +611,7 @@ class HariJapCounter {
             'om', 'ओम', 'aum', 'औम',
             'namah', 'नमः', 'namo', 'नमो',
             'swami', 'स्वामी', 'guruji', 'गुरुजी',
-            'baba', 'बाबा', 'sadguru', 'सद्गुरु',
-            'hare', 'हरे', 'hari', 'हरी', 'haari', 'हारी'
+            'baba', 'बाबा', 'sadguru', 'सद्गुरु'
         ];
         
         let cleanedText = text;
@@ -581,8 +622,13 @@ class HariJapCounter {
             cleanedText = cleanedText.replace(regex, '');
         });
         
-        // Remove Shri specifically from the beginning
-        cleanedText = cleanedText.replace(/^(shri|श्री|sri)\s+/gi, '');
+        // Normalize common word substitutions
+        // Handle cases where speech recognition substitutes words
+        cleanedText = cleanedText
+            .replace(/\bश्री\b/g, 'जय')  // Replace श्री with जय for consistency
+            .replace(/\bहरि\b/g, 'हारी')  // Normalize हरि to हारी
+            .replace(/\bहरी\b/g, 'हारी')  // Normalize हरी to हारी
+            .replace(/\bकृष्ण\b/g, 'कृष्णा'); // Normalize कृष्ण to कृष्णा
         
         // Clean up extra spaces
         cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
@@ -820,12 +866,12 @@ class HariJapCounter {
 
     updateCountDisplay() {
         if (this.elements.countDisplay) {
-            // Show today's count instead of total count
-            const todayCount = this.state.todayWords;
+            const todayTotalWords = this.calculateTodayTotalWords();
+            
             const current = parseInt(this.elements.countDisplay.textContent) || 0;
-            if (current !== todayCount) {
+            if (current !== todayTotalWords) {
                 this.elements.countDisplay.classList.add('pulse');
-                this.elements.countDisplay.textContent = todayCount;
+                this.elements.countDisplay.textContent = todayTotalWords;
                 setTimeout(() => {
                     this.elements.countDisplay.classList.remove('pulse');
                 }, 500);
@@ -888,7 +934,8 @@ class HariJapCounter {
         }
 
         if (this.elements.todayCount) {
-            this.elements.todayCount.textContent = this.state.todayWords;
+            const todayTotalWords = this.calculateTodayTotalWords();
+            this.elements.todayCount.textContent = todayTotalWords;
         }
 
         if (this.elements.accuracy && this.metrics.recognitionAttempts > 0) {
@@ -907,10 +954,11 @@ class HariJapCounter {
 
     updateFullJapDisplay() {
         if (this.elements.fullJapCount) {
+            const todayTotalWords = this.calculateTodayTotalWords();
             const current = parseInt(this.elements.fullJapCount.textContent) || 0;
-            if (current !== this.state.totalWords) {
+            if (current !== todayTotalWords) {
                 this.elements.fullJapCount.classList.add('pulse');
-                this.elements.fullJapCount.textContent = this.state.totalWords;
+                this.elements.fullJapCount.textContent = todayTotalWords;
                 setTimeout(() => {
                     this.elements.fullJapCount.classList.remove('pulse');
                 }, 500);
@@ -1216,6 +1264,13 @@ class HariJapCounter {
     // ================================================================
     // UTILITY METHODS
     // ================================================================
+
+    calculateTodayTotalWords() {
+        // Calculate today's total words: current mala progress + completed malas today
+        const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
+        const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
+        return currentMalaWords + completedMalasWords;
+    }
 
     getTodayDateString() {
         // Use cached server date if available, otherwise fallback to local time
