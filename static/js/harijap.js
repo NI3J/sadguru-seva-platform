@@ -703,7 +703,10 @@ class HariJapCounter {
         this.state.todayWords += wordsToAdd;
         this.state.todayPronunciations += pronunciationsToAdd;
         this.state.currentMalaPronunciations += pronunciationsToAdd;
-        this.state.todaysCount += wordsToAdd; // Update persistent today's count
+        
+        // Calculate todaysCount correctly after increment
+        // This ensures todaysCount reflects (currentMala * 5) + (completedMalas * 108 * 5)
+        this.state.todaysCount = this.calculateTodayTotalWords();
 
         console.log('📊 Total: Words=' + this.state.totalWords + ', Today: Words=' + this.state.todayWords + ', Pronunciations=' + this.state.totalPronunciations + ', Current=' + this.state.currentMalaPronunciations);
 
@@ -832,6 +835,9 @@ class HariJapCounter {
         this.state.isSaving = true;
 
         try {
+            // Calculate actual todays count for persistence
+            const actualTodaysCount = this.calculateTodayTotalWords();
+            
             const payload = {
                 count: this.state.totalWords,
                 totalMalas: this.state.totalMalas,
@@ -841,7 +847,7 @@ class HariJapCounter {
                 todayPronunciations: this.state.todayPronunciations,
                 todayMalas: this.state.todayMalas,
                 todayDate: this.state.todayDate,
-                todaysCount: this.state.todaysCount
+                todaysCount: actualTodaysCount // Save the calculated value
             };
 
             console.log('💾 Saving to server:', payload);
@@ -976,11 +982,11 @@ class HariJapCounter {
 
     updateFullJapDisplay() {
         if (this.elements.fullJapCount) {
-            const todayTotalWords = this.calculateTodayTotalWords();
+            // Show total lifetime count, not today's count
             const current = parseInt(this.elements.fullJapCount.textContent) || 0;
-            if (current !== todayTotalWords) {
+            if (current !== this.state.totalWords) {
                 this.elements.fullJapCount.classList.add('pulse');
-                this.elements.fullJapCount.textContent = todayTotalWords;
+                this.elements.fullJapCount.textContent = this.state.totalWords;
                 setTimeout(() => {
                     this.elements.fullJapCount.classList.remove('pulse');
                 }, 500);
@@ -1285,15 +1291,16 @@ class HariJapCounter {
     // ================================================================
 
     calculateTodayTotalWords() {
-        // Use todaysCount from database if available, otherwise calculate
-        if (this.state.todaysCount > 0) {
-            return this.state.todaysCount;
-        }
-        
-        // Fallback calculation: current mala progress + completed malas today
+        // Always calculate based on current mala progress and completed malas
+        // This ensures accuracy even if database is out of sync
         const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
         const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
-        return currentMalaWords + completedMalasWords;
+        const calculatedTotal = currentMalaWords + completedMalasWords;
+        
+        // Update state with calculated value for consistency
+        this.state.todaysCount = calculatedTotal;
+        
+        return calculatedTotal;
     }
 
     getTodayDateString() {
