@@ -391,7 +391,7 @@ def harijap_save_state():
         # Convert JavaScript date string to MySQL date format if needed
         if today_date and isinstance(today_date, str):
             try:
-                from datetime import datetime
+                from datetime import datetime, timezone, timedelta
                 # Handle different date formats from JavaScript
                 if 'GMT' in today_date or 'UTC' in today_date:
                     # Parse ISO date string and convert to MySQL format
@@ -402,12 +402,14 @@ def harijap_save_state():
                     dt = datetime.fromisoformat(today_date.split('T')[0])
                     today_date = dt.strftime('%Y-%m-%d')
             except (ValueError, TypeError):
-                # If parsing fails, use current date
-                today_date = datetime.now().strftime('%Y-%m-%d')
+                # If parsing fails, use current date in IST timezone
+                ist = timezone(timedelta(hours=5, minutes=30))
+                today_date = datetime.now(ist).strftime('%Y-%m-%d')
         elif not today_date:
-            # If no date provided, use current date
-            from datetime import datetime
-            today_date = datetime.now().strftime('%Y-%m-%d')
+            # CRITICAL FIX: Use IST timezone for date consistency
+            from datetime import datetime, timezone, timedelta
+            ist = timezone(timedelta(hours=5, minutes=30))
+            today_date = datetime.now(ist).strftime('%Y-%m-%d')
         
         print(f"DEBUG: Saving - count={count}, malas={total_malas}, " 
               f"current_mala={current_mala_pronunciations}, total_pron={total_pronunciations}, "
@@ -417,6 +419,8 @@ def harijap_save_state():
         cursor = get_cursor(conn)
 
         # Insert or update with all fields including today's data
+        # CRITICAL FIX: Use GREATEST() to ensure count never decreases
+        # This prevents data loss if client sends incorrect values
         cursor.execute("""
             INSERT INTO harijap_progress 
             (bhaktgan_id, name, phone, count, total_malas, 
@@ -425,10 +429,10 @@ def harijap_save_state():
              today_malas, today_date, todays_count)
             VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
-                count = VALUES(count),
-                total_malas = VALUES(total_malas),
+                count = GREATEST(count, VALUES(count)),
+                total_malas = GREATEST(total_malas, VALUES(total_malas)),
                 current_mala_pronunciations = VALUES(current_mala_pronunciations),
-                total_pronunciations = VALUES(total_pronunciations),
+                total_pronunciations = GREATEST(total_pronunciations, VALUES(total_pronunciations)),
                 last_spoken_at = NOW(),
                 updated_at = NOW(),
                 today_words = VALUES(today_words),
@@ -633,15 +637,22 @@ def get_server_time():
     Get current server time for date calculations.
     
     Returns:
-        JSON with current server date and time
+        JSON with current server date and time in IST timezone
     """
-    now = datetime.now()
+    from datetime import timezone, timedelta
+    # Create IST timezone (UTC+5:30)
+    ist = timezone(timedelta(hours=5, minutes=30))
+    now = datetime.now(ist)
+    
     return jsonify({
         'success': True,
         'date': now.strftime('%Y-%m-%d'),
         'datetime': now.isoformat(),
         'timezone': 'IST',
-        'timestamp': now.timestamp()
+        'timestamp': now.timestamp(),
+        'hour': now.hour,
+        'minute': now.minute,
+        'second': now.second
     }), 200
 
 

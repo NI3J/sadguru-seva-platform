@@ -488,82 +488,91 @@ class HariJapCounter {
 
     countMantraRepetitions(text) {
         const normalized = this.normalizeText(text);
-        let maxCount = 0;
 
         // Clean the text to remove unwanted words like "Shri", "Shree", etc.
         const cleanedText = this.cleanMantraText(normalized);
         
-        // Try each target phrase pattern
+        console.log('🔍 Counting mantra in: "' + cleanedText + '"');
+        
+        // CRITICAL FIX: Use pattern matching first to find actual complete mantras
+        // This prevents double counting from overlapping patterns
+        let totalCount = this.countMantraPatterns(cleanedText);
+        
+        // If pattern matching found something, use it
+        if (totalCount > 0) {
+            console.log('✅ Found ' + totalCount + ' mantras via pattern matching');
+            return totalCount;
+        }
+        
+        // Fallback: Try exact phrase matching (but only count once per recognition)
+        // This prevents double counting when speech has slight variations
         for (let pattern of this.config.targetPhrases) {
             const patternLower = pattern.toLowerCase();
-            let count = 0;
-            let searchText = cleanedText;
-
-            // Count occurrences with better boundary detection
-            while (searchText.includes(patternLower)) {
-                const index = searchText.indexOf(patternLower);
+            
+            // If the cleaned text exactly matches the pattern, count as 1
+            if (cleanedText === patternLower) {
+                console.log('✅ Exact match: ' + pattern);
+                return 1;
+            }
+            
+            // If the pattern appears in the text, count occurrences
+            if (cleanedText.includes(patternLower)) {
+                // Count non-overlapping occurrences
+                let count = 0;
+                let searchText = cleanedText;
                 
-                // Check if it's a complete word match (not part of another word)
-                const beforeChar = index > 0 ? searchText.charAt(index - 1) : ' ';
-                const afterIndex = index + patternLower.length;
-                const afterChar = afterIndex < searchText.length ? searchText.charAt(afterIndex) : ' ';
-                
-                // Only count if surrounded by word boundaries
-                if ((beforeChar === ' ' || beforeChar === '।' || beforeChar === '.') && 
-                    (afterChar === ' ' || afterChar === '।' || afterChar === '.' || afterChar === '')) {
+                while (searchText.includes(patternLower)) {
+                    const index = searchText.indexOf(patternLower);
                     count++;
+                    // Move well past this occurrence to avoid overlap
+                    searchText = searchText.substring(index + patternLower.length + 1);
                 }
                 
-                // Move past this occurrence
-                searchText = searchText.substring(index + patternLower.length);
-            }
-
-            if (count > maxCount) {
-                maxCount = count;
+                if (count > 0) {
+                    console.log('✅ Found ' + count + ' occurrences of: ' + pattern);
+                    return count;
+                }
             }
         }
 
-        // If no exact matches, try pattern-based matching for common variations
-        if (maxCount === 0) {
-            maxCount = this.countMantraPatterns(cleanedText);
-        }
-
-        // If still no matches, try fuzzy matching for single phrase
-        if (maxCount === 0 && this.isMantraPhrase(text)) {
+        // Try fuzzy matching for single phrase
+        if (this.isMantraPhrase(text)) {
+            console.log('✅ Fuzzy match');
             return 1;
         }
-
-        return maxCount;
+        
+        console.log('❌ No mantra found in: "' + text + '"');
+        return 0;
     }
 
     countMantraPatterns(text) {
-        // Pattern-based matching for common mantra variations
-        // This handles cases where speech recognition substitutes words
+        // CRITICAL FIX: Pattern-based matching that counts COMPLETE mantras only
+        // This prevents double counting when text contains partial repetitions
         
-        const patterns = [
-            // Pattern: [जय/श्री] [जय/श्री] [राम] [कृष्ण/कृष्णा] [हारी/हरी/हरि]
-            {
-                regex: /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi,
-                name: 'jai-jai-ram-krishna-hari'
-            },
-            // Pattern: [जय/श्री] [राम] [कृष्ण/कृष्णा] [हारी/हरी/हरि] (single jai)
-            {
-                regex: /(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi,
-                name: 'jai-ram-krishna-hari'
-            }
-        ];
-
-        let totalCount = 0;
+        // Primary pattern: "जय जय राम कृष्णा हारी" (complete mantra)
+        // This is the standard 5-word mantra
+        const completePattern = /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi;
         
-        for (let pattern of patterns) {
-            const matches = text.match(pattern.regex);
-            if (matches) {
-                totalCount += matches.length;
-                console.log(`✅ Pattern "${pattern.name}" matched ${matches.length} times:`, matches);
-            }
+        // Find all complete mantra matches
+        const completeMatches = text.match(completePattern);
+        
+        if (completeMatches && completeMatches.length > 0) {
+            console.log(`✅ Found ${completeMatches.length} complete mantra(s):`, completeMatches);
+            return completeMatches.length;
         }
-
-        return totalCount;
+        
+        // Secondary pattern: Look for partial patterns as single count
+        // This handles cases where user says parts of the mantra
+        const partialPattern = /(?:जय|श्री)/gi;
+        const partialMatches = text.match(partialPattern);
+        
+        // If we found mantra-related words but no complete mantra, count as 1 single attempt
+        if (partialMatches && partialMatches.length >= 2) {
+            console.log('⚠️ Found mantra words but not complete mantra, counting as 1');
+            return 1;
+        }
+        
+        return 0;
     }
 
     isMantraPhrase(text) {
@@ -677,24 +686,8 @@ class HariJapCounter {
     // ================================================================
 
     incrementCounterByCount(count) {
-        // Check if it's a new day and reset today's count if needed
-        const currentDate = this.getTodayDateString();
-        
-        // Only reset if date actually changed (prevent false positives during session)
-        if (this.state.todayDate && this.state.todayDate !== currentDate) {
-            console.log('📅 New day detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
-            this.state.todayWords = 0;
-            this.state.todayPronunciations = 0;
-            this.state.todayMalas = 0;
-            this.state.todayDate = currentDate;
-            this.state.todaysCount = 0; // Reset persistent today's count
-            
-            // Show notification about new day
-            this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
-        } else if (!this.state.todayDate) {
-            // If todayDate is not set, set it without resetting
-            this.state.todayDate = currentDate;
-        }
+        // DO NOT reset dates during increment - let checkForDateChange handle it
+        // This prevents false resets during chanting
 
         // Calculate total words and pronunciations for this recognition
         const wordsToAdd = count * this.config.wordsPerPronunciation;
@@ -728,16 +721,16 @@ class HariJapCounter {
             this.state.currentMalaPronunciations += pronunciationsToAdd;
         }
 
-        // Increment both total and today's counts
+        // CRITICAL FIX: Increment both total and today's counts
+        // These are the authoritative sources for count tracking
         this.state.totalWords += wordsToAdd;
         this.state.totalPronunciations += pronunciationsToAdd;
         this.state.todayWords += wordsToAdd;
         this.state.todayPronunciations += pronunciationsToAdd;
 
-        // Recalculate todaysCount after increment
-        // This ensures todaysCount reflects (currentMala * 5) + (completedMalas * 108 * 5)
-        // Store calculated value for persistence
-        this.state.todaysCount = this.calculateTodayTotalWords();
+        // CRITICAL FIX: todaysCount should always equal todayWords
+        // Don't recalculate from mala progress - use the actual increment
+        this.state.todaysCount = this.state.todayWords;
 
         console.log('📊 Count Update:', {
             totalWords: this.state.totalWords,
@@ -828,20 +821,36 @@ class HariJapCounter {
             const data = await response.json();
 
             if (data.success) {
-                this.state.totalWords = data.count || 0;
-                this.state.totalMalas = data.total_malas || 0;
+                // CRITICAL FIX: Only update from server if loading from initial state
+                // or if the server values are higher (preserve data integrity)
+                const serverCount = data.count || 0;
+                const serverTotalMalas = data.total_malas || 0;
+                const serverTotalPronunciations = data.total_pronunciations || 0;
+                
+                // Use the greater value to prevent data loss
+                this.state.totalWords = Math.max(this.state.totalWords, serverCount);
+                this.state.totalMalas = Math.max(this.state.totalMalas, serverTotalMalas);
+                this.state.totalPronunciations = Math.max(this.state.totalPronunciations, serverTotalPronunciations);
+                
+                // Load session-specific data (can be different from client)
                 this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
-                this.state.totalPronunciations = data.total_pronunciations || 0;
                 
-                // Load today's data
-                this.state.todayWords = data.today_words || 0;
-                this.state.todayPronunciations = data.today_pronunciations || 0;
-                this.state.todayMalas = data.today_malas || 0;
-                this.state.todayDate = data.today_date || this.getTodayDateString();
+                // CRITICAL FIX: Load today's data and check if date matches
+                const serverTodayDate = data.today_date || this.getTodayDateString();
+                const currentDate = this.getTodayDateString();
                 
-                // Recalculate todaysCount to ensure it matches current state
-                // This fixes any inconsistencies between database and current progress
-                this.state.todaysCount = this.calculateTodayTotalWords();
+                // Only load today's data if the date matches
+                // If date changed, keep existing data (will be reset by checkForDateChange)
+                if (serverTodayDate === this.state.todayDate || serverTodayDate === currentDate) {
+                    this.state.todayWords = data.today_words || 0;
+                    this.state.todayPronunciations = data.today_pronunciations || 0;
+                    this.state.todayMalas = data.today_malas || 0;
+                    this.state.todayDate = serverTodayDate;
+                    this.state.todaysCount = data.todays_count || this.state.todayWords;
+                } else {
+                    // Date changed - keep current state, will be handled by checkForDateChange
+                    console.log('📅 Server date different from client, keeping current state');
+                }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
                 console.log('✅ State loaded:', {
@@ -1327,8 +1336,16 @@ class HariJapCounter {
     // ================================================================
 
     calculateTodayTotalWords() {
-        // Always calculate based on current mala progress and completed malas
-        // This ensures accuracy even if database is out of sync
+        // CRITICAL FIX: Calculate today's total words based on actual today words
+        // This ensures that todaysCount reflects the actual count that happened today
+        // Use today_words directly from state as it's the authoritative source
+        // Only if it's 0, calculate from mala progress
+        if (this.state.todayWords > 0) {
+            return this.state.todayWords;
+        }
+        
+        // Fallback: calculate based on current mala progress and completed malas
+        // This handles the case when todayWords hasn't been set yet
         const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
         const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
         const calculatedTotal = currentMalaWords + completedMalasWords;
@@ -1337,16 +1354,16 @@ class HariJapCounter {
     }
 
     getTodayDateString() {
-        // Use cached server date if available, otherwise fallback to local time
+        // CRITICAL FIX: Always use server date for consistency with timezone
+        // This ensures date comparisons are done with server timezone (IST)
         if (this.serverDate) {
             return this.serverDate;
         }
         
-        // Fallback to local time if server date not available
-        const today = new Date();
-        return today.getFullYear() + '-' + 
-               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-               String(today.getDate()).padStart(2, '0');
+        // If server date not loaded yet, return current date from server
+        // Don't use local time as it may have different timezone
+        this.getServerTime(); // Try to load server time
+        return this.getTodayDateString();
     }
 
     async getServerTime() {
@@ -1360,7 +1377,14 @@ class HariJapCounter {
                 const data = await response.json();
                 if (data.success) {
                     this.serverDate = data.date;
-                    console.log('🕐 Server time loaded:', data.date);
+                    this.serverTime = data.datetime;
+                    console.log('🕐 Server time loaded:', data.date, 'at', data.hour + ':' + data.minute + ':' + data.second);
+                    
+                    // If server time was loaded, trigger date check
+                    if (this.state.isInitialized) {
+                        this.checkForDateChange();
+                    }
+                    
                     return data.date;
                 }
             }
@@ -1368,7 +1392,7 @@ class HariJapCounter {
             console.error('❌ Error getting server time:', error);
         }
         
-        // Fallback to local time
+        // Fallback: return today's date in ISO format (will be corrected on next server sync)
         const today = new Date();
         return today.getFullYear() + '-' + 
                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -1382,9 +1406,15 @@ class HariJapCounter {
         // Do NOT reset if dates are the same (prevent false positives)
         if (this.state.todayDate && this.state.todayDate !== currentDate && currentDate !== this.state.todayDate) {
             console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
+            
+            // CRITICAL FIX: Save current day's progress BEFORE resetting
+            this.saveToServer(true);
+            
+            // Now reset today's counters for the new day
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
+            this.state.currentMalaPronunciations = 0; // Reset current mala for new day
             this.state.todayDate = currentDate;
             this.state.todaysCount = 0; // Reset persistent today's count
             
@@ -1393,10 +1423,11 @@ class HariJapCounter {
             
             // Update UI and save
             this.updateUI();
-            this.saveToServer();
+            this.saveToServer(true);
         } else if (!this.state.todayDate) {
             // If todayDate is not set, set it without resetting
             this.state.todayDate = currentDate;
+            this.saveToServer();
         }
     }
 
