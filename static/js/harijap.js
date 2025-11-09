@@ -137,6 +137,10 @@ class HariJapCounter {
 
             this.state.isInitialized = true;
             this.updateUI();
+            
+            // Verify button is clickable
+            this.verifyButtonSetup();
+            
             this.showNotification('🙏 स्वागत आहे! जपाची तयारी झाली', 'success');
 
             console.log('✅ Initialization complete');
@@ -252,9 +256,35 @@ class HariJapCounter {
         this.addListener('resetBtn', 'click', () => this.confirmReset());
         this.addListener('logoutBtn', 'click', () => this.logout());
 
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            this.updateActivity();
+            
+            // Space key to start/stop listening
+            if (e.code === 'Space' && !e.target.matches('input, textarea, button')) {
+                e.preventDefault();
+                if (this.state.isListening) {
+                    this.stopListening();
+                } else {
+                    this.startListening();
+                }
+            }
+            
+            // Escape key to stop listening
+            if (e.code === 'Escape' && this.state.isListening) {
+                e.preventDefault();
+                this.stopListening();
+            }
+            
+            // Ctrl+Enter for manual count
+            if (e.ctrlKey && e.code === 'Enter') {
+                e.preventDefault();
+                this.addManualCount();
+            }
+        });
+
         // Add activity tracking for general user interactions
         document.addEventListener('click', () => this.updateActivity());
-        document.addEventListener('keydown', () => this.updateActivity());
         document.addEventListener('mousemove', () => this.updateActivity());
 
         // Page visibility and unload
@@ -272,8 +302,50 @@ class HariJapCounter {
     }
 
     addListener(elementId, event, handler) {
-        if (this.elements[elementId]) {
-            this.elements[elementId].addEventListener(event, handler);
+        // First try to get from cached elements
+        let element = this.elements[elementId];
+        
+        // If not found in cache, try to find it directly in DOM
+        if (!element) {
+            element = document.getElementById(elementId);
+            if (element) {
+                console.warn('⚠️ Element ' + elementId + ' not in cache, found directly in DOM');
+                this.elements[elementId] = element; // Cache it for future use
+            }
+        }
+        
+        if (element) {
+            element.addEventListener(event, handler);
+            console.log('✅ Event listener attached to ' + elementId);
+        } else {
+            console.error('❌ Element not found: ' + elementId + ' - event listener not attached');
+        }
+    }
+
+    verifyButtonSetup() {
+        // Verify start button is properly set up
+        const startBtn = this.elements.startBtn || document.getElementById('startBtn');
+        if (startBtn) {
+            console.log('✅ Start button found:', {
+                id: startBtn.id,
+                disabled: startBtn.disabled,
+                style: window.getComputedStyle(startBtn).pointerEvents,
+                zIndex: window.getComputedStyle(startBtn).zIndex
+            });
+            
+            // Ensure button is not disabled initially
+            if (startBtn.disabled && !this.state.isListening) {
+                console.warn('⚠️ Start button is disabled but should be enabled');
+                startBtn.disabled = false;
+            }
+            
+            // Add a test click handler to verify it works
+            const testHandler = (e) => {
+                console.log('🔍 Test click detected on start button');
+            };
+            startBtn.addEventListener('click', testHandler, { once: true });
+        } else {
+            console.error('❌ Start button not found in DOM!');
         }
     }
 
