@@ -249,12 +249,92 @@ class HariJapCounter {
     }
 
     attachEventListeners() {
-        // Button listeners
-        this.addListener('startBtn', 'click', () => this.startListening());
-        this.addListener('stopBtn', 'click', () => this.stopListening());
-        this.addListener('manualBtn', 'click', () => this.addManualCount());
-        this.addListener('resetBtn', 'click', () => this.confirmReset());
-        this.addListener('logoutBtn', 'click', () => this.logout());
+        // Button listeners - use both click and mousedown for maximum compatibility
+        this.addListener('startBtn', 'click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🎤 Start button clicked');
+            this.startListening();
+        });
+        this.addListener('startBtn', 'mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🎤 Start button mousedown');
+            if (!this.state.isListening) {
+                this.startListening();
+            }
+        });
+        
+        this.addListener('stopBtn', 'click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.stopListening();
+        });
+        this.addListener('stopBtn', 'mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.isListening) {
+                this.stopListening();
+            }
+        });
+        
+        this.addListener('manualBtn', 'click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.addManualCount();
+        });
+        this.addListener('manualBtn', 'mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.addManualCount();
+        });
+        
+        this.addListener('resetBtn', 'click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.confirmReset();
+        });
+        this.addListener('resetBtn', 'mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.confirmReset();
+        });
+        
+        this.addListener('logoutBtn', 'click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.logout();
+        });
+        
+        // Touch event handlers for mobile devices
+        this.addListener('startBtn', 'touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🎤 Start button touched');
+            if (!this.state.isListening) {
+                this.startListening();
+            }
+        });
+        
+        this.addListener('stopBtn', 'touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.isListening) {
+                this.stopListening();
+            }
+        });
+        
+        this.addListener('manualBtn', 'touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.addManualCount();
+        });
+        
+        this.addListener('resetBtn', 'touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.confirmReset();
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -323,16 +403,47 @@ class HariJapCounter {
     }
 
     verifyButtonSetup() {
-        // Verify start button is properly set up
+        // Verify all buttons are properly set up
+        const buttons = ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'];
+        
+        buttons.forEach(btnId => {
+            const btn = this.elements[btnId] || document.getElementById(btnId);
+            if (btn) {
+                const computedStyle = window.getComputedStyle(btn);
+                console.log(`✅ ${btnId} found:`, {
+                    id: btn.id,
+                    disabled: btn.disabled,
+                    pointerEvents: computedStyle.pointerEvents,
+                    zIndex: computedStyle.zIndex,
+                    position: computedStyle.position,
+                    display: computedStyle.display,
+                    visibility: computedStyle.visibility
+                });
+                
+                // Ensure button is clickable
+                btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
+                btn.style.position = 'relative';
+                btn.style.zIndex = '100';
+                
+                // Check if button is covered by another element
+                const rect = btn.getBoundingClientRect();
+                const elementAtPoint = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+                
+                if (elementAtPoint !== btn && !btn.contains(elementAtPoint)) {
+                    console.warn(`⚠️ ${btnId} might be covered by:`, elementAtPoint);
+                }
+            } else {
+                console.error(`❌ ${btnId} not found in DOM!`);
+            }
+        });
+        
+        // Specifically check start button
         const startBtn = this.elements.startBtn || document.getElementById('startBtn');
         if (startBtn) {
-            console.log('✅ Start button found:', {
-                id: startBtn.id,
-                disabled: startBtn.disabled,
-                style: window.getComputedStyle(startBtn).pointerEvents,
-                zIndex: window.getComputedStyle(startBtn).zIndex
-            });
-            
             // Ensure button is not disabled initially
             if (startBtn.disabled && !this.state.isListening) {
                 console.warn('⚠️ Start button is disabled but should be enabled');
@@ -341,11 +452,9 @@ class HariJapCounter {
             
             // Add a test click handler to verify it works
             const testHandler = (e) => {
-                console.log('🔍 Test click detected on start button');
+                console.log('🔍 Test click detected on start button', e);
             };
             startBtn.addEventListener('click', testHandler, { once: true });
-        } else {
-            console.error('❌ Start button not found in DOM!');
         }
     }
 
@@ -1595,7 +1704,115 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🙏 Initializing Hari Jap Counter Application');
     window.hariJapCounter = new HariJapCounter();
+    
+    // Fallback: Direct event listeners if initialization failed
+    setTimeout(() => {
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const manualBtn = document.getElementById('manualBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        if (startBtn && !startBtn.onclick) {
+            console.log('⚠️ Adding fallback click handler for startBtn');
+            startBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔍 Fallback click handler triggered for startBtn');
+                if (window.hariJapCounter && typeof window.hariJapCounter.startListening === 'function') {
+                    window.hariJapCounter.startListening();
+                } else {
+                    console.error('❌ hariJapCounter not initialized or startListening not available');
+                }
+            }, { capture: true });
+        }
+        
+        if (stopBtn && !stopBtn.onclick) {
+            stopBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.hariJapCounter && typeof window.hariJapCounter.stopListening === 'function') {
+                    window.hariJapCounter.stopListening();
+                }
+            }, { capture: true });
+        }
+        
+        if (manualBtn && !manualBtn.onclick) {
+            manualBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.hariJapCounter && typeof window.hariJapCounter.addManualCount === 'function') {
+                    window.hariJapCounter.addManualCount();
+                }
+            }, { capture: true });
+        }
+        
+        if (resetBtn && !resetBtn.onclick) {
+            resetBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.hariJapCounter && typeof window.hariJapCounter.confirmReset === 'function') {
+                    window.hariJapCounter.confirmReset();
+                }
+            }, { capture: true });
+        }
+    }, 1000);
 });
+
+// ====================================================================
+// DEBUG HELPER FUNCTION
+// ====================================================================
+
+window.debugHariJapButtons = function() {
+    console.log('🔍 Debugging Hari Jap Buttons...');
+    const buttons = ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'];
+    
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            const rect = btn.getBoundingClientRect();
+            const elementAtPoint = document.elementFromPoint(
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2
+            );
+            
+            console.log(`${btnId}:`, {
+                found: true,
+                disabled: btn.disabled,
+                visible: rect.width > 0 && rect.height > 0,
+                position: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+                elementAtCenter: elementAtPoint?.tagName + (elementAtPoint?.id ? `#${elementAtPoint.id}` : ''),
+                isCovered: elementAtPoint !== btn && !btn.contains(elementAtPoint),
+                computedStyle: {
+                    pointerEvents: window.getComputedStyle(btn).pointerEvents,
+                    zIndex: window.getComputedStyle(btn).zIndex,
+                    position: window.getComputedStyle(btn).position,
+                    display: window.getComputedStyle(btn).display
+                },
+                eventListeners: {
+                    click: btn.onclick !== null,
+                    hasListeners: btn.getEventListeners ? btn.getEventListeners() : 'unknown'
+                }
+            });
+            
+            // Test click programmatically
+            try {
+                btn.click();
+                console.log(`✅ Programmatic click on ${btnId} succeeded`);
+            } catch (e) {
+                console.error(`❌ Programmatic click on ${btnId} failed:`, e);
+            }
+        } else {
+            console.error(`❌ ${btnId} not found in DOM`);
+        }
+    });
+    
+    if (window.hariJapCounter) {
+        console.log('✅ HariJapCounter instance exists');
+        console.log('State:', window.hariJapCounter.state);
+    } else {
+        console.error('❌ HariJapCounter instance not found');
+    }
+};
 
 // ====================================================================
 // EXPORT FOR TESTING (optional)
