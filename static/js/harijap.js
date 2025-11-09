@@ -103,6 +103,13 @@ class HariJapCounter {
         this.recognition = null;
 
         // ============================================================
+        // SERVER TIME MANAGEMENT
+        // ============================================================
+        this.serverDate = null;
+        this.serverTime = null;
+        this.serverTimeLoading = false;
+
+        // ============================================================
         // SESSION TIMEOUT MANAGEMENT
         // ============================================================
         this.sessionTimeout = {
@@ -1541,10 +1548,28 @@ class HariJapCounter {
             return this.serverDate;
         }
         
-        // If server date not loaded yet, return current date from server
-        // Don't use local time as it may have different timezone
-        this.getServerTime(); // Try to load server time
-        return this.getTodayDateString();
+        // If server date not loaded yet, return local date as fallback
+        // This prevents infinite recursion - server date will be loaded asynchronously
+        const today = new Date();
+        const fallbackDate = today.getFullYear() + '-' + 
+               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(today.getDate()).padStart(2, '0');
+        
+        // Try to load server time asynchronously (don't wait for it)
+        if (!this.serverTimeLoading) {
+            this.serverTimeLoading = true;
+            this.getServerTime().then(() => {
+                this.serverTimeLoading = false;
+                // Once server time is loaded, check for date change
+                if (this.state.isInitialized) {
+                    this.checkForDateChange();
+                }
+            }).catch(() => {
+                this.serverTimeLoading = false;
+            });
+        }
+        
+        return fallbackDate;
     }
 
     async getServerTime() {

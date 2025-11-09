@@ -60,16 +60,16 @@
 
         <!-- Control Buttons -->
         <div class="controls">
-            <button class="btn btn-primary" id="startBtn">
+            <button class="btn btn-primary" id="startBtn" onclick="handleStartClick(event)">
                 🎤 जप शुरू करें
             </button>
-            <button class="btn btn-secondary" id="stopBtn" disabled>
+            <button class="btn btn-secondary" id="stopBtn" disabled onclick="handleStopClick(event)">
                 ⏹️ रोकें
             </button>
-            <button class="btn btn-manual" id="manualBtn">
+            <button class="btn btn-manual" id="manualBtn" onclick="handleManualClick(event)">
                 ➕ मैन्युअल गिनती
             </button>
-            <button class="btn btn-danger" id="resetBtn">
+            <button class="btn btn-danger" id="resetBtn" onclick="handleResetClick(event)">
                 🔄 रीसेट
             </button>
         </div>
@@ -130,5 +130,148 @@
 
     <!-- Load JavaScript -->
     <script src="{{ url_for('static', filename='js/harijap.js') }}"></script>
+    
+    <!-- Immediate button handlers (fallback) -->
+    <script>
+        // Immediate handlers that work even if main script fails
+        function handleStartClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for startBtn');
+            if (window.hariJapCounter && typeof window.hariJapCounter.startListening === 'function') {
+                window.hariJapCounter.startListening();
+            } else {
+                console.error('❌ hariJapCounter not ready, retrying...');
+                setTimeout(() => {
+                    if (window.hariJapCounter && typeof window.hariJapCounter.startListening === 'function') {
+                        window.hariJapCounter.startListening();
+                    } else {
+                        alert('जप शुरू करने में समस्या। कृपया पृष्ठ को रीफ्रेश करें।');
+                    }
+                }, 500);
+            }
+            return false;
+        }
+        
+        function handleStopClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for stopBtn');
+            if (window.hariJapCounter && typeof window.hariJapCounter.stopListening === 'function') {
+                window.hariJapCounter.stopListening();
+            }
+            return false;
+        }
+        
+        function handleManualClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for manualBtn');
+            if (window.hariJapCounter && typeof window.hariJapCounter.addManualCount === 'function') {
+                window.hariJapCounter.addManualCount();
+            }
+            return false;
+        }
+        
+        function handleResetClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for resetBtn');
+            if (window.hariJapCounter && typeof window.hariJapCounter.confirmReset === 'function') {
+                window.hariJapCounter.confirmReset();
+            }
+            return false;
+        }
+        
+        // Also attach event listeners immediately (before DOMContentLoaded)
+        (function() {
+            function attachImmediateHandlers() {
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const manualBtn = document.getElementById('manualBtn');
+                const resetBtn = document.getElementById('resetBtn');
+                
+                if (startBtn) {
+                    console.log('✅ Found startBtn, attaching immediate handlers');
+                    startBtn.style.pointerEvents = 'auto';
+                    startBtn.style.cursor = 'pointer';
+                    startBtn.style.zIndex = '9999';
+                    startBtn.style.position = 'relative';
+                    
+                    // Multiple event types
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        startBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🎯 Immediate handler triggered:', eventType);
+                            if (window.hariJapCounter && typeof window.hariJapCounter.startListening === 'function') {
+                                window.hariJapCounter.startListening();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (stopBtn) {
+                    stopBtn.style.pointerEvents = 'auto';
+                    stopBtn.style.cursor = 'pointer';
+                    stopBtn.style.zIndex = '9999';
+                    stopBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        stopBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.hariJapCounter && typeof window.hariJapCounter.stopListening === 'function') {
+                                window.hariJapCounter.stopListening();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (manualBtn) {
+                    manualBtn.style.pointerEvents = 'auto';
+                    manualBtn.style.cursor = 'pointer';
+                    manualBtn.style.zIndex = '9999';
+                    manualBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        manualBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.hariJapCounter && typeof window.hariJapCounter.addManualCount === 'function') {
+                                window.hariJapCounter.addManualCount();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (resetBtn) {
+                    resetBtn.style.pointerEvents = 'auto';
+                    resetBtn.style.cursor = 'pointer';
+                    resetBtn.style.zIndex = '9999';
+                    resetBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        resetBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.hariJapCounter && typeof window.hariJapCounter.confirmReset === 'function') {
+                                window.hariJapCounter.confirmReset();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+            }
+            
+            // Try immediately
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', attachImmediateHandlers);
+            } else {
+                attachImmediateHandlers();
+            }
+            
+            // Also try after a short delay
+            setTimeout(attachImmediateHandlers, 100);
+            setTimeout(attachImmediateHandlers, 500);
+            setTimeout(attachImmediateHandlers, 1000);
+        })();
+    </script>
 </body>
 </html>
