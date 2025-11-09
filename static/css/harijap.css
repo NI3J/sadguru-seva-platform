@@ -319,6 +319,7 @@ body::before {
     flex-wrap: wrap;
     position: relative;
     z-index: 100;
+    pointer-events: auto !important;
 }
 
 .btn {
@@ -327,9 +328,9 @@ body::before {
     border-radius: 30px;
     font-size: 1.1rem;
     font-weight: 600;
-    cursor: pointer;
+    cursor: pointer !important;
     transition: all 0.3s ease;
-    position: relative;
+    position: relative !important;
     overflow: hidden;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -337,8 +338,10 @@ body::before {
     min-width: 140px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    z-index: 10;
-    pointer-events: auto;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .btn::before {
