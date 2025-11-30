@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="hi" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>दैनिक सत्संग - {{ marathi_date }}</title>
+    <meta name="description" content="सद्गुरूंचा दैनिक सत्संग - आध्यात्मिक ज्ञान आणि मार्गदर्शन">
+    
+    <!-- Link to your CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/satsang.css') }}">
+    
+    <!-- Google Fonts for better Devanagari support -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="satsang-container">
+        <!-- Header Section -->
+        <header class="satsang-header">
+            <div class="header-content">
+                <div class="om-symbol">🕉️</div>
+                <h1 class="main-title">दैनिक सत्संग</h1>
+                <div class="date-info">
+                    <div class="marathi-date">📅 {{ marathi_date }} ({{ marathi_day }})</div>
+                    <div class="english-date">{{ english_date }} ({{ english_day }})</div>
+                    <div class="page-info">दिवस {{ page_number }}</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="satsang-nav">
+            <div class="nav-buttons">
+                {% if prev_page %}
+                <a href="?page={{ prev_page }}" class="nav-btn prev-btn" title="मागील दिवस">
+                    <i class="fas fa-chevron-left"></i> मागील
+                </a>
+                {% else %}
+                <span class="nav-btn prev-btn disabled">
+                    <i class="fas fa-chevron-left"></i> मागील
+                </span>
+                {% endif %}
+
+                <a href="?page={{ today_page }}" class="nav-btn today-btn" title="आजचा सत्संग">
+                    <i class="fas fa-home"></i> आज
+                </a>
+
+                {% if next_page %}
+                <a href="?page={{ next_page }}" class="nav-btn next-btn" title="पुढील दिवस">
+                    पुढील <i class="fas fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <span class="nav-btn next-btn disabled">
+                    पुढील <i class="fas fa-chevron-right"></i>
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Status indicators -->
+            <div class="status-indicators">
+                {% if is_today %}
+                <span class="status-badge today">आजचा सत्संग</span>
+                {% elif is_future %}
+                <span class="status-badge future">भविष्यातील सत्संग</span>
+                {% elif is_past %}
+                <span class="status-badge past">भूतकाळातील सत्संग</span>
+                {% endif %}
+
+                {% if satsang.is_fallback %}
+                <span class="status-badge fallback">तात्पुरती सामग्री</span>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="satsang-main">
+            <!-- Satsang Title -->
+            <div class="satsang-title-section">
+                <h2 class="satsang-title">{{ satsang.title }}</h2>
+                <div class="author-info">
+                    <i class="fas fa-user"></i> लेखक: {{ satsang.author }}
+                </div>
+            </div>
+
+            <!-- Language Toggle Buttons -->
+            <div class="language-toggle">
+                <button id="marathiBtn" class="lang-btn active" onclick="showMarathi()">
+                    <i class="fas fa-language"></i> मराठी
+                </button>
+                <button id="englishBtn" class="lang-btn" onclick="showEnglish()">
+                    <i class="fas fa-globe"></i> English
+                </button>
+            </div>
+
+            <!-- Marathi Content -->
+            <div id="marathiContent" class="content-section marathi-content">
+                <div class="content-header">
+                    <h3><i class="fas fa-om"></i> मराठी सत्संग</h3>
+                </div>
+                <div class="content-text">
+                    {% if satsang.marathi_content %}
+                        <p>{{ satsang.marathi_content | replace('\n', '</p><p>') | safe }}</p>
+                    {% else %}
+                        <div class="no-content">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>मराठी सामग्री सध्या उपलब्ध नाही.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- English Content -->
+            <div id="englishContent" class="content-section english-content" style="display: none;">
+                <div class="content-header">
+                    <h3><i class="fas fa-book-open"></i> English Satsang</h3>
+                </div>
+                <div class="content-text">
+                    {% if satsang.english_content %}
+                        <p>{{ satsang.english_content | replace('\n', '</p><p>') | safe }}</p>
+                    {% else %}
+                        <div class="no-content">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>English content is not yet available.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button onclick="increaseFontSize()" class="action-btn" title="फॉन्ट मोठा करा">
+                    <i class="fas fa-plus"></i> A+
+                </button>
+                <button onclick="decreaseFontSize()" class="action-btn" title="फॉन्ट छोटा करा">
+                    <i class="fas fa-minus"></i> A-
+                </button>
+                <button onclick="printSatsang()" class="action-btn" title="प्रिंट करा">
+                    <i class="fas fa-print"></i> प्रिंट
+                </button>
+                <button onclick="shareSatsang()" class="action-btn" title="शेअर करा">
+                    <i class="fas fa-share"></i> शेअर
+                </button>
+            </div>
+	    <div class="main-page-link">
+		    <!-- 🏠 Back to Home Button -->
+		    <div class="main-page-link">
+    <section class="home-button-section">
+        <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+    </section>
+</div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="satsang-footer">
+            <div class="footer-content">
+                <div class="lotus-symbol">🪷</div>
+                <p class="footer-text">सद्गुरूंची कृपा सदैव तुमच्यासह राहो</p>
+                <div class="footer-symbols">🕉️ 🌺 🙏🏻</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>सत्संग लोड करत आहे...</p>
+        </div>
+    </div>
+
+    <!-- Link to your JavaScript file -->
+    <script src="{{ url_for('static', filename='js/satsang.js') }}"></script>
+</body>
+</html>

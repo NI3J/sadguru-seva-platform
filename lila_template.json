@@ -1,0 +1,28 @@
+[
+    {
+        "title_english": "",
+        "title_marathi": "",
+        "description_english": "",
+        "description_marathi": "",
+        "story_english": "",
+        "story_marathi": "",
+        "moral_english": "",
+        "moral_marathi": "",
+        "shloka_sanskrit": null,
+        "shloka_translation_english": null,
+        "shloka_translation_marathi": null,
+        "category": "childhood",
+        "age_group": "all",
+        "image_url": null,
+        "thumbnail_url": null,
+        "audio_url": null,
+        "video_url": null,
+        "order_sequence": 1,
+        "is_featured": false,
+        "is_active": true,
+        "tags": "",
+        "reading_time_minutes": 5,
+        "difficulty_level": "easy",
+        "created_by": "Admin"
+    }
+]

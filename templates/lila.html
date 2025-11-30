@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="hi" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 कृष्ण लिला - Krishna Lila | Sadguru Seva Platform</title>
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Explore divine Krishna Lilas in both Marathi and English. Beautiful stories of Lord Krishna's life, teachings, and miracles.">
+    <meta name="keywords" content="Krishna Lila, कृष्ण लिला, Krishna stories, Marathi Krishna stories, Hindu mythology">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lila.css') }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕉️</text></svg>">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="/" class="brand-link">
+                    <span class="brand-icon">🕉️</span>
+                    <span class="brand-text">Sadguru Seva</span>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i> मुख्य
+                </a>
+                <a href="/krishna-lila" class="nav-link active">
+                    <i class="fas fa-book-open"></i> कृष्ण लिला
+                </a>
+                <a href="/programs" class="nav-link">
+                    <i class="fas fa-calendar"></i> कार्यक्रम
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        <span class="title-sanskrit">🌸 कृष्ण लिला 🌸</span>
+                        <span class="title-english">Krishna Lila</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        <span class="subtitle-marathi">भगवान कृष्णाच्या दिव्य कथा आणि लिला</span>
+                        <span class="subtitle-english">Divine Stories and Pastimes of Lord Krishna</span>
+                    </p>
+                </div>
+                <div class="hero-search">
+                    <form action="{{ url_for('krishna_lila.search') }}" method="GET" class="search-form">
+                        <input type="text" name="q" placeholder="लिला शोधा... / Search Lilas..." class="search-input">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-number">{{ stats.total_lilas if stats else 0 }}</div>
+                    <div class="stat-label">
+                        <span class="marathi">एकूण लिला</span>
+                        <span class="english">Total Lilas</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-number">{{ featured_lilas|length }}</div>
+                    <div class="stat-label">
+                        <span class="marathi">विशेष लिला</span>
+                        <span class="english">Featured</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📖</div>
+                    <div class="stat-number">{{ lilas_by_category.keys()|length }}</div>
+                    <div class="stat-label">
+                        <span class="marathi">प्रकार</span>
+                        <span class="english">Categories</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Lilas Section -->
+    {% if featured_lilas %}
+    <section class="featured-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="title-marathi">✨ विशेष लिला ✨</span>
+                    <span class="title-english">Featured Lilas</span>
+                </h2>
+            </div>
+            <div class="featured-grid">
+                {% for lila in featured_lilas %}
+                <div class="featured-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+                    <div class="card-image">
+                        {% if lila.image_url %}
+                        <img src="{{ lila.image_url }}" alt="{{ lila.title_english }}" loading="lazy">
+                        {% else %}
+                        <div class="placeholder-image">
+                            <i class="fas fa-om"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-overlay">
+                            <span class="category-tag">{{ lila.category.title() }}</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">
+                            <span class="title-marathi">{{ lila.title_marathi }}</span>
+                            <span class="title-english">{{ lila.title_english }}</span>
+                        </h3>
+                        <p class="card-description">
+                            <span class="desc-marathi">{{ lila.description_marathi[:100] }}{% if lila.description_marathi|length > 100 %}...{% endif %}</span>
+                            <span class="desc-english">{{ lila.description_english[:100] }}{% if lila.description_english|length > 100 %}...{% endif %}</span>
+                        </p>
+                        <div class="card-meta">
+                            <span class="reading-time">
+                                <i class="fas fa-clock"></i> {{ lila.reading_time_minutes }} min
+                            </span>
+                            <span class="difficulty">
+                                <i class="fas fa-signal"></i> {{ lila.difficulty_level.title() }}
+                            </span>
+                        </div>
+                        <a href="{{ url_for('krishna_lila.view_lila', lila_id=lila.id) }}" class="read-more-btn">
+                            <span class="marathi">वाचा</span>
+                            <span class="english">Read More</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Categories Section -->
+    <section class="categories-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="title-marathi">📚 लिला प्रकार 📚</span>
+                    <span class="title-english">Lila Categories</span>
+                </h2>
+            </div>
+            
+            {% if lilas_by_category %}
+            <div class="categories-tabs">
+                <div class="tabs-nav">
+                    {% for category in lilas_by_category.keys() %}
+                    <button class="tab-btn {% if loop.first %}active{% endif %}" 
+                            onclick="showCategory('{{ category }}')">
+                        {% set category_info = {
+                            'childhood': {'icon': '👶', 'marathi': 'बालपण', 'english': 'Childhood'},
+                            'youth': {'icon': '🧑', 'marathi': 'युवावस्था', 'english': 'Youth'},
+                            'mathura': {'icon': '🏛️', 'marathi': 'मथुरा', 'english': 'Mathura'},
+                            'dwarka': {'icon': '🏰', 'marathi': 'द्वारका', 'english': 'Dwarka'},
+                            'devotion': {'icon': '💝', 'marathi': 'भक्ति', 'english': 'Devotion'},
+                            'teachings': {'icon': '📜', 'marathi': 'शिकवण', 'english': 'Teachings'},
+                            'miracles': {'icon': '✨', 'marathi': 'चमत्कार', 'english': 'Miracles'}
+                        } %}
+                        {% set cat_info = category_info.get(category, {'icon': '📖', 'marathi': category, 'english': category}) %}
+                        
+                        <span class="tab-icon">{{ cat_info.icon }}</span>
+                        <span class="tab-text">
+                            <span class="marathi">{{ cat_info.marathi }}</span>
+                            <span class="english">{{ cat_info.english }}</span>
+                        </span>
+                        <span class="tab-count">({{ lilas_by_category[category]|length }})</span>
+                    </button>
+                    {% endfor %}
+                </div>
+                
+                <div class="tabs-content">
+                    {% for category, lilas in lilas_by_category.items() %}
+                    <div class="tab-content {% if loop.first %}active{% endif %}" id="{{ category }}-content">
+                        <div class="lilas-grid">
+                            {% for lila in lilas %}
+                            <div class="lila-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
+                                <div class="card-header">
+                                    {% if lila.thumbnail_url %}
+                                    <img src="{{ lila.thumbnail_url }}" alt="{{ lila.title_english }}" class="card-thumbnail">
+                                    {% else %}
+                                    <div class="card-placeholder">
+                                        <i class="fas fa-om"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="lila-title">
+                                        <span class="marathi">{{ lila.title_marathi }}</span>
+                                        <span class="english">{{ lila.title_english }}</span>
+                                    </h4>
+                                    <p class="lila-snippet">
+                                        {{ lila.description_marathi[:80] }}{% if lila.description_marathi|length > 80 %}...{% endif %}
+                                    </p>
+                                    <div class="card-footer">
+                                        <div class="lila-meta">
+                                            <span class="duration">
+                                                <i class="fas fa-clock"></i> {{ lila.reading_time_minutes }}min
+                                            </span>
+                                            {% if lila.difficulty_level %}
+                                            <span class="difficulty difficulty-{{ lila.difficulty_level }}">
+                                                {{ lila.difficulty_level.title() }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <a href="{{ url_for('krishna_lila.view_lila', lila_id=lila.id) }}" 
+                                           class="lila-link">
+                                            <i class="fas fa-book-open"></i>
+                                            <span class="marathi">वाचा</span>
+                                            <span class="english">Read</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if lilas|length > 6 %}
+                        <div class="view-all-container">
+                            <a href="{{ url_for('krishna_lila.view_category', category=category) }}" 
+                               class="view-all-btn">
+                                <span class="marathi">सर्व {{ category }} लिला पहा</span>
+                                <span class="english">View All {{ category.title() }} Lilas</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <h3 class="empty-title">
+                    <span class="marathi">अद्याप कोणतीही लिला उपलब्ध नाही</span>
+                    <span class="english">No Lilas Available Yet</span>
+                </h3>
+                <p class="empty-message">
+                    <span class="marathi">कृपया नंतर परत या</span>
+                    <span class="english">Please check back later</span>
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4 class="footer-title">
+                        <span class="marathi">संपर्क</span>
+                        <span class="english">Contact</span>
+                    </h4>
+                    <p class="footer-text">
+                        <span class="marathi">आध्यात्मिक मार्गदर्शनासाठी संपर्क साधा</span>
+                        <span class="english">Connect for spiritual guidance</span>
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">
+                        <span class="marathi">कृष्ण लिला</span>
+                        <span class="english">Krishna Lila</span>
+                    </h4>
+                    <div class="footer-links">
+                        <a href="{{ url_for('krishna_lila.index') }}">
+                            <span class="marathi">सर्व लिला</span>
+                            <span class="english">All Lilas</span>
+                        </a>
+                        <a href="{{ url_for('krishna_lila.view_category', category='childhood') }}">
+                            <span class="marathi">बालपण लिला</span>
+                            <span class="english">Childhood</span>
+                        </a>
+                        <a href="{{ url_for('krishna_lila.view_category', category='devotion') }}">
+                            <span class="marathi">भक्ति कथा</span>
+                            <span class="english">Devotion</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="copyright">
+                    <span class="marathi">© {{ current_year }} सदगुरु सेवा मंच - सर्व हक्क राखीव</span>
+                    <span class="english">© {{ current_year }} Sadguru Seva Platform - All Rights Reserved</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script src="{{ url_for('static', filename='js/lila.js') }}"></script>
+    
+    <script>
+        // Initialize AOS animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <title>शिवतांडव स्तोत्रम् - दिव्य दर्शन</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbutton.css') }}">
+    <script src="{{ url_for('static', filename='js/navbutton.js') }}" defer></script>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 🕉️ Page Title -->
+        <header class="page-header">
+            <h1>🔱 शिवतांडव स्तोत्रम् - दिव्य दर्शन</h1>
+        </header>
+
+        <!-- 🎥 OneDrive Video Embed -->
+        <section class="video-section">
+            <iframe
+                src="https://1drv.ms/v/c/dee6adcd81463e49/IQRCtdQsIBL8T43SUS9rQ8Y-AbQ8uBkWRFFLDR5leBSikx8"
+                width="100%"
+                height="600"
+                frameborder="0"
+                scrolling="no"
+                allowfullscreen>
+            </iframe>
+        </section>
+
+        <!-- 📜 Shivtandav Lyrics -->
+        <section class="lyrics-section">
+            <h2>📖 श्लोक</h2>
+            <div class="lyrics">
+                {% for verse in lyrics %}
+                    <p><strong>{{ verse.verse_number }}.</strong> {{ verse.content }}</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- 🏠 Back to Home Button -->
+        <section class="home-button-section">
+	  <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+        </section>
+    </div>
+
+</body>
+</html>

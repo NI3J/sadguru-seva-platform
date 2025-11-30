@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📿 Sadguru Baba चे दैनिक कार्यक्रम</title>
+  <meta name="description" content="Sadguru Baba चे दैनिक कार्यक्रम आणि धार्मिक उत्सव">
+
+  <!-- External Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/program.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Mukti:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <div class="program-container">
+    <header class="program-header">
+      <div class="header-content">
+        <div class="title-section">
+          <h1 class="program-title">📿 Sadguru Baba चे दैनिक कार्यक्रम</h1>
+          <p class="program-subtitle">आध्यात्मिक कार्यक्रम आणि धार्मिक उत्सवांची संपूर्ण माहिती</p>
+        </div>
+        <nav class="program-nav">
+          <a href="/" class="nav-button back-button">⬅️ मुख्य पृष्ठ</a>
+          <button id="filterToggle" class="nav-button filter-button">🔍 फिल्टर</button>
+          <a href="{{ url_for('admin.admin_dashboard') }}" class="nav-button admin-button">⚙️ Admin</a>
+        </nav>
+      </div>
+
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-item">📅 <span id="totalDays">{{ days|length }}</span> दिवस</div>
+        <div class="stat-item">🎯 <span id="totalPrograms">{{ total_programs }}</span> कार्यक्रम</div>
+        <div class="stat-item">📍 <span id="todayPrograms">0</span> आज</div>
+      </div>
+    </header>
+
+    <section class="filter-section" id="filterSection" aria-hidden="true">
+      <div class="filter-container">
+        <div class="filter-header">
+          <h2>🔍 कार्यक्रम फिल्टर</h2>
+          <button id="filterClose">✕</button>
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label for="dateFilter">📅 तारीख निवडा:</label>
+            <input type="date" id="dateFilter">
+            <small>विशिष्ट तारखेचे कार्यक्रम पहा</small>
+          </div>
+
+          <div class="filter-group">
+            <label for="searchFilter">🔍 कार्यक्रम शोधा:</label>
+            <input type="text" id="searchFilter" placeholder="आरती, प्रसाद, भजन...">
+            <button id="searchClear">✕</button>
+            <small>कार्यक्रमाचे नाव किंवा तपशील शोधा</small>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button id="todayFilter">📍 आजचे कार्यक्रम</button>
+          <button id="upcomingFilter">⏭️ आगामी कार्यक्रम</button>
+          <button id="clearFilters">❌ साफ करा</button>
+        </div>
+
+        <div class="active-filters" id="activeFilters" style="display: none;">
+          <span>सक्रिय फिल्टर:</span>
+          <div id="activeFiltersList"></div>
+        </div>
+      </div>
+    </section>
+<main class="program-content">
+  {% if days %}
+    <div class="view-controls">
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="list">📋 यादी</button>
+        <button class="view-btn" data-view="calendar">📅 कॅलेंडर</button>
+      </div>
+      <div class="sort-controls">
+        <label for="sortSelect">क्रमवारी:</label>
+        <select id="sortSelect">
+          <option value="date-desc">नवीन प्रथम</option>
+          <option value="date-asc">जुने प्रथम</option>
+          <option value="programs-desc">अधिक कार्यक्रम</option>
+          <option value="programs-asc">कमी कार्यक्रम</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="programs-list" id="programsList">
+      {% for day in days %}
+        <article class="day-block" data-date="{{ day.date }}">
+          <header class="date-header">
+            <div class="date-info">
+              <span>🗓️ {{ day.date }}</span>
+              {% if day.date == today %}<span class="today-badge">आज</span>{% endif %}
+              <span>{{ day.programs|length }} कार्यक्रम</span>
+            </div>
+            <button class="expand-toggle" data-target="programs-{{ loop.index }}">▼</button>
+          </header>
+
+          <div class="programs-content" id="programs-{{ loop.index }}">
+            {% if day.programs %}
+              <ul>
+                {% for program in day.programs %}
+                  <li>
+                    • {{ program }}
+                    <button class="share-btn" data-program="{{ program }}">📤</button>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>🙏🏼 या दिवशी कोणताही कार्यक्रम नोंदवलेला नाही.</p>
+            {% endif %}
+            <div class="day-summary">एकूण {{ day.programs|length }} कार्यक्रम | {{ day.date }}</div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    <div class="programs-calendar" id="programsCalendar" style="display: none;">
+      <div class="calendar-header">
+        <button id="prevMonth">‹</button>
+        <h3 id="calendarTitle">कॅलेंडर दृश्य</h3>
+        <button id="nextMonth">›</button>
+      </div>
+      <div id="calendarGrid"></div>
+    </div>
+
+    <div class="load-more-section" id="loadMoreSection" style="display: none;">
+      <button id="loadMoreBtn">⬇️ अधिक कार्यक्रम लोड करा <span id="loadCount"></span></button>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>कोणतेही कार्यक्रम उपलब्ध नाहीत</h2>
+      <p>सध्या कोणतेही दैनिक कार्यक्रम नोंदवले गेले नाहीत.</p>
+      <a href="{{ url_for('admin.admin_dashboard') }}">➕ नवीन कार्यक्रम जोडा</a>
+      <a href="/">🏠 मुख्य पृष्ठावर जा</a>
+    </div>
+  {% endif %}
+</main>
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          {% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+          {{ message }}
+          <button class="flash-close">&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Floating Action Buttons -->
+<div class="floating-actions">
+  <button id="scrollToTop">↑</button>
+  <a href="{{ url_for('admin.admin_dashboard') }}">+</a>
+  <button id="sharePrograms">📤</button>
+</div>
+
+<!-- Share Modal -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-content">
+    <h3 id="shareModalTitle">कार्यक्रम शेअर करा</h3>
+    <button class="modal-close">&times;</button>
+    <div class="share-options">
+      <button data-platform="whatsapp">📱 WhatsApp</button>
+      <button data-platform="facebook">📘 Facebook</button>
+      <button data-platform="copy">📋 Copy Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading & Offline Indicators -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>कार्यक्रम लोड होत आहेत...</p>
+</div>
+<div class="offline-indicator" id="offlineIndicator">📶 इंटरनेट कनेक्शन नाही</div>
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='js/program.js') }}"></script>
+</body>
+</html>
