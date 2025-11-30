@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Spiritual Website • RadhaKrishna Ashram
+{% endblock %}
+
+{% block head_styles %}
+<!-- Link to external CSS file -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+  <div class="hero-content">
+    <div class="welcome-text">
+      राधाकृष्ण आश्रम गातेगावच्या अध्यात्मीक वेब साइटवर आपले स्वागत आहे
+    </div>
+    
+    <!-- Main image - using placeholder if mahadev.jpg doesn't exist -->
+    <img src="{{ url_for('static', filename='images/mahadev.jpg') }}"
+         alt="Mahadev"
+         class="mahadev-img"
+         onerror="this.style.display='none';">
+    
+    <div class="description-text">
+      <p>हे स्थान अंतर्गत परिवर्तन आणि जागरूक जीवनासाठी समर्पित आहे.</p>
+      <p>आध्यात्मिक प्रवासात आपले स्वागत आहे.</p>
+      <p>येथे शांती, प्रेम आणि आनंदाचा अनुभव घ्या.</p>
+    </div>
+    
+    <div class="divider"></div>
+  </div>
+</div>
+
+<!-- Floating Trishul - hide if image doesn't exist -->
+<img src="{{ url_for('static', filename='images/trishul.svg') }}"
+     class="floating-trishul"
+     alt="Trishul"
+     title="Click me for blessings! 🙏"
+     onerror="this.style.display='none';">
+
+<!-- Link to external JavaScript file -->
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

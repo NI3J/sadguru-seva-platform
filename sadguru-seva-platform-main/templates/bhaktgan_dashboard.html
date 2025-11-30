@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="dashboard-container">
+
+    <!-- 📌 Sticky Header Block -->
+    <div class="sticky-header">
+      <h1>भक्तगण सूची 📿</h1>
+      <p>एकूण नोंदणी: {{ bhaktgan_list | length }}</p>
+      <a href="/admin/bhaktgan/export" class="button">📤 CSV डाउनलोड करा</a>
+    </div>
+
+    <!-- 🔍 सेवा प्रकार Filter -->
+    <form method="get" action="/admin/bhaktgan" class="filter-form">
+      <label for="seva">सेवा प्रकार फिल्टर:</label>
+      <select name="seva" id="seva" onchange="this.form.submit()">
+        <option value="">-- सर्व सेवा --</option>
+        <option value="Ashram seva" {% if current_seva == 'Ashram seva' %}selected{% endif %}>Ashram seva</option>
+        <option value="Rangoli kadhne" {% if current_seva == 'Rangoli kadhne' %}selected{% endif %}>Rangoli kadhne</option>
+        <!-- Add more as needed -->
+      </select>
+    </form>
+
+    <!-- 📊 भक्तगण Table -->
+    <table>
+      <thead>
+        <tr>
+          <th>नाव</th>
+          <th>ईमेल</th>
+          <th>फोन</th>
+          <th>सेवा</th>
+          <th>शहर</th>
+          <th>नोंदणी वेळ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bhakt in bhaktgan_list %}
+        <tr>
+          <td>{{ bhakt.name }}</td>
+          <td>{{ bhakt.email }}</td>
+          <td>{{ bhakt.phone }}</td>
+          <td>{{ bhakt.seva_interest }}</td>
+          <td>{{ bhakt.city }}</td>
+          <td>{{ bhakt.submitted_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+{% endblock %}

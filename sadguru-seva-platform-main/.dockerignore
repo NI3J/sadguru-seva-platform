@@ -1,0 +1,21 @@
+# Ignore Git and version control metadata
+.git
+.gitignore
+.gitattributes
+
+# Ignore media and large files
+*.mp4
+*.zip
+*.tar
+*.mov
+*.avi
+
+# Ignore Python cache and logs
+__pycache__/
+*.pyc
+*.log
+
+# Ignore test artifacts
+tests/
+coverage/
+.env

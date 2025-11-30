@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bhaktgan_dashboard.css') }}">
+<script src="{{ url_for('static', filename='js/bhaktgan_dashboard.js') }}"></script>
+
+<div class="dashboard-container">
+  <div class="header-section">
+    <h1>भक्तगण सूची <span class="bead">📿</span></h1>
+    <p class="total-count">एकूण नोंदणी: <strong>{{ bhaktgan_list|length }}</strong></p>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="bhakt-table">
+      <thead>
+        <tr>
+          <th>नाव</th>
+          <th>ईमेल</th>
+          <th>फोन</th>
+          <th>सेवा</th>
+          <th>शहर</th>
+          <th>नोंदणी वेळ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bhakt in bhaktgan_list %}
+        <tr>
+          <td>{{ bhakt.name }}</td>
+          <td>{{ bhakt.email }}</td>
+          <td>{{ bhakt.phone }}</td>
+          <td>{{ bhakt.seva_interest }}</td>
+          <td>{{ bhakt.city }}</td>
+          <td>{{ bhakt.submitted_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

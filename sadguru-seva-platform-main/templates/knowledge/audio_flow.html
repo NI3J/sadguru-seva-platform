@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhakti Geet - Divine Audio Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Floating Background Images */
+        .background-images {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .floating-image {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            opacity: 0.3;
+            animation: float 15s infinite linear;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .floating-image:nth-child(1) {
+            top: 10%;
+            left: -150px;
+            animation-delay: 0s;
+            animation-duration: 20s;
+        }
+
+        .floating-image:nth-child(2) {
+            top: 30%;
+            left: -150px;
+            animation-delay: -7s;
+            animation-duration: 18s;
+        }
+
+        .floating-image:nth-child(3) {
+            top: 50%;
+            left: -150px;
+            animation-delay: -14s;
+            animation-duration: 22s;
+        }
+
+        .floating-image:nth-child(4) {
+            top: 70%;
+            left: -150px;
+            animation-delay: -21s;
+            animation-duration: 16s;
+        }
+
+        .floating-image:nth-child(5) {
+            top: 20%;
+            left: -150px;
+            animation-delay: -10s;
+            animation-duration: 24s;
+        }
+
+        .floating-image:nth-child(6) {
+            top: 60%;
+            left: -150px;
+            animation-delay: -17s;
+            animation-duration: 19s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateX(0) rotate(0deg) scale(1);
+            }
+            25% {
+                transform: translateX(25vw) rotate(90deg) scale(1.1);
+            }
+            50% {
+                transform: translateX(50vw) rotate(180deg) scale(0.9);
+            }
+            75% {
+                transform: translateX(75vw) rotate(270deg) scale(1.05);
+            }
+            100% {
+                transform: translateX(100vw) rotate(360deg) scale(1);
+            }
+        }
+
+        /* Main Container */
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .audio-player {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .audio-player::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .title {
+            color: #ff6b35;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .playlist {
+            margin-bottom: 30px;
+        }
+
+        .song-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .song-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .song-item.active {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
+        }
+
+        .song-item::before {
+            content: '🎵';
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .song-item.active::before {
+            content: '▶️';
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+            min-width: 60px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .progress-container {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 8px;
+            margin: 20px 0;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.1s ease;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .volume-slider {
+            width: 150px;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+        }
+
+        .current-song {
+            font-size: 1.2rem;
+            color: #ff6b35;
+            font-weight: bold;
+            margin-bottom: 20px;
+            min-height: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .audio-player {
+                margin: 10px;
+                padding: 30px 20px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            .control-btn {
+                padding: 12px 15px;
+                min-width: 50px;
+            }
+            
+            .floating-image {
+                width: 100px;
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-images">
+        <img src="/static/images/Baba/Baba1.jpeg" alt="Baba" class="floating-image">
+        <img src="/static/images/Baba/Baba2.jpeg" alt="Baba" class="floating-image">
+        <img src="/static/images/Baba/Baba3.jpeg" alt="Baba" class="floating-image">
+        <img src="/static/images/Baba/Baba1.jpeg" alt="Baba" class="floating-image">
+        <img src="/static/images/Baba/Baba2.jpeg" alt="Baba" class="floating-image">
+        <img src="/static/images/Baba/Baba3.jpeg" alt="Baba" class="floating-image">
+    </div>
+
+    <div class="container">
+        <div class="audio-player">
+            <h1 class="title">🕉️ भक्ति गीत 🕉️</h1>
+            <p class="subtitle">Divine Audio Collection</p>
+            
+            <div class="current-song" id="currentSong">Select a song to play</div>
+            
+            <div class="playlist">
+                <div class="song-item" data-src="/static/audio/Bhaktigeet/Sare-tirath-dham.mp3">
+                    🏛️ Sare Tirath Dham
+                </div>
+                <div class="song-item" data-src="/static/audio/Bhaktigeet/Shree-Krashna-Govind-Hare-Murare.mp3">
+                    🦚 Shree Krishna Govind Hare Murare
+                </div>
+                <div class="song-item" data-src="/static/audio/Bhaktigeet/Vithal-Maza.mp3">
+                    🙏 Vithal Maza
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="control-btn" id="prevBtn">⏮️</button>
+                <button class="control-btn" id="playPauseBtn">▶️</button>
+                <button class="control-btn" id="nextBtn">⏭️</button>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+            
+            <div class="volume-container">
+                <span>🔊</span>
+                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
+                <span id="volumeValue">70%</span>
+		<a href="/" id="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+            </div>
+            
+            <audio id="audioPlayer" preload="metadata"></audio>
+        </div>
+    </div>
+
+    <script>
+        class BhaktiAudioPlayer {
+            constructor() {
+                this.audio = document.getElementById('audioPlayer');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.prevBtn = document.getElementById('prevBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.progressBar = document.getElementById('progressBar');
+                this.currentTimeEl = document.getElementById('currentTime');
+                this.durationEl = document.getElementById('duration');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeValue = document.getElementById('volumeValue');
+                this.currentSongEl = document.getElementById('currentSong');
+                this.songItems = document.querySelectorAll('.song-item');
+                
+                this.currentIndex = -1;
+                this.isPlaying = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.audio.volume = 0.7;
+            }
+            
+            setupEventListeners() {
+                // Play/Pause button
+                this.playPauseBtn.addEventListener('click', () => {
+                    this.togglePlayPause();
+                });
+                
+                // Previous/Next buttons
+                this.prevBtn.addEventListener('click', () => {
+                    this.previousSong();
+                });
+                
+                this.nextBtn.addEventListener('click', () => {
+                    this.nextSong();
+                });
+                
+                // Progress bar
+                this.progressContainer.addEventListener('click', (e) => {
+                    this.setProgress(e);
+                });
+                
+                // Volume slider
+                this.volumeSlider.addEventListener('input', () => {
+                    this.setVolume();
+                });
+                
+                // Song items
+                this.songItems.forEach((item, index) => {
+                    item.addEventListener('click', () => {
+                        this.selectSong(index);
+                    });
+                });
+                
+                // Audio events
+                this.audio.addEventListener('loadedmetadata', () => {
+                    this.updateDuration();
+                });
+                
+                this.audio.addEventListener('timeupdate', () => {
+                    this.updateProgress();
+                });
+                
+                this.audio.addEventListener('ended', () => {
+                    this.nextSong();
+                });
+                
+                this.audio.addEventListener('error', (e) => {
+                    console.error('Audio error:', e);
+                    this.showError('Error loading audio file');
+                });
+            }
+            
+            selectSong(index) {
+                if (index === this.currentIndex) {
+                    this.togglePlayPause();
+                    return;
+                }
+                
+                this.currentIndex = index;
+                const songItem = this.songItems[index];
+                const src = songItem.dataset.src;
+                const title = songItem.textContent.trim();
+                
+                // Update UI
+                this.songItems.forEach(item => item.classList.remove('active'));
+                songItem.classList.add('active');
+                this.currentSongEl.textContent = title;
+                
+                // Load and play
+                this.audio.src = src;
+                this.audio.load();
+                
+                // Auto-play if a song was already playing
+                if (this.isPlaying) {
+                    this.audio.play().catch(e => {
+                        console.error('Playback error:', e);
+                        this.showError('Playback failed');
+                    });
+                }
+            }
+            
+            togglePlayPause() {
+                if (this.currentIndex === -1) {
+                    this.selectSong(0);
+                    return;
+                }
+                
+                if (this.isPlaying) {
+                    this.audio.pause();
+                    this.isPlaying = false;
+                    this.playPauseBtn.textContent = '▶️';
+                } else {
+                    this.audio.play().then(() => {
+                        this.isPlaying = true;
+                        this.playPauseBtn.textContent = '⏸️';
+                    }).catch(e => {
+                        console.error('Playback error:', e);
+                        this.showError('Playback failed');
+                    });
+                }
+            }
+            
+            previousSong() {
+                if (this.currentIndex <= 0) {
+                    this.selectSong(this.songItems.length - 1);
+                } else {
+                    this.selectSong(this.currentIndex - 1);
+                }
+            }
+            
+            nextSong() {
+                if (this.currentIndex >= this.songItems.length - 1) {
+                    this.selectSong(0);
+                } else {
+                    this.selectSong(this.currentIndex + 1);
+                }
+            }
+            
+            setProgress(e) {
+                const width = this.progressContainer.clientWidth;
+                const clickX = e.offsetX;
+                const duration = this.audio.duration;
+                
+                if (duration) {
+                    this.audio.currentTime = (clickX / width) * duration;
+                }
+            }
+            
+            setVolume() {
+                const volume = this.volumeSlider.value / 100;
+                this.audio.volume = volume;
+                this.volumeValue.textContent = this.volumeSlider.value + '%';
+            }
+            
+            updateProgress() {
+                const { duration, currentTime } = this.audio;
+                
+                if (duration) {
+                    const progressPercent = (currentTime / duration) * 100;
+                    this.progressBar.style.width = progressPercent + '%';
+                    this.currentTimeEl.textContent = this.formatTime(currentTime);
+                }
+            }
+            
+            updateDuration() {
+                const { duration } = this.audio;
+                if (duration) {
+                    this.durationEl.textContent = this.formatTime(duration);
+                }
+            }
+            
+            formatTime(time) {
+                const minutes = Math.floor(time / 60);
+                const seconds = Math.floor(time % 60);
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            showError(message) {
+                this.currentSongEl.textContent = `❌ ${message}`;
+                this.isPlaying = false;
+                this.playPauseBtn.textContent = '▶️';
+            }
+        }
+        
+        // Initialize the player when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new BhaktiAudioPlayer();
+        });
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add floating particles effect
+            const createFloatingParticles = () => {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: fixed;
+                    width: 6px;
+                    height: 6px;
+                    background: linear-gradient(45deg, #ff6b35, #f7931e);
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 0;
+                    opacity: 0.7;
+                    animation: particleFloat 8s linear infinite;
+                `;
+                
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 8000);
+            };
+            
+            // Create particles periodically
+            setInterval(createFloatingParticles, 2000);
+            
+            // Add particle animation CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes particleFloat {
+                    0% {
+                        transform: translateY(100vh) rotate(0deg);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 0.7;
+                    }
+                    90% {
+                        opacity: 0.7;
+                    }
+                    100% {
+                        transform: translateY(-100vh) rotate(360deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

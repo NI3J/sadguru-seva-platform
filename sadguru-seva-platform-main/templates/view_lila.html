@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="hi" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | Sadguru Seva Platform</title>
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="{{ lila.description_english[:160] if lila.description_english else lila.description_marathi[:160] }}...">
+    <meta name="keywords" content="Krishna Lila, {{ lila.title_english }}, {{ lila.title_marathi }}, {{ lila.category }}">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lila.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/view_lila.css') }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕉️</text></svg>">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="/" class="brand-link">
+                    <span class="brand-icon">🕉️</span>
+                    <span class="brand-text">Sadguru Seva</span>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i> मुख्य
+                </a>
+                <a href="{{ url_for('krishna_lila.index') }}" class="nav-link">
+                    <i class="fas fa-book-open"></i> कृष्ण लिला
+                </a>
+                <a href="/programs" class="nav-link">
+                    <i class="fas fa-calendar"></i> कार्यक्रम
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-container">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="/">मुख्य</a> 
+                <i class="fas fa-chevron-right"></i>
+                <a href="{{ url_for('krishna_lila.index') }}">कृष्ण लिला</a>
+                <i class="fas fa-chevron-right"></i>
+                <span>{{ lila.title_marathi }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lila Content -->
+    <main class="lila-content">
+        <div class="container">
+            <!-- Lila Header -->
+            <div class="lila-header">
+                {% if lila.image_url %}
+                <div class="lila-image">
+                    <img src="{{ lila.image_url }}" alt="{{ lila.title_english }}" loading="lazy">
+                    <div class="image-overlay"></div>
+                </div>
+                {% endif %}
+                
+                <div class="lila-header-content">
+                    <div class="lila-meta">
+                        <span class="category-tag">
+                            {% set category_names = {
+                                'childhood': 'बालपण लिला',
+                                'youth': 'युवावस्था लिला',
+                                'mathura': 'मथुरा लिला',
+                                'dwarka': 'द्वारका लिला',
+                                'devotion': 'भक्ति कथा',
+                                'teachings': 'शिकवण',
+                                'miracles': 'दिव्य चमत्कार'
+                            } %}
+                            {{ category_names.get(lila.category, lila.category.title()) }}
+                        </span>
+                        
+                        {% if lila.difficulty_level %}
+                        <span class="difficulty difficulty-{{ lila.difficulty_level }}">
+                            {% if lila.difficulty_level == 'easy' %}सोपे{% elif lila.difficulty_level == 'medium' %}मध्यम{% else %}कठीण{% endif %}
+                        </span>
+                        {% endif %}
+                        
+                        <span class="reading-time">
+                            <i class="fas fa-clock"></i> {{ lila.reading_time_minutes }} मिनिट
+                        </span>
+                        
+                        {% if lila.age_group and lila.age_group != 'all' %}
+                        <span class="age-group">
+                            <i class="fas fa-users"></i>
+                            {% if lila.age_group == 'children' %}बाल{% elif lila.age_group == 'youth' %}युवा{% else %}प्रौढ{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <h1 class="lila-title">
+                        <span class="title-marathi">{{ lila.title_marathi }}</span>
+                        <span class="title-english">{{ lila.title_english }}</span>
+                    </h1>
+                    
+                    <!-- Media Controls -->
+                    <div class="media-controls">
+                        {% if lila.audio_url %}
+                        <button class="media-btn audio-btn" onclick="toggleAudio()">
+                            <i class="fas fa-volume-up"></i>
+                            <span>ऑडिओ</span>
+                        </button>
+                        {% endif %}
+                        
+                        {% if lila.video_url %}
+                        <button class="media-btn video-btn" onclick="toggleVideo()">
+                            <i class="fas fa-play"></i>
+                            <span>व्हिडिओ</span>
+                        </button>
+                        {% endif %}
+                        
+                        <button class="media-btn share-btn" onclick="shareLila()">
+                            <i class="fas fa-share-alt"></i>
+                            <span>शेअर</span>
+                        </button>
+                        
+                        <button class="media-btn bookmark-btn" onclick="bookmarkLila({{ lila.id }})">
+                            <i class="fas fa-bookmark"></i>
+                            <span>जतन करा</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio/Video Player -->
+            {% if lila.audio_url or lila.video_url %}
+            <div class="media-player" id="mediaPlayer" style="display: none;">
+                {% if lila.audio_url %}
+                <audio id="audioPlayer" controls style="width: 100%; display: none;">
+                    <source src="{{ lila.audio_url }}" type="audio/mpeg">
+                    Your browser does not support audio playback.
+                </audio>
+                {% endif %}
+                
+                {% if lila.video_url %}
+                <video id="videoPlayer" controls style="width: 100%; display: none;">
+                    <source src="{{ lila.video_url }}" type="video/mp4">
+                    Your browser does not support video playback.
+                </video>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Description Section -->
+            {% if lila.description_marathi or lila.description_english %}
+            <div class="content-section description-section">
+                <h2 class="section-title">
+                    <span class="title-icon">📝</span>
+                    <span class="marathi">संक्षिप्त परिचय</span>
+                    <span class="english">Brief Introduction</span>
+                </h2>
+                
+                {% if lila.description_marathi %}
+                <div class="description-content marathi-content">
+                    <p>{{ lila.description_marathi }}</p>
+                </div>
+                {% endif %}
+                
+                {% if lila.description_english %}
+                <div class="description-content english-content">
+                    <p>{{ lila.description_english }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Main Story Content -->
+            <div class="story-content">
+                <!-- Language Toggle -->
+                <div class="language-toggle">
+                    <button class="lang-btn active" onclick="showLanguage('marathi')" id="marathiBtn">
+                        <i class="fas fa-language"></i> मराठी
+                    </button>
+                    <button class="lang-btn" onclick="showLanguage('english')" id="englishBtn">
+                        <i class="fas fa-language"></i> English
+                    </button>
+                </div>
+
+                <!-- Marathi Story -->
+                <div class="story-section marathi-story active" id="marathiStory">
+                    <h2 class="story-title">
+                        <span class="title-icon">📜</span>
+                        कथा - {{ lila.title_marathi }}
+                    </h2>
+                    <div class="story-text">
+                        {{ lila.story_marathi|safe|replace('\n', '<br>')|replace('\r\n', '<br>') }}
+                    </div>
+                </div>
+
+                <!-- English Story -->
+                <div class="story-section english-story" id="englishStory">
+                    <h2 class="story-title">
+                        <span class="title-icon">📖</span>
+                        Story - {{ lila.title_english }}
+                    </h2>
+                    <div class="story-text">
+                        {{ lila.story_english|safe|replace('\n', '<br>')|replace('\r\n', '<br>') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shloka Section -->
+            {% if lila.shloka_sanskrit %}
+            <div class="content-section shloka-section">
+                <h2 class="section-title">
+                    <span class="title-icon">🕉️</span>
+                    <span class="marathi">श्लोक</span>
+                    <span class="english">Shloka</span>
+                </h2>
+                
+                <div class="shloka-content">
+                    <div class="sanskrit-text">
+                        {{ lila.shloka_sanskrit|safe|replace('\n', '<br>') }}
+                    </div>
+                    
+                    {% if lila.shloka_translation_marathi %}
+                    <div class="translation marathi-translation">
+                        <h4>मराठी अर्थ:</h4>
+                        <p>{{ lila.shloka_translation_marathi }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if lila.shloka_translation_english %}
+                    <div class="translation english-translation">
+                        <h4>English Translation:</h4>
+                        <p>{{ lila.shloka_translation_english }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Moral/Teaching Section -->
+            {% if lila.moral_marathi or lila.moral_english %}
+            <div class="content-section moral-section">
+                <h2 class="section-title">
+                    <span class="title-icon">💡</span>
+                    <span class="marathi">शिकवण</span>
+                    <span class="english">Teaching</span>
+                </h2>
+                
+                <div class="moral-content">
+                    {% if lila.moral_marathi %}
+                    <div class="moral-text marathi-moral">
+                        <h4>मराठी:</h4>
+                        <p>{{ lila.moral_marathi|safe|replace('\n', '<br>') }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if lila.moral_english %}
+                    <div class="moral-text english-moral">
+                        <h4>English:</h4>
+                        <p>{{ lila.moral_english|safe|replace('\n', '<br>') }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tags Section -->
+            {% if lila.tags %}
+            <div class="content-section tags-section">
+                <h3 class="section-title">
+                    <span class="title-icon">🏷️</span>
+                    संबंधित विषय
+                </h3>
+                <div class="tags-container">
+                    {% for tag in lila.tags.split(',') %}
+                    <span class="tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Lilas Section -->
+            {% if related_lilas %}
+            <div class="content-section related-section">
+                <h2 class="section-title">
+                    <span class="title-icon">📚</span>
+                    <span class="marathi">संबंधित लिला</span>
+                    <span class="english">Related Lilas</span>
+                </h2>
+                
+                <div class="related-grid">
+                    {% for related in related_lilas %}
+                    <div class="related-card">
+                        {% if related.thumbnail_url %}
+                        <div class="related-image">
+                            <img src="{{ related.thumbnail_url }}" alt="{{ related.title_english }}" loading="lazy">
+                        </div>
+                        {% else %}
+                        <div class="related-placeholder">
+                            <i class="fas fa-om"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="related-content">
+                            <h4 class="related-title">
+                                <span class="marathi">{{ related.title_marathi }}</span>
+                                <span class="english">{{ related.title_english }}</span>
+                            </h4>
+                            
+                            {% if related.description_marathi %}
+                            <p class="related-description">
+                                {{ related.description_marathi[:80] }}{% if related.description_marathi|length > 80 %}...{% endif %}
+                            </p>
+                            {% endif %}
+                            
+                            <a href="{{ url_for('krishna_lila.view_lila', lila_id=related.id) }}" class="related-link">
+                                वाचा <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Navigation Buttons -->
+            <div class="navigation-buttons">
+                <a href="{{ url_for('krishna_lila.index') }}" class="nav-btn back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="marathi">सर्व लिला</span>
+                    <span class="english">All Lilas</span>
+                </a>
+                
+                <a href="{{ url_for('krishna_lila.view_category', category=lila.category) }}" class="nav-btn category-btn">
+                    <i class="fas fa-list"></i>
+                    <span class="marathi">{{ category_names.get(lila.category, lila.category) }}</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4 class="footer-title">कृष्ण लिला</h4>
+                    <p>भगवान कृष्णाच्या दिव्य कथा आणि शिकवणी</p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">संपर्क</h4>
+                    <p>आध्यात्मिक मार्गदर्शनासाठी संपर्क साधा</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ current_year }} सदगुरु सेवा मंच - सर्व हक्क राखीव</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script src="{{ url_for('static', filename='js/view_lila.js') }}"></script>
+    
+    <script>
+        // Initialize AOS animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    </script>
+</body>
+</html>

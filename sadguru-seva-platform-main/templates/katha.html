@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <title>सद्गुरु कथा</title>
+  <style>
+    body {
+      font-family: "Mukta", sans-serif;
+      background-color: #f8f2ed;
+      color: #3b2f2f;
+      text-align: center;
+      padding: 30px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fffbea;
+      box-shadow: 0 0 15px rgba(0,0,0,0.15);
+      padding: 20px;
+      border-radius: 10px;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #802c2c;
+    }
+    .video-wrapper {
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📖 सद्गुरु कथा</h1>
+    
+    <div class="video-wrapper">
+      {% if video_exists %}
+        <video controls width="100%">
+          <source src="{{ url_for('static', filename='videos/sadguru_katha.mp4') }}" type="video/mp4">
+          आपला ब्राउझर व्हिडिओ टॅगला सपोर्ट करत नाही.
+        </video>
+      {% else %}
+        <iframe width="100%" height="400"
+                src="https://www.youtube.com/embed/LfzHkniTvmM?start=2404"
+                title="Sadguru Katha on YouTube"
+                frameborder="0" allowfullscreen>
+        </iframe>
+      {% endif %}
+    </div>
+
+    <p>🙏 सद्गुरुंच्या कृपेने जीवनात प्रकाश येतो.</p>
+  </div>
+</body>
+</html>
