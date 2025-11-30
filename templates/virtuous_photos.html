@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}सद्गुरुंचे दर्शन छायाचित्रे - Enhanced Gallery{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/photos_enhanced.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="photos-gallery-container">
+    <!-- Header Section -->
+    <header class="gallery-header">
+        <h1 class="gallery-title">
+            <i class="fas fa-images"></i>
+            सद्गुरुंचे दर्शन छायाचित्रे
+        </h1>
+        <p class="gallery-subtitle">आध्यात्मिक प्रेरणा आणि शांतीचा अनुभव</p>
+    </header>
+
+    <!-- Controls Section -->
+    <div class="gallery-controls">
+        <!-- Search Bar -->
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search-input" placeholder="छायाचित्रे शोधा..." class="search-input">
+            <button id="clear-search" class="clear-search-btn" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="category-filter">
+            <label for="category-select" class="filter-label">
+                <i class="fas fa-filter"></i>
+                श्रेणी:
+            </label>
+            <select id="category-select" class="category-select">
+                <option value="">सर्व श्रेण्या</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- View Mode Toggle -->
+        <div class="view-mode-toggle">
+            <button id="grid-view" class="view-btn active" title="Grid View">
+                <i class="fas fa-th"></i>
+            </button>
+            <button id="slideshow-view" class="view-btn" title="Slideshow View">
+                <i class="fas fa-play"></i>
+            </button>
+            <button id="list-view" class="view-btn" title="List View">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>छायाचित्रे लोड होत आहेत...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" class="error-message" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>छायाचित्रे लोड करण्यात त्रुटी आली. कृपया पुन्हा प्रयत्न करा.</p>
+        <button id="retry-btn" class="retry-btn">पुन्हा प्रयत्न करा</button>
+    </div>
+
+    <!-- Photos Grid -->
+    <div id="photos-grid" class="photos-grid">
+        <!-- Photos will be loaded here dynamically -->
+    </div>
+
+    <!-- Slideshow Modal -->
+    <div id="slideshow-modal" class="slideshow-modal" style="display: none;">
+        <div class="slideshow-container">
+            <!-- Close Button -->
+            <button id="close-slideshow" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Navigation Arrows -->
+            <button id="prev-slide" class="nav-btn prev-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="next-slide" class="nav-btn next-btn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <!-- Image Container -->
+            <div class="slide-image-container">
+                <img id="slide-image" src="" alt="" class="slide-image">
+                <div class="image-loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Image Info -->
+            <div class="slide-info">
+                <h3 id="slide-title" class="slide-title"></h3>
+                <p id="slide-description" class="slide-description"></p>
+                <div class="slide-meta">
+                    <span id="slide-counter" class="slide-counter"></span>
+                    <span id="slide-category" class="slide-category"></span>
+                </div>
+            </div>
+
+            <!-- Slideshow Controls -->
+            <div class="slideshow-controls">
+                <button id="play-pause" class="control-btn play-pause-btn">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <button id="fullscreen-btn" class="control-btn fullscreen-btn">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button id="download-btn" class="control-btn download-btn">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="slideshow-progress">
+                <div id="progress-bar" class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="pagination" style="display: none;">
+        <button id="prev-page" class="page-btn prev-page-btn" disabled>
+            <i class="fas fa-chevron-left"></i>
+            मागील
+        </button>
+        <div id="page-numbers" class="page-numbers"></div>
+        <button id="next-page" class="page-btn next-page-btn">
+            पुढील
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Stats Section -->
+    <div id="stats-section" class="stats-section" style="display: none;">
+        <div class="stat-item">
+            <i class="fas fa-images"></i>
+            <span id="total-photos" class="stat-value">0</span>
+            <span class="stat-label">एकूण छायाचित्रे</span>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-eye"></i>
+            <span id="total-views" class="stat-value">0</span>
+            <span class="stat-label">एकूण दृश्ये</span>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-star"></i>
+            <span id="avg-views" class="stat-value">0</span>
+            <span class="stat-label">सरासरी दृश्ये</span>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Card Template -->
+<template id="photo-card-template">
+    <div class="photo-card" data-photo-id="">
+        <div class="photo-image-container">
+            <img class="photo-image" src="" alt="" loading="lazy">
+            <div class="photo-overlay">
+                <button class="view-btn overlay-btn" title="View">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="download-btn overlay-btn" title="Download">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            <div class="photo-loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <div class="photo-info">
+            <h3 class="photo-title"></h3>
+            <p class="photo-description"></p>
+            <div class="photo-meta">
+                <span class="photo-category"></span>
+                <span class="photo-date"></span>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- List Item Template -->
+<template id="photo-list-template">
+    <div class="photo-list-item" data-photo-id="">
+        <div class="list-image-container">
+            <img class="list-image" src="" alt="" loading="lazy">
+        </div>
+        <div class="list-info">
+            <h3 class="list-title"></h3>
+            <p class="list-description"></p>
+            <div class="list-meta">
+                <span class="list-category"></span>
+                <span class="list-date"></span>
+                <span class="list-views"></span>
+            </div>
+        </div>
+        <div class="list-actions">
+            <button class="view-btn list-action-btn" title="View">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="download-btn list-action-btn" title="Download">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- Page Number Template -->
+<template id="page-number-template">
+    <button class="page-number-btn" data-page="">
+    </button>
+</template>
+
+{% endblock %}
+
+{% block footer_scripts %}
+<script src="{{ url_for('static', filename='js/photos_enhanced.js') }}"></script>
+{% endblock %}

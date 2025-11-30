@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>आध्यात्मिक प्रवेश - OTP सत्यापन</title>
+    <link rel="stylesheet" href="static/css/enter_otp.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Main page navigation link -->
+    <div class="main-page-link">
+        <section class="home-button-section">
+            <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+        </section>
+    </div>
+
+    <!-- Floating spiritual particles -->
+    <div class="spiritual-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Main OTP container -->
+    <main class="otp-container">
+        <!-- Sacred symbol -->
+        <div class="sacred-symbol">🕉️</div>
+        
+        <!-- Page title -->
+        <h1 class="otp-title">आध्यात्मिक प्रवेश</h1>
+        
+        <!-- OTP verification form -->
+        <form action="/validate-otp" method="POST" class="otp-form">
+            <div class="input-group">
+                <input type="text" 
+                       name="otp" 
+                       class="otp-input"
+                       placeholder="OTP लिहा" 
+                       maxlength="6"
+                       pattern="[0-9]{6}"
+                       autocomplete="one-time-code"
+                       inputmode="numeric"
+                       required>
+            </div>
+            
+            <button type="submit" class="otp-submit">
+                🔓 प्रवेश मिळवा
+            </button>
+        </form>
+        
+        <!-- Spiritual quote -->
+        <div class="spiritual-quote">
+            "सत्यमेव जयते" - Truth alone triumphs
+        </div>
+        
+        <!-- Additional spiritual elements -->
+        <div class="spiritual-ornament">
+            <span class="ornament-left">🪷</span>
+            <span class="ornament-center">✨</span>
+            <span class="ornament-right">🪷</span>
+        </div>
+    </main>
+
+    <!-- Loading overlay (hidden by default) -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="loading-text">प्रमाणीकरण करत आहे...</div>
+        </div>
+    </div>
+
+    <!-- Success particles container -->
+    <div class="success-particles" id="successParticles"></div>
+
+    <!-- JavaScript -->
+    <script src="static/js/enter_otp.js"></script>
+</body>
+</html>

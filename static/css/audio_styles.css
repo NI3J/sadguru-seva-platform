@@ -1,0 +1,104 @@
+/* 🌌 Base Layout */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  color: white;
+  background-color: black;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* 🖼️ Background Slideshow */
+.background-slideshow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  animation: fadeImages 30s infinite;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.2;
+  filter: blur(1px);
+}
+
+/* 🎞️ Slideshow Keyframes */
+@keyframes fadeImages {
+  0%   { background-image: url('/static/images/Baba/Baba1.jpeg'); }
+  33%  { background-image: url('/static/images/Baba/Baba2.jpeg'); }
+  66%  { background-image: url('/static/images/Baba/Baba3.jpeg'); }
+  100% { background-image: url('/static/images/Baba/Baba1.jpeg'); }
+}
+
+/* 🎧 Audio Player Section */
+.audio-gallery {
+  margin-top: 40px;
+}
+
+#audioPlayer {
+  width: 80%;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+/* ⏭️ Control Button */
+button {
+  margin: 20px;
+  padding: 12px 24px;
+  font-size: 18px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #555;
+}
+
+/* 🖼️ Baba Image */
+#babaImage {
+  width: 220px;
+  height: auto;
+  border: 2px solid white;
+  border-radius: 10px;
+  margin-top: 30px;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 8px;
+}
+
+/* 🕉️ Title */
+h1 {
+  font-size: 32px;
+  margin-top: 40px;
+  color: #ffcc00;
+}
+#home-button {
+  display: inline-block;
+  margin: 30px auto;
+  padding: 12px 24px;
+  background-color: #fbe9e7;
+  color: #4e342e;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 8px;
+  font-family: 'Noto Serif Devanagari', serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#home-button:hover {
+  background-color: #ffccbc;
+  transform: scale(1.05);
+}
+
+.home-icon {
+  width: 20px;
+  vertical-align: middle;
+  margin-right: 8px;
+}

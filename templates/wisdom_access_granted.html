@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}प्रवेश प्राप्त - Wisdom Portal{% endblock %}
+
+{% block content %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/access_granted.css') }}">
+  
+  <div class="access-granted">
+    <h2>🪔 नमस्कार {{ username }}!</h2>
+    <p class="blessing">तुम्हाला सद्गुरुंच्या ज्ञानयज्ञात प्रवेश मिळाला आहे</p>
+    
+    <div class="sadguru-card">
+      <img src="{{ url_for('static', filename='images/sadguru.jpg') }}" alt="Sadguru Maharaj" class="sadguru-img">
+      <blockquote>
+        <p>"जगात सर्वात मोठी शक्ती श्रद्धा आहे."</p>
+        <p>— प. पु. श्री विद्यानंदजी सागर महाराज</p>
+      </blockquote>
+    </div>
+    
+    <div class="next-step">
+      <a href="/katha" class="button">📽️ कथा सुरू करा</a>
+      <p class="browser-note">तुमचा ब्राउझर व्हिडिओ सपोर्ट करत नाही.</p>
+    </div>
+    
+    <div class="main-page-link">
+      <section class="home-button-section">
+        <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+      </section>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/access_granted.js') }}"></script>
+{% endblock %}
+

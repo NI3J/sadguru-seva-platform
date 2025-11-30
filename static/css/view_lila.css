@@ -1,0 +1,753 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🌸 View Lila Styles - Krishna Lila Individual Page
+   static/css/view_lila.css
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🔧 Base Styles & Layout
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🧭 Breadcrumb Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.breadcrumb-container {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb a {
+    color: #ff6b35;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb a:hover {
+    color: #e55a2b;
+}
+
+.breadcrumb i {
+    font-size: 12px;
+    color: #999;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📄 Main Content Layout
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.lila-content {
+    padding: 30px 0;
+    background: #fafafa;
+    min-height: 100vh;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📸 Lila Header Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.lila-header {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.1);
+    margin-bottom: 30px;
+}
+
+.lila-image {
+    position: relative;
+    height: 300px;
+    overflow: hidden;
+}
+
+.lila-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.lila-image:hover img {
+    transform: scale(1.05);
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 100%);
+}
+
+.lila-header-content {
+    padding: 30px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🏷️ Meta Information Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.lila-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.category-tag,
+.difficulty,
+.reading-time,
+.age-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    border-radius: 25px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.category-tag {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.difficulty {
+    border: 2px solid;
+}
+
+.difficulty-easy {
+    background: #e8f5e8;
+    color: #2e7d32;
+    border-color: #4caf50;
+}
+
+.difficulty-medium {
+    background: #fff3e0;
+    color: #f57c00;
+    border-color: #ff9800;
+}
+
+.difficulty-advanced {
+    background: #ffebee;
+    color: #c62828;
+    border-color: #f44336;
+}
+
+.reading-time {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 2px solid #2196f3;
+}
+
+.age-group {
+    background: #f3e5f5;
+    color: #7b1fa2;
+    border: 2px solid #9c27b0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📝 Title Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.lila-title {
+    margin: 20px 0 25px 0;
+}
+
+.title-marathi {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    font-family: 'Noto Sans Devanagari', sans-serif;
+    line-height: 1.2;
+    margin-bottom: 10px;
+}
+
+.title-english {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #666;
+    font-style: italic;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🎮 Media Controls
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.media-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.media-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.audio-btn {
+    background: linear-gradient(135deg, #4caf50, #45a049);
+    color: white;
+}
+
+.audio-btn:hover {
+    background: linear-gradient(135deg, #45a049, #3e8e41);
+    transform: translateY(-2px);
+}
+
+.video-btn {
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    color: white;
+}
+
+.video-btn:hover {
+    background: linear-gradient(135deg, #1976d2, #1565c0);
+    transform: translateY(-2px);
+}
+
+.share-btn {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+}
+
+.share-btn:hover {
+    background: linear-gradient(135deg, #f57c00, #ef6c00);
+    transform: translateY(-2px);
+}
+
+.bookmark-btn {
+    background: linear-gradient(135deg, #e91e63, #c2185b);
+    color: white;
+}
+
+.bookmark-btn:hover {
+    background: linear-gradient(135deg, #c2185b, #ad1457);
+    transform: translateY(-2px);
+}
+
+.bookmark-btn.bookmarked {
+    background: linear-gradient(135deg, #4caf50, #45a049);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🎬 Media Player Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.media-player {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.media-player audio,
+.media-player video {
+    border-radius: 10px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📄 Content Sections
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.content-section {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.08);
+    border-left: 5px solid #ff6b35;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.title-icon {
+    font-size: 1.8rem;
+}
+
+.marathi,
+.english {
+    margin-left: 10px;
+}
+
+.english {
+    color: #666;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📖 Story Content Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.story-content {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.08);
+}
+
+.language-toggle {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.lang-btn {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.lang-btn.active {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.lang-btn:hover:not(.active) {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.story-section {
+    display: none;
+    padding: 30px;
+}
+
+.story-section.active {
+    display: block;
+}
+
+.story-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.story-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #444;
+    text-align: justify;
+    font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+.marathi-story .story-text {
+    font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+.english-story .story-text {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🕉️ Shloka Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.shloka-section {
+    border-left: 5px solid #9c27b0;
+}
+
+.shloka-content {
+    text-align: center;
+}
+
+.sanskrit-text {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #7b1fa2;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+    border-radius: 10px;
+    font-family: 'Noto Sans Devanagari', serif;
+    line-height: 1.6;
+}
+
+.translation {
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.marathi-translation {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+}
+
+.english-translation {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+.translation h4 {
+    color: #333;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.translation p {
+    color: #555;
+    line-height: 1.6;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   💡 Moral/Teaching Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.moral-section {
+    border-left: 5px solid #4caf50;
+    background: linear-gradient(135deg, #f8fff8, #e8f5e8);
+}
+
+.moral-content {
+    display: grid;
+    gap: 20px;
+}
+
+.moral-text {
+    padding: 20px;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+}
+
+.marathi-moral {
+    border-left: 4px solid #4caf50;
+}
+
+.english-moral {
+    border-left: 4px solid #2196f3;
+}
+
+.moral-text h4 {
+    color: #2e7d32;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.moral-text p {
+    color: #444;
+    line-height: 1.7;
+    font-size: 1.05rem;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🏷️ Tags Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.tags-section {
+    border-left: 5px solid #607d8b;
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tag {
+    background: linear-gradient(135deg, #607d8b, #546e7a);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.tag:hover {
+    transform: translateY(-2px);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📚 Related Lilas Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.related-section {
+    border-left: 5px solid #ff9800;
+}
+
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.related-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.related-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(255, 152, 0, 0.15);
+}
+
+.related-image {
+    height: 120px;
+    overflow: hidden;
+}
+
+.related-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.related-card:hover .related-image img {
+    transform: scale(1.1);
+}
+
+.related-placeholder {
+    height: 120px;
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+}
+
+.related-content {
+    padding: 20px;
+}
+
+.related-title {
+    margin-bottom: 10px;
+}
+
+.related-title .marathi {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+.related-title .english {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+.related-description {
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.related-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #ff9800;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.related-link:hover {
+    color: #f57c00;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🧭 Navigation Buttons
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.navigation-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 40px 0;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 25px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.back-btn {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+}
+
+.back-btn:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+    transform: translateY(-2px);
+}
+
+.category-btn {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.category-btn:hover {
+    background: linear-gradient(135deg, #f7931e, #e68619);
+    transform: translateY(-2px);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   📱 Responsive Design
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .lila-content {
+        padding: 20px 0;
+    }
+    
+    .lila-header-content {
+        padding: 20px;
+    }
+    
+    .title-marathi {
+        font-size: 2rem;
+    }
+    
+    .title-english {
+        font-size: 1.4rem;
+    }
+    
+    .content-section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .lila-meta {
+        gap: 10px;
+    }
+    
+    .media-controls {
+        gap: 10px;
+    }
+    
+    .media-btn {
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+    
+    .related-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .navigation-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .nav-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+    }
+    
+    .moral-content {
+        gap: 15px;
+    }
+    
+    .story-text {
+        font-size: 1rem;
+    }
+    
+    .sanskrit-text {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .lila-image {
+        height: 200px;
+    }
+    
+    .title-marathi {
+        font-size: 1.8rem;
+    }
+    
+    .title-english {
+        font-size: 1.2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+    }
+    
+    .breadcrumb {
+        font-size: 12px;
+        gap: 8px;
+    }
+    
+    .story-section {
+        padding: 20px;
+    }
+    
+    .related-content {
+        padding: 15px;
+    }
+}━
