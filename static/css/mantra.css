@@ -55,6 +55,24 @@ h1 {
   opacity: 0.8;
 }
 
+.gurudev-image-container {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1rem;
+}
+
+.gurudev-image {
+  max-width: 300px;
+  width: 100%;
+  height: auto;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px var(--shadow);
+  border: 3px solid var(--accent);
+  object-fit: contain;
+  background: white;
+  padding: 0.5rem;
+}
+
 .audio-container {
   display: none;
 }
@@ -462,6 +480,10 @@ html {
     font-size: 2rem;
   }
 
+  .gurudev-image {
+    max-width: 250px;
+  }
+
   .control-row {
     flex-direction: column;
     gap: 0.5rem;
@@ -496,6 +518,10 @@ html {
 @media (max-width: 480px) {
   .container {
     overflow: visible;
+  }
+
+  .gurudev-image {
+    max-width: 200px;
   }
 
   input[type="range"] {
