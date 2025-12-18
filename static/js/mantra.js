@@ -15,6 +15,9 @@
       console.warn('[mantra.js] Missing <audio id="mantra-audio">');
       return;
     }
+    
+    // Debug: Log initialization
+    console.log('[mantra.js] Initializing...');
 
     const playBtn = sel('#play');
     const stopBtn = sel('#stop');
@@ -30,8 +33,8 @@
     const versesContainer = sel('#verses');
     const loadingEl = sel('#loading');
 
-    const prefersReducedMotion = window.matchMedia && 
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = (window.matchMedia && 
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) || false;
 
     // Config
     const SEEK_STEP = 5;
@@ -46,21 +49,31 @@
       verseIndex = buildVerseIndex(versesContainer);
     }
 
-    // Wire up controls
+    // Wire up controls - pass prefersReducedMotion
     bindCoreControls({ 
       audio, playBtn, stopBtn, prevBtn, nextBtn, muteBtn, 
       vol, loopToggle, rateSel, seek, cur, dur, 
-      verseIndex, versesContainer 
+      verseIndex, versesContainer, prefersReducedMotion
     });
     
     // Initialize first shlok highlight immediately on page load
-    if (verseIndex && versesContainer && verseIndex.nodes.length > 0) {
-      // Use setTimeout to ensure DOM is ready
-      setTimeout(() => {
+    function initializeFirstShlok() {
+      if (verseIndex && versesContainer && verseIndex.nodes.length > 0) {
         const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
         updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
-      }, 100);
+        // Force update again after a short delay to ensure it sticks
+        setTimeout(() => {
+          updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+        }, 200);
+      }
     }
+    
+    // Initialize immediately
+    initializeFirstShlok();
+    
+    // Also initialize after a delay to catch any timing issues
+    setTimeout(initializeFirstShlok, 300);
+    setTimeout(initializeFirstShlok, 500);
     
     // Initialize first shlok highlight when audio starts playing
     audio.addEventListener('play', () => {
@@ -79,33 +92,54 @@
     // Time updates
     let lastPersist = 0;
     let isSeeking = false;
+    let updateInterval = null;
     
-    // Use both timeupdate and progress events for better updates
-    audio.addEventListener('timeupdate', () => {
+    // Function to force update UI
+    function forceUpdateUI() {
       if (!isSeeking) {
         updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
       }
-      
-      const now = performance.now();
-      if (now - lastPersist > 1500) {
-        persistTime(audio);
-        lastPersist = now;
-      }
-    });
+    }
+    
+    // Use both timeupdate and progress events for better updates
+    audio.addEventListener('timeupdate', forceUpdateUI);
     
     // Also listen to progress event for smoother updates
     audio.addEventListener('progress', () => {
       if (!isSeeking && isFinite(audio.duration) && audio.duration > 0) {
-        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+        forceUpdateUI();
+      }
+    });
+    
+    // Poll for updates every 100ms when playing (fallback)
+    audio.addEventListener('play', () => {
+      if (!updateInterval) {
+        updateInterval = setInterval(() => {
+          if (!audio.paused && !audio.ended) {
+            forceUpdateUI();
+          }
+        }, 100);
+      }
+    });
+    
+    audio.addEventListener('pause', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+    });
+    
+    audio.addEventListener('ended', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
       }
     });
     
     // Listen to loadeddata for initial update
     audio.addEventListener('loadeddata', () => {
       updateDurationUI({ audio, seek, dur });
-      if (verseIndex && versesContainer && isFinite(audio.currentTime)) {
-        updateVerseHighlight(verseIndex, versesContainer, audio.currentTime, prefersReducedMotion);
-      }
+      initializeFirstShlok();
     });
 
     // On metadata loaded
@@ -158,7 +192,7 @@
   function bindCoreControls({ 
     audio, playBtn, stopBtn, prevBtn, nextBtn, muteBtn, 
     vol, loopToggle, rateSel, seek, cur, dur,
-    verseIndex, versesContainer
+    verseIndex, versesContainer, prefersReducedMotion = false
   }) {
     if (playBtn) {
       playBtn.addEventListener('click', () => togglePlay(audio, playBtn));
@@ -245,9 +279,33 @@
     }
 
     // Update UI on state changes
-    audio.addEventListener('play', () => updatePlayButton(playBtn, true));
-    audio.addEventListener('pause', () => updatePlayButton(playBtn, false));
-    audio.addEventListener('ended', () => updatePlayButton(playBtn, false));
+    audio.addEventListener('play', () => {
+      updatePlayButton(playBtn, true);
+      // Force UI update when playing starts
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      }
+    });
+    audio.addEventListener('pause', () => {
+      updatePlayButton(playBtn, false);
+      // Update UI even when paused
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      }
+    });
+    audio.addEventListener('ended', () => {
+      updatePlayButton(playBtn, false);
+      // Update UI when ended
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      }
+    });
 
     // Initial UI
     updatePlayButton(playBtn, !audio.paused && !audio.ended);
@@ -304,15 +362,29 @@
   }
 
   function updateDurationUI({ audio, seek, dur }) {
-    if (dur) dur.textContent = isFinite(audio.duration) ? formatTime(audio.duration) : '--:--';
+    if (dur) {
+      const duration = isFinite(audio.duration) ? audio.duration : 0;
+      dur.textContent = duration > 0 ? formatTime(duration) : '--:--';
+    }
     if (seek) {
-      seek.max = '100';
-      seek.value = '0';
-      seek.setAttribute('aria-valuenow', '0');
+      // Always set max to 100
+      if (seek.max !== '100') {
+        seek.max = '100';
+      }
+      // Set initial value based on current time
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        const pct = clamp((currentTime / audio.duration) * 100, 0, 100);
+        seek.value = String(pct);
+        seek.setAttribute('aria-valuenow', seek.value);
+      } else {
+        seek.value = '0';
+        seek.setAttribute('aria-valuenow', '0');
+      }
     }
   }
 
-  function updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion) {
+  function updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion = false) {
     // Update current time display
     if (cur) {
       const time = isFinite(audio.currentTime) ? audio.currentTime : 0;
@@ -431,7 +503,7 @@
     return { nodes, activeIdx: -1 };
   }
 
-  function updateVerseHighlight(index, container, currentTime, prefersReducedMotion) {
+  function updateVerseHighlight(index, container, currentTime, prefersReducedMotion = false) {
     if (!index) return;
     const { nodes } = index;
 
@@ -483,8 +555,23 @@
         // Create and add pointer element directly in DOM
         const pointerEl = document.createElement('span');
         pointerEl.className = 'shlok-pointer';
-        pointerEl.textContent = '👉';
+        pointerEl.innerHTML = '👉';
         pointerEl.setAttribute('aria-hidden', 'true');
+        pointerEl.style.cssText = `
+          position: absolute !important;
+          top: 50% !important;
+          left: 10px !important;
+          transform: translateY(-50%) !important;
+          font-size: 2.5rem !important;
+          z-index: 100 !important;
+          pointer-events: none !important;
+          filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3)) !important;
+          line-height: 1 !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        `;
+        
         // Insert at the beginning of the shlok content
         if (el.firstChild) {
           el.insertBefore(pointerEl, el.firstChild);
@@ -492,8 +579,20 @@
           el.appendChild(pointerEl);
         }
         
-        // Force a reflow to ensure the element is rendered
+        // Force multiple reflows to ensure rendering
         void pointerEl.offsetHeight;
+        void el.offsetHeight;
+        requestAnimationFrame(() => {
+          void pointerEl.offsetHeight;
+          // Verify pointer is visible
+          const rect = pointerEl.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            console.warn('[mantra.js] Pointer element not visible, retrying...');
+            pointerEl.style.display = 'block';
+            pointerEl.style.visibility = 'visible';
+            pointerEl.style.opacity = '1';
+          }
+        });
         
         // Smooth scroll verse into view
         setTimeout(() => {
@@ -519,16 +618,34 @@
       if (!pointerEl) {
         pointerEl = document.createElement('span');
         pointerEl.className = 'shlok-pointer';
-        pointerEl.textContent = '👉';
+        pointerEl.innerHTML = '👉';
         pointerEl.setAttribute('aria-hidden', 'true');
+        pointerEl.style.cssText = `
+          position: absolute !important;
+          top: 50% !important;
+          left: 10px !important;
+          transform: translateY(-50%) !important;
+          font-size: 2.5rem !important;
+          z-index: 100 !important;
+          pointer-events: none !important;
+          filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3)) !important;
+          line-height: 1 !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        `;
         // Insert at the beginning of the shlok content
         if (el.firstChild) {
           el.insertBefore(pointerEl, el.firstChild);
         } else {
           el.appendChild(pointerEl);
         }
-        // Force a reflow
+        // Force multiple reflows
         void pointerEl.offsetHeight;
+        void el.offsetHeight;
+        requestAnimationFrame(() => {
+          void pointerEl.offsetHeight;
+        });
       }
     }
   }
