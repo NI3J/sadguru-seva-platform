@@ -52,6 +52,23 @@
       vol, loopToggle, rateSel, seek, cur, dur, 
       verseIndex, versesContainer 
     });
+    
+    // Initialize first shlok highlight immediately on page load
+    if (verseIndex && versesContainer && verseIndex.nodes.length > 0) {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+      }, 100);
+    }
+    
+    // Initialize first shlok highlight when audio starts playing
+    audio.addEventListener('play', () => {
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+      }
+    });
 
     // Media Session API
     setupMediaSession({ audio, verseIndex });
@@ -63,6 +80,7 @@
     let lastPersist = 0;
     let isSeeking = false;
     
+    // Use both timeupdate and progress events for better updates
     audio.addEventListener('timeupdate', () => {
       if (!isSeeking) {
         updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
@@ -74,12 +92,51 @@
         lastPersist = now;
       }
     });
+    
+    // Also listen to progress event for smoother updates
+    audio.addEventListener('progress', () => {
+      if (!isSeeking && isFinite(audio.duration) && audio.duration > 0) {
+        updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion);
+      }
+    });
+    
+    // Listen to loadeddata for initial update
+    audio.addEventListener('loadeddata', () => {
+      updateDurationUI({ audio, seek, dur });
+      if (verseIndex && versesContainer && isFinite(audio.currentTime)) {
+        updateVerseHighlight(verseIndex, versesContainer, audio.currentTime, prefersReducedMotion);
+      }
+    });
 
     // On metadata loaded
     audio.addEventListener('loadedmetadata', () => {
       updateDurationUI({ audio, seek, dur });
       restoreLastTimeForSrc(audio);
       if (loadingEl) loadingEl.style.display = 'none';
+      // Initialize verse highlight on load
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+      }
+    });
+    
+    // On canplay - when audio is ready to play
+    audio.addEventListener('canplay', () => {
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+      }
+      // Update duration when audio can play
+      updateDurationUI({ audio, seek, dur });
+    });
+    
+    // On loadeddata - when audio data is loaded
+    audio.addEventListener('loadeddata', () => {
+      updateDurationUI({ audio, seek, dur });
+      if (verseIndex && versesContainer) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
+      }
     });
 
     // Handle seeking flag
@@ -248,21 +305,50 @@
 
   function updateDurationUI({ audio, seek, dur }) {
     if (dur) dur.textContent = isFinite(audio.duration) ? formatTime(audio.duration) : '--:--';
-    if (seek) seek.value = '0';
+    if (seek) {
+      seek.max = '100';
+      seek.value = '0';
+      seek.setAttribute('aria-valuenow', '0');
+    }
   }
 
   function updateTimeUI({ audio, seek, cur, dur }, verseIndex, versesContainer, prefersReducedMotion) {
-    if (cur) cur.textContent = formatTime(audio.currentTime);
-    if (dur && isFinite(audio.duration)) dur.textContent = formatTime(audio.duration);
-
-    if (seek && isFinite(audio.duration) && audio.duration > 0) {
-      const pct = (audio.currentTime / audio.duration) * 100;
-      seek.value = String(pct);
-      seek.setAttribute('aria-valuenow', seek.value);
+    // Update current time display
+    if (cur) {
+      const time = isFinite(audio.currentTime) ? audio.currentTime : 0;
+      cur.textContent = formatTime(time);
+    }
+    
+    // Update duration display
+    if (dur) {
+      const duration = isFinite(audio.duration) ? audio.duration : 0;
+      dur.textContent = duration > 0 ? formatTime(duration) : '--:--';
     }
 
-    if (verseIndex && versesContainer && isFinite(audio.currentTime)) {
-      updateVerseHighlight(verseIndex, versesContainer, audio.currentTime, prefersReducedMotion);
+    // Always update seek bar
+    if (seek) {
+      // Ensure max is set correctly
+      if (seek.max !== '100') {
+        seek.max = '100';
+      }
+      
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        const pct = clamp((currentTime / audio.duration) * 100, 0, 100);
+        seek.value = String(pct);
+        seek.setAttribute('aria-valuenow', seek.value);
+        // Force visual update
+        seek.style.setProperty('--progress', pct + '%');
+      } else {
+        // Even if duration not loaded, show current position
+        seek.value = '0';
+      }
+    }
+
+    // Update verse highlight - always update, even if time is 0
+    if (verseIndex && versesContainer) {
+      const currentTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+      updateVerseHighlight(verseIndex, versesContainer, currentTime, prefersReducedMotion);
     }
   }
 
@@ -364,26 +450,86 @@
       }
     }
 
+    // If no verse found but currentTime is 0, default to first verse
+    if (found === -1 && currentTime === 0 && nodes.length > 0) {
+      found = 0;
+    }
+
     if (found !== index.activeIdx) {
-      // Remove previous highlight
-      if (index.activeIdx >= 0) {
-        nodes[index.activeIdx].el.classList.remove('is-active');
+      // Remove previous highlight and pointer
+      if (index.activeIdx >= 0 && nodes[index.activeIdx]) {
+        const prevEl = nodes[index.activeIdx].el;
+        prevEl.classList.remove('is-active');
+        // Remove pointer element if it exists
+        const prevPointer = prevEl.querySelector('.shlok-pointer');
+        if (prevPointer) {
+          prevPointer.remove();
+        }
       }
       
       // Add new highlight
       if (found >= 0) {
         const el = nodes[found].el;
         el.classList.add('is-active');
+        el.style.position = 'relative';
+        el.style.zIndex = '10';
+        
+        // Remove any existing pointer first
+        const existingPointer = el.querySelector('.shlok-pointer');
+        if (existingPointer) {
+          existingPointer.remove();
+        }
+        
+        // Create and add pointer element directly in DOM
+        const pointerEl = document.createElement('span');
+        pointerEl.className = 'shlok-pointer';
+        pointerEl.textContent = '👉';
+        pointerEl.setAttribute('aria-hidden', 'true');
+        // Insert at the beginning of the shlok content
+        if (el.firstChild) {
+          el.insertBefore(pointerEl, el.firstChild);
+        } else {
+          el.appendChild(pointerEl);
+        }
+        
+        // Force a reflow to ensure the element is rendered
+        void pointerEl.offsetHeight;
         
         // Smooth scroll verse into view
-        el.scrollIntoView({
-          behavior: prefersReducedMotion ? 'auto' : 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
+        setTimeout(() => {
+          el.scrollIntoView({
+            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 50);
       }
       
       index.activeIdx = found;
+    } else if (found >= 0 && index.activeIdx === found) {
+      // Ensure active state is maintained
+      const el = nodes[found].el;
+      if (!el.classList.contains('is-active')) {
+        el.classList.add('is-active');
+        el.style.position = 'relative';
+        el.style.zIndex = '10';
+      }
+      // Ensure pointer exists
+      let pointerEl = el.querySelector('.shlok-pointer');
+      if (!pointerEl) {
+        pointerEl = document.createElement('span');
+        pointerEl.className = 'shlok-pointer';
+        pointerEl.textContent = '👉';
+        pointerEl.setAttribute('aria-hidden', 'true');
+        // Insert at the beginning of the shlok content
+        if (el.firstChild) {
+          el.insertBefore(pointerEl, el.firstChild);
+        } else {
+          el.appendChild(pointerEl);
+        }
+        // Force a reflow
+        void pointerEl.offsetHeight;
+      }
     }
   }
 
