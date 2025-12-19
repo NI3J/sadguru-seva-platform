@@ -263,6 +263,9 @@ def harijap_get_state():
     """
     Get user's current Hari Jap progress state.
     
+    CRITICAL: Resets today's count (today_words, today_malas, todays_count) at IST 12:00 AM daily.
+    Total count (count, total_malas, total_pronunciations) NEVER resets.
+    
     Returns:
         JSON with user's progress data including count, malas, and pronunciations
     """
@@ -278,6 +281,11 @@ def harijap_get_state():
     cursor = None
     
     try:
+        # Get current IST date for comparison
+        from datetime import timezone, timedelta
+        ist = timezone(timedelta(hours=5, minutes=30))
+        current_ist_date = datetime.now(ist).strftime('%Y-%m-%d')
+        
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
@@ -303,8 +311,8 @@ def harijap_get_state():
                  current_mala_pronunciations, total_pronunciations,
                  today_words, today_pronunciations, today_malas, today_date,
                  todays_count)
-                VALUES (%s, %s, %s, 0, 0, 0, 0, 0, 0, 0, CURDATE(), 0)
-            """, (bhaktgan_id, name, phone))
+                VALUES (%s, %s, %s, 0, 0, 0, 0, 0, 0, 0, %s, 0)
+            """, (bhaktgan_id, name, phone, current_ist_date))
             conn.commit()
             
             row = {
@@ -316,22 +324,58 @@ def harijap_get_state():
                 'today_words': 0,
                 'today_pronunciations': 0,
                 'today_malas': 0,
-                'today_date': None,
+                'today_date': current_ist_date,
                 'todays_count': 0
             }
+        else:
+            # CRITICAL FIX: Check if date has changed (IST 12:00 AM passed)
+            # If date changed, reset today's fields but PRESERVE total count
+            stored_date = None
+            if row.get('today_date'):
+                if isinstance(row['today_date'], str):
+                    stored_date = row['today_date']
+                else:
+                    stored_date = row['today_date'].strftime('%Y-%m-%d') if hasattr(row['today_date'], 'strftime') else str(row['today_date'])
+            
+            # Reset today's count if date changed (IST midnight passed)
+            if stored_date != current_ist_date:
+                print(f"DEBUG: Date changed from {stored_date} to {current_ist_date} (IST). Resetting today's count.")
+                
+                # CRITICAL: Only reset today's fields, NEVER reset total count
+                cursor.execute("""
+                    UPDATE harijap_progress 
+                    SET today_words = 0,
+                        today_pronunciations = 0,
+                        today_malas = 0,
+                        today_date = %s,
+                        todays_count = 0,
+                        current_mala_pronunciations = 0
+                    WHERE bhaktgan_id = %s
+                """, (current_ist_date, bhaktgan_id))
+                conn.commit()
+                
+                # Update row dict to reflect reset values
+                row['today_words'] = 0
+                row['today_pronunciations'] = 0
+                row['today_malas'] = 0
+                row['today_date'] = current_ist_date
+                row['todays_count'] = 0
+                row['current_mala_pronunciations'] = 0
+                
+                print(f"DEBUG: Today's count reset. Total count preserved: {row['count']}")
 
         return jsonify({
             'success': True, 
-            'count': row['count'], 
-            'total_malas': row['total_malas'],
+            'count': row['count'],  # Total count - NEVER resets
+            'total_malas': row['total_malas'],  # Total malas - NEVER resets
             'current_mala_pronunciations': row.get('current_mala_pronunciations', 0),
-            'total_pronunciations': row.get('total_pronunciations', 0),
+            'total_pronunciations': row.get('total_pronunciations', 0),  # Total pronunciations - NEVER resets
             'last_spoken_at': row['last_spoken_at'],
-            'today_words': row.get('today_words', 0),
-            'today_pronunciations': row.get('today_pronunciations', 0),
-            'today_malas': row.get('today_malas', 0),
-            'today_date': row.get('today_date'),
-            'todays_count': row.get('todays_count', 0)
+            'today_words': row.get('today_words', 0),  # Today's count - resets daily at IST 12:00 AM
+            'today_pronunciations': row.get('today_pronunciations', 0),  # Today's pronunciations - resets daily
+            'today_malas': row.get('today_malas', 0),  # Today's malas - resets daily
+            'today_date': row.get('today_date'),  # Current IST date
+            'todays_count': row.get('todays_count', 0)  # Today's count - resets daily
         }), 200
         
     except Exception as e:
@@ -418,9 +462,36 @@ def harijap_save_state():
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
+        # CRITICAL: Check if date has changed (IST 12:00 AM passed) before saving
+        # Get current stored date to compare
+        cursor.execute("""
+            SELECT today_date, count as stored_count
+            FROM harijap_progress 
+            WHERE bhaktgan_id = %s
+        """, (bhaktgan_id,))
+        existing_row = cursor.fetchone()
+        
+        stored_date = None
+        if existing_row and existing_row.get('today_date'):
+            if isinstance(existing_row['today_date'], str):
+                stored_date = existing_row['today_date']
+            else:
+                stored_date = existing_row['today_date'].strftime('%Y-%m-%d') if hasattr(existing_row['today_date'], 'strftime') else str(existing_row['today_date'])
+        
+        # If date changed (IST midnight passed), reset today's fields
+        # CRITICAL: Total count (count, total_malas, total_pronunciations) NEVER resets
+        if stored_date and stored_date != today_date:
+            print(f"DEBUG: Date changed from {stored_date} to {today_date} during save. Resetting today's fields.")
+            today_words = 0
+            today_pronunciations = 0
+            today_malas = 0
+            todays_count = 0
+            current_mala_pronunciations = 0
+
         # Insert or update with all fields including today's data
-        # CRITICAL FIX: Use GREATEST() to ensure count never decreases
+        # CRITICAL FIX: Use GREATEST() to ensure total count NEVER decreases
         # This prevents data loss if client sends incorrect values
+        # Total count (count, total_malas, total_pronunciations) is NEVER reset
         cursor.execute("""
             INSERT INTO harijap_progress 
             (bhaktgan_id, name, phone, count, total_malas, 

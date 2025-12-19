@@ -1606,17 +1606,19 @@ class HariJapCounter {
     }
 
     checkForDateChange() {
-        const currentDate = this.getTodayDateString();
+        const currentDate = this.getTodayDateString(); // Uses IST timezone from server
         
-        // Only reset if the date actually changed (e.g., midnight passed)
+        // CRITICAL: Only reset if the date actually changed (IST 12:00 AM passed)
         // Do NOT reset if dates are the same (prevent false positives)
-        if (this.state.todayDate && this.state.todayDate !== currentDate && currentDate !== this.state.todayDate) {
-            console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
+        // CRITICAL: Only reset TODAY's counts - total count (totalWords, totalMalas) NEVER resets
+        if (this.state.todayDate && this.state.todayDate !== currentDate) {
+            console.log('📅 Date change detected (IST midnight)! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             
-            // CRITICAL FIX: Save current day's progress BEFORE resetting
+            // CRITICAL: Save current day's progress BEFORE resetting
             this.saveToServer(true);
             
-            // Now reset today's counters for the new day
+            // CRITICAL: Reset ONLY today's counters for the new day
+            // Total count (totalWords, totalMalas, totalPronunciations) is NEVER reset
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
