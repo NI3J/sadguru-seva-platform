@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>शिवपुराण कथा - दिवस ३</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbutton.css') }}">
+    <script src="{{ url_for('static', filename='js/navbutton.js') }}" defer></script>
+    <style>
+        body {
+            font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;
+            background: linear-gradient(135deg, #f8f2ed 0%, #fffbea 100%);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .page-header {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .video-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .video-section iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .home-button-section {
+            padding: 30px;
+            text-align: center;
+            background: #fff;
+        }
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.8em;
+            }
+            .video-section iframe {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 🔱 Page Title -->
+        <header class="page-header">
+            <h1>🔱 शिवपुराण कथा - दिवस ३</h1>
+        </header>
+
+        <!-- 🎥 OneDrive Video Embed -->
+        <section class="video-section">
+            <iframe
+                src="https://1drv.ms/v/c/dee6adcd81463e49/IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU"
+                width="100%"
+                height="600"
+                frameborder="0"
+                scrolling="no"
+                allowfullscreen>
+            </iframe>
+        </section>
+
+        <!-- 🏠 Back to Home Button -->
+        <section class="home-button-section">
+            <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+        </section>
+    </div>
+
+</body>
+</html>
+
