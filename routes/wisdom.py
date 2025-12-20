@@ -99,6 +99,12 @@ def shivtandav():
 
     return render_template('knowledge/shivtandav.html', lyrics=lyrics)
 
+# 🔱 Shivpuran Katha Day 3
+@wisdom_bp.route('/knowledge/shivpuran-katha-divas-3')
+def shivpuran_katha_divas_3():
+    """Route for Shivpuran Katha Day 3 with OneDrive video embed"""
+    return render_template('knowledge/shivpuran_katha_divas_3.html')
+
 # 🎧 Audio Flow
 @wisdom_bp.route('/knowledge/audio_flow')
 def audio_flow():
