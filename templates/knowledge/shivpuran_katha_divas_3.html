@@ -3,222 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>शिवपुराण कथा - दिवस ३</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbutton.css') }}">
-    <script src="{{ url_for('static', filename='js/navbutton.js') }}" defer></script>
-    <style>
-        body {
-            font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;
-            background: linear-gradient(135deg, #f8f2ed 0%, #fffbea 100%);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .page-header {
-            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .page-header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        .audio-section {
-            padding: 30px;
-            background: #f8f9fa;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .audio-player-container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        .audio-player-container audio {
-            width: 100%;
-            height: 60px;
-            outline: none;
-        }
-        .iframe-fallback {
-            width: 100%;
-            height: 100px;
-            border: none;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        .audio-info {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.1em;
-        }
-        .error-message {
-            color: #d32f2f;
-            text-align: center;
-            padding: 20px;
-            background: #ffebee;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .home-button-section {
-            padding: 30px;
-            text-align: center;
-            background: #fff;
-        }
-        @media (max-width: 768px) {
-            .page-header h1 {
-                font-size: 1.8em;
-            }
-            .audio-section {
-                padding: 20px;
-            }
-            .audio-player-container {
-                padding: 20px;
-            }
-        }
-    </style>
+    <title>शिवमहापुराण कथा टाकळी - दिव्य अनुभव</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shivpuran_katha.css') }}">
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="om-symbol">ॐ</div>
+            <div class="loading-text">दिव्य कथा लोड होत आहे...</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
 
-    <div class="container">
-        <!-- 🔱 Page Title -->
-        <header class="page-header">
-            <h1>🔱 शिवपुराण कथा - दिवस ३</h1>
+    <!-- Floating Particles Background -->
+    <div class="particles-container">
+        <canvas id="particles-canvas"></canvas>
+    </div>
+
+    <!-- Animated Sacred Geometry -->
+    <div class="sacred-geometry">
+        <div class="mandala mandala-1"></div>
+        <div class="mandala mandala-2"></div>
+        <div class="mandala mandala-3"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Header with Dark Mode Toggle -->
+        <header class="main-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="trishul-icon">🔱</div>
+                    <h1 class="main-title">शिवमहापुराण कथा टाकळी</h1>
+                </div>
+                <div class="header-controls">
+                    <button id="dark-mode-toggle" class="dark-mode-btn" aria-label="Dark Mode Toggle">
+                        <span class="sun-icon">☀️</span>
+                        <span class="moon-icon">🌙</span>
+                    </button>
+                    <a href="{{ url_for('main.home') }}" class="home-link">🏠 मुख्य पृष्ठ</a>
+                </div>
+            </div>
         </header>
 
-        <!-- 🎵 OneDrive Audio Player -->
-        <section class="audio-section">
-            <div class="audio-player-container">
-                <div class="audio-info">
-                    🎵 शिवपुराण कथा - दिवस ३ (Shivpuran Katha - Day 3)
-                </div>
-                <audio id="audioPlayer" controls preload="metadata">
-                    <!-- OneDrive direct download link - will be set by JavaScript -->
-                    Your browser does not support the audio element.
-                </audio>
-                <!-- Fallback iframe for OneDrive embed (shown if audio fails) -->
-                <iframe id="onedriveIframe" class="iframe-fallback" style="display: none;" 
-                    src="https://onedrive.live.com/embed?cid=dee6adcd81463e49&resid=dee6adcd81463e49!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb"
-                    frameborder="0" scrolling="no">
-                </iframe>
-                <div id="errorMessage" class="error-message" style="display: none;">
-                    ⚠️ Audio file could not be loaded. Please check the OneDrive link or try downloading the file directly.
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <div class="animated-om">ॐ</div>
+                <h2 class="hero-title">दिव्य कथा अनुभव</h2>
+                <p class="hero-subtitle">प.पु.श्री विद्यानंद महाराज गातेगावकर यांच्या पवित्र वाणीतुन</p>
+                <div class="hero-badges">
+                    <span class="badge">7 दिवस</span>
+                    <span class="badge">पूर्ण कथा</span>
+                    <span class="badge">दिव्य अनुभव</span>
                 </div>
             </div>
         </section>
 
-        <!-- 🏠 Back to Home Button -->
-        <section class="home-button-section">
-            <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
+        <!-- Benefits Section -->
+        <section class="benefits-section">
+            <h3 class="section-title">कथा ऐकण्याचे फायदे</h3>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">🧘</div>
+                    <h4>मानसिक शांती</h4>
+                    <p>मनाची शांती आणि आंतरिक सुख</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">✨</div>
+                    <h4>आध्यात्मिक विकास</h4>
+                    <p>आत्मज्ञान आणि आध्यात्मिक प्रगती</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🙏</div>
+                    <h4>भक्ती भावना</h4>
+                    <p>भगवान शिवाच्या प्रति प्रेम</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🌟</div>
+                    <h4>पुण्य प्राप्ती</h4>
+                    <p>कथा श्रवणाने पुण्य लाभ</p>
+                </div>
+            </div>
         </section>
+
+        <!-- Episodes Grid -->
+        <section class="episodes-section">
+            <h3 class="section-title">कथा एपिसोड</h3>
+            <div class="episodes-grid" id="episodes-grid">
+                <!-- Day 1 -->
+                <div class="episode-card" data-episode="1">
+                    <div class="episode-number">01</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस १</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/1HVf2WKBJCp6Y-aQA8zaiepUSUaPlW5cc/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=1HVf2WKBJCp6Y-aQA8zaiepUSUaPlW5cc" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 2 -->
+                <div class="episode-card" data-episode="2">
+                    <div class="episode-number">02</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस २</h4>
+                        <p class="episode-subtitle">प.पु.श्री विद्यानंद महाराज गातेगावकर</p>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/1aYfEDTQ5FpHFYCDgqx-fYZuidzfP_5RA/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=1aYfEDTQ5FpHFYCDgqx-fYZuidzfP_5RA" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 3 -->
+                <div class="episode-card" data-episode="3">
+                    <div class="episode-number">03</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवपुराण कथा - दिवस ३</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/1z9VWtpgNkLWRtxIwOFQgoBAlH5Kqn9Fs/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=1z9VWtpgNkLWRtxIwOFQgoBAlH5Kqn9Fs" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 4 -->
+                <div class="episode-card" data-episode="4">
+                    <div class="episode-number">04</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस ४</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/18KBgZq4GshxF4WnjI4rrousZmoSEjkNz/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=18KBgZq4GshxF4WnjI4rrousZmoSEjkNz" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 5 -->
+                <div class="episode-card" data-episode="5">
+                    <div class="episode-number">05</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस ५</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/10N5XgyxLP5yOdoGRNp_unnXijTK3197m/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=10N5XgyxLP5yOdoGRNp_unnXijTK3197m" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 6 -->
+                <div class="episode-card" data-episode="6">
+                    <div class="episode-number">06</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस ६</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/13gZjTVqLe6wNSkXrYKju0ZQxfatLNMP3/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=13gZjTVqLe6wNSkXrYKju0ZQxfatLNMP3" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day 7 -->
+                <div class="episode-card" data-episode="7">
+                    <div class="episode-number">07</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">शिवमहापुराण कथा दिवस ७</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/1sNF-imbfqaUx6wy_ohaEsMaTbyfDRsT4/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=1sNF-imbfqaUx6wy_ohaEsMaTbyfDRsT4" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Kalyache Kirtan -->
+                <div class="episode-card special-card" data-episode="8">
+                    <div class="episode-number">🌟</div>
+                    <div class="episode-content">
+                        <h4 class="episode-title">काल्याचे किर्तन</h4>
+                        <div class="audio-embed-container">
+                            <iframe src="https://drive.google.com/file/d/1Iwkx3SnaOg2EfkdMJbYmEbygTYpx3G6A/preview" 
+                                    allow="autoplay"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                        <a href="https://drive.google.com/uc?export=download&id=1Iwkx3SnaOg2EfkdMJbYmEbygTYpx3G6A" 
+                           class="download-btn" target="_blank" data-tooltip="Download Audio">
+                            <span>📥</span> Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-content">
+                <p>🔱 नमः शिवाय 🔱</p>
+                <p>सर्व हक्क राखीव - शिवमहापुराण कथा टाकळी</p>
+            </div>
+        </footer>
     </div>
 
-    <script>
-        // Convert OneDrive sharing link to direct download link
-        function convertOneDriveLink(sharingLink) {
-            // OneDrive sharing link format: https://onedrive.live.com/?id=...
-            // We need to convert it to: https://onedrive.live.com/download?cid=...&resid=...&authkey=...
-            
-            // Method 1: Try using the embed format (works for some files)
-            // Extract CID from the URL
-            const cid = 'dee6adcd81463e49';
-            
-            // Try multiple formats
-            const formats = [
-                // Format 1: Direct download with file ID from shortened URL
-                `https://onedrive.live.com/download?cid=${cid}&resid=${cid}!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb`,
-                // Format 2: Embed format (sometimes works for audio)
-                `https://onedrive.live.com/embed?cid=${cid}&resid=${cid}!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb`,
-                // Format 3: Direct link conversion
-                sharingLink.replace('/?id=', '/download?id=').replace('&parent=', '&')
-            ];
-            
-            return formats;
-        }
-        
-        // Initialize audio player
-        const audioPlayer = document.getElementById('audioPlayer');
-        const errorMessage = document.getElementById('errorMessage');
-        const onedriveIframe = document.getElementById('onedriveIframe');
-        const originalLink = 'https://onedrive.live.com/?id=%2Fpersonal%2Fdee6adcd81463e49%2FDocuments%2FAudios%2FDay3Shivpuran%2Emp3&parent=%2Fpersonal%2Fdee6adcd81463e49%2FDocuments%2FAudios';
-        
-        if (audioPlayer) {
-            // Try different OneDrive link formats
-            const linkFormats = convertOneDriveLink(originalLink);
-            let currentFormatIndex = 0;
-            let triedIframe = false;
-            
-            function tryNextFormat() {
-                if (currentFormatIndex < linkFormats.length) {
-                    audioPlayer.src = linkFormats[currentFormatIndex];
-                    currentFormatIndex++;
-                } else if (!triedIframe) {
-                    // Try iframe fallback
-                    triedIframe = true;
-                    audioPlayer.style.display = 'none';
-                    if (onedriveIframe) {
-                        onedriveIframe.style.display = 'block';
-                    }
-                } else {
-                    // All formats failed, show error
-                    errorMessage.style.display = 'block';
-                    errorMessage.innerHTML = `
-                        ⚠️ Audio file could not be loaded from OneDrive.<br>
-                        This may be due to CORS restrictions or authentication requirements.<br>
-                        <a href="${originalLink}" target="_blank" style="color: #1976d2; text-decoration: underline; margin-top: 10px; display: inline-block;">Click here to open in OneDrive</a><br><br>
-                        <strong>Note:</strong> To fix this, you can:<br>
-                        1. Right-click the file in OneDrive and select "Embed" to get the embed link<br>
-                        2. Or upload the file to your server's /static/audio/ directory<br>
-                        3. Or use a different hosting service that allows direct audio streaming
-                    `;
-                }
-            }
-            
-            // Set initial source
-            tryNextFormat();
-            
-            // Handle loading errors
-            audioPlayer.addEventListener('error', function(e) {
-                console.error('Audio loading error, trying next format...', e);
-                // Wait a bit before trying next format to avoid rapid retries
-                setTimeout(tryNextFormat, 500);
-            });
-            
-            // Hide error on successful load
-            audioPlayer.addEventListener('loadeddata', function() {
-                errorMessage.style.display = 'none';
-                if (onedriveIframe) {
-                    onedriveIframe.style.display = 'none';
-                }
-                console.log('Audio loaded successfully');
-            });
-            
-            // Handle canplay event
-            audioPlayer.addEventListener('canplay', function() {
-                errorMessage.style.display = 'none';
-                if (onedriveIframe) {
-                    onedriveIframe.style.display = 'none';
-                }
-            });
-        }
-    </script>
-
+    <script src="{{ url_for('static', filename='js/shivpuran_katha.js') }}"></script>
 </body>
 </html>
-
