@@ -33,16 +33,48 @@
             font-size: 2.5em;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-        .video-section {
+        .audio-section {
             padding: 30px;
             background: #f8f9fa;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .video-section iframe {
+        .audio-player-container {
             width: 100%;
-            height: 600px;
+            max-width: 800px;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .audio-player-container audio {
+            width: 100%;
+            height: 60px;
+            outline: none;
+        }
+        .iframe-fallback {
+            width: 100%;
+            height: 100px;
             border: none;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+        .audio-info {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .error-message {
+            color: #d32f2f;
+            text-align: center;
+            padding: 20px;
+            background: #ffebee;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
         .home-button-section {
             padding: 30px;
@@ -53,8 +85,11 @@
             .page-header h1 {
                 font-size: 1.8em;
             }
-            .video-section iframe {
-                height: 400px;
+            .audio-section {
+                padding: 20px;
+            }
+            .audio-player-container {
+                padding: 20px;
             }
         }
     </style>
@@ -67,16 +102,25 @@
             <h1>🔱 शिवपुराण कथा - दिवस ३</h1>
         </header>
 
-        <!-- 🎥 OneDrive Video Embed -->
-        <section class="video-section">
-            <iframe
-                src="https://1drv.ms/u/c/dee6adcd81463e49/IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU?e=i5ptsb"
-                width="100%"
-                height="600"
-                frameborder="0"
-                scrolling="no"
-                allowfullscreen>
-            </iframe>
+        <!-- 🎵 OneDrive Audio Player -->
+        <section class="audio-section">
+            <div class="audio-player-container">
+                <div class="audio-info">
+                    🎵 शिवपुराण कथा - दिवस ३ (Shivpuran Katha - Day 3)
+                </div>
+                <audio id="audioPlayer" controls preload="metadata">
+                    <!-- OneDrive direct download link - will be set by JavaScript -->
+                    Your browser does not support the audio element.
+                </audio>
+                <!-- Fallback iframe for OneDrive embed (shown if audio fails) -->
+                <iframe id="onedriveIframe" class="iframe-fallback" style="display: none;" 
+                    src="https://onedrive.live.com/embed?cid=dee6adcd81463e49&resid=dee6adcd81463e49!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb"
+                    frameborder="0" scrolling="no">
+                </iframe>
+                <div id="errorMessage" class="error-message" style="display: none;">
+                    ⚠️ Audio file could not be loaded. Please check the OneDrive link or try downloading the file directly.
+                </div>
+            </div>
         </section>
 
         <!-- 🏠 Back to Home Button -->
@@ -84,6 +128,96 @@
             <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
         </section>
     </div>
+
+    <script>
+        // Convert OneDrive sharing link to direct download link
+        function convertOneDriveLink(sharingLink) {
+            // OneDrive sharing link format: https://onedrive.live.com/?id=...
+            // We need to convert it to: https://onedrive.live.com/download?cid=...&resid=...&authkey=...
+            
+            // Method 1: Try using the embed format (works for some files)
+            // Extract CID from the URL
+            const cid = 'dee6adcd81463e49';
+            
+            // Try multiple formats
+            const formats = [
+                // Format 1: Direct download with file ID from shortened URL
+                `https://onedrive.live.com/download?cid=${cid}&resid=${cid}!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb`,
+                // Format 2: Embed format (sometimes works for audio)
+                `https://onedrive.live.com/embed?cid=${cid}&resid=${cid}!IQCqzNSqwEK1QaYW1kZaShwXARTowFjDqmcujx6cVQAwraU&authkey=!i5ptsb`,
+                // Format 3: Direct link conversion
+                sharingLink.replace('/?id=', '/download?id=').replace('&parent=', '&')
+            ];
+            
+            return formats;
+        }
+        
+        // Initialize audio player
+        const audioPlayer = document.getElementById('audioPlayer');
+        const errorMessage = document.getElementById('errorMessage');
+        const onedriveIframe = document.getElementById('onedriveIframe');
+        const originalLink = 'https://onedrive.live.com/?id=%2Fpersonal%2Fdee6adcd81463e49%2FDocuments%2FAudios%2FDay3Shivpuran%2Emp3&parent=%2Fpersonal%2Fdee6adcd81463e49%2FDocuments%2FAudios';
+        
+        if (audioPlayer) {
+            // Try different OneDrive link formats
+            const linkFormats = convertOneDriveLink(originalLink);
+            let currentFormatIndex = 0;
+            let triedIframe = false;
+            
+            function tryNextFormat() {
+                if (currentFormatIndex < linkFormats.length) {
+                    audioPlayer.src = linkFormats[currentFormatIndex];
+                    currentFormatIndex++;
+                } else if (!triedIframe) {
+                    // Try iframe fallback
+                    triedIframe = true;
+                    audioPlayer.style.display = 'none';
+                    if (onedriveIframe) {
+                        onedriveIframe.style.display = 'block';
+                    }
+                } else {
+                    // All formats failed, show error
+                    errorMessage.style.display = 'block';
+                    errorMessage.innerHTML = `
+                        ⚠️ Audio file could not be loaded from OneDrive.<br>
+                        This may be due to CORS restrictions or authentication requirements.<br>
+                        <a href="${originalLink}" target="_blank" style="color: #1976d2; text-decoration: underline; margin-top: 10px; display: inline-block;">Click here to open in OneDrive</a><br><br>
+                        <strong>Note:</strong> To fix this, you can:<br>
+                        1. Right-click the file in OneDrive and select "Embed" to get the embed link<br>
+                        2. Or upload the file to your server's /static/audio/ directory<br>
+                        3. Or use a different hosting service that allows direct audio streaming
+                    `;
+                }
+            }
+            
+            // Set initial source
+            tryNextFormat();
+            
+            // Handle loading errors
+            audioPlayer.addEventListener('error', function(e) {
+                console.error('Audio loading error, trying next format...', e);
+                // Wait a bit before trying next format to avoid rapid retries
+                setTimeout(tryNextFormat, 500);
+            });
+            
+            // Hide error on successful load
+            audioPlayer.addEventListener('loadeddata', function() {
+                errorMessage.style.display = 'none';
+                if (onedriveIframe) {
+                    onedriveIframe.style.display = 'none';
+                }
+                console.log('Audio loaded successfully');
+            });
+            
+            // Handle canplay event
+            audioPlayer.addEventListener('canplay', function() {
+                errorMessage.style.display = 'none';
+                if (onedriveIframe) {
+                    onedriveIframe.style.display = 'none';
+                }
+            });
+        }
+    </script>
 
 </body>
 </html>
