@@ -102,8 +102,16 @@ def shivtandav():
 # 🔱 Shivpuran Katha Day 3
 @wisdom_bp.route('/knowledge/shivpuran-katha-divas-3')
 def shivpuran_katha_divas_3():
-    """Route for Shivpuran Katha Day 3 with OneDrive video embed"""
-    return render_template('knowledge/shivpuran_katha_divas_3.html')
+    """Route for Shivpuran Katha Day 3 with configurable container sizes"""
+    # Container sizing configuration (increased by ~20-25%)
+    container_config = {
+        'grid_min_width': '420px',      # Increased from 350px (20% increase)
+        'card_padding': '2.5rem',        # Increased from 2rem (25% increase)
+        'audio_height': '240px',         # Increased from 200px (20% increase)
+        'audio_height_mobile': '220px'   # Increased from 180px (22% increase)
+    }
+    return render_template('knowledge/shivpuran_katha_divas_3.html', 
+                         container_config=container_config)
 
 # 🎧 Audio Flow
 @wisdom_bp.route('/knowledge/audio_flow')

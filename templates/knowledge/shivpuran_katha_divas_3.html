@@ -8,6 +8,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Mukta:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/shivpuran_katha.css') }}">
+    <style>
+        :root {
+            --episode-grid-min-width: {{ container_config.grid_min_width }};
+            --episode-card-padding: {{ container_config.card_padding }};
+            --audio-container-height: {{ container_config.audio_height }};
+            --audio-container-height-mobile: {{ container_config.audio_height_mobile }};
+        }
+    </style>
 </head>
 <body>
     <!-- Loading Screen -->
