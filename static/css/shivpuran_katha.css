@@ -531,7 +531,7 @@ body {
 
 .episodes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--episode-grid-min-width, 420px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--episode-grid-min-width, 500px), 1fr));
     gap: 2rem;
 }
 
@@ -540,7 +540,7 @@ body {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: 25px;
-    padding: var(--episode-card-padding, 2.5rem);
+    padding: var(--episode-card-padding, 3rem);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     box-shadow: 0 4px 20px var(--shadow-light);
     position: relative;
@@ -617,7 +617,7 @@ body {
 /* Audio Embed Container - Google Drive Iframe */
 .audio-embed-container {
     width: 100%;
-    height: var(--audio-container-height, 240px);
+    height: var(--audio-container-height, 280px);
     border-radius: 15px;
     overflow: hidden;
     margin-bottom: 1.5rem;
@@ -801,7 +801,7 @@ body {
     }
 
     .audio-embed-container {
-        height: var(--audio-container-height-mobile, 220px);
+        height: var(--audio-container-height-mobile, 250px);
     }
 }
 

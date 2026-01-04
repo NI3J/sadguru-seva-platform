@@ -103,12 +103,12 @@ def shivtandav():
 @wisdom_bp.route('/knowledge/shivpuran-katha-divas-3')
 def shivpuran_katha_divas_3():
     """Route for Shivpuran Katha Day 3 with configurable container sizes"""
-    # Container sizing configuration (increased by ~20-25%)
+    # Container sizing configuration (significantly increased for better visibility)
     container_config = {
-        'grid_min_width': '420px',      # Increased from 350px (20% increase)
-        'card_padding': '2.5rem',        # Increased from 2rem (25% increase)
-        'audio_height': '240px',         # Increased from 200px (20% increase)
-        'audio_height_mobile': '220px'   # Increased from 180px (22% increase)
+        'grid_min_width': '500px',      # Increased from 350px (43% increase)
+        'card_padding': '3rem',          # Increased from 2rem (50% increase)
+        'audio_height': '280px',         # Increased from 200px (40% increase)
+        'audio_height_mobile': '250px'   # Increased from 180px (39% increase)
     }
     return render_template('knowledge/shivpuran_katha_divas_3.html', 
                          container_config=container_config)
