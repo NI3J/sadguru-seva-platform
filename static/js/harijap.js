@@ -1027,17 +1027,27 @@ class HariJapCounter {
                 const serverTodayDate = data.today_date || this.getTodayDateString();
                 const currentDate = this.getTodayDateString();
                 
-                // Only load today's data if the date matches
-                // If date changed, keep existing data (will be reset by checkForDateChange)
-                if (serverTodayDate === this.state.todayDate || serverTodayDate === currentDate) {
+                // CRITICAL FIX: Always load today's data from server if server date matches current date
+                // This ensures today's count persists after logout/login
+                // Only skip loading if the date has actually changed (midnight passed)
+                if (serverTodayDate === currentDate) {
+                    // Server date matches current date - load today's data from server
                     this.state.todayWords = data.today_words || 0;
                     this.state.todayPronunciations = data.today_pronunciations || 0;
                     this.state.todayMalas = data.today_malas || 0;
                     this.state.todayDate = serverTodayDate;
                     this.state.todaysCount = data.todays_count || this.state.todayWords;
+                    console.log('✅ Loaded today\'s data from server:', {
+                        todayWords: this.state.todayWords,
+                        todaysCount: this.state.todaysCount,
+                        todayDate: this.state.todayDate
+                    });
                 } else {
-                    // Date changed - keep current state, will be handled by checkForDateChange
-                    console.log('📅 Server date different from client, keeping current state');
+                    // Date changed - server date is different from current date
+                    // This means midnight passed - reset will be handled by checkForDateChange
+                    console.log('📅 Server date different from current date. Server:', serverTodayDate, 'Current:', currentDate);
+                    // Still set todayDate to current date to prevent false resets
+                    this.state.todayDate = currentDate;
                 }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
