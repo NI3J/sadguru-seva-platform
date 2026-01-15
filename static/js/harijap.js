@@ -134,10 +134,15 @@ class HariJapCounter {
             console.log('🙏 Initializing Hari Jap Counter...');
 
             await this.authenticateUser();
-            await this.getServerTime(); // Get server time for date calculations
+            // CRITICAL: Load server time FIRST and wait for it to complete
+            // This ensures serverDate is set before loading state
+            const serverDate = await this.getServerTime();
+            console.log('🕐 Server date loaded:', serverDate);
+            
             this.cacheElements();
             this.initializeSpeechRecognition();
             this.attachEventListeners();
+            // Now load state - serverDate is guaranteed to be set
             await this.loadStateFromServer();
             this.startAutoProcesses();
             this.startSessionTimeout();
@@ -478,12 +483,13 @@ class HariJapCounter {
             this.loadStateFromServer();
         }, this.config.syncInterval);
 
-        // Server time sync (every 5 minutes)
-        setInterval(() => {
-            this.getServerTime();
+        // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
+        setInterval(async () => {
+            await this.getServerTime();
+            this.checkForDateChange();
         }, 5 * 60 * 1000);
 
-        // Check for date change (every minute)
+        // Check for date change (every minute) - CRITICAL for IST midnight reset
         setInterval(() => {
             this.checkForDateChange();
         }, 60 * 1000);
@@ -1024,30 +1030,54 @@ class HariJapCounter {
                 this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
                 
                 // CRITICAL FIX: Load today's data and check if date matches
-                const serverTodayDate = data.today_date || this.getTodayDateString();
-                const currentDate = this.getTodayDateString();
+                // Use server date from response, and compare with serverDate (IST) from getServerTime
+                const serverTodayDate = data.today_date || this.serverDate || this.getTodayDateString();
+                const currentServerDate = this.serverDate || this.getTodayDateString();
                 
-                // CRITICAL FIX: Always load today's data from server if server date matches current date
+                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate);
+                
+                // CRITICAL FIX: Always load today's data from server if server date matches current server date
                 // This ensures today's count persists after logout/login
-                // Only skip loading if the date has actually changed (midnight passed)
-                if (serverTodayDate === currentDate) {
+                // Only skip loading if the date has actually changed (IST midnight passed)
+                if (serverTodayDate === currentServerDate) {
                     // Server date matches current date - load today's data from server
-                    this.state.todayWords = data.today_words || 0;
+                    // CRITICAL: Use todays_count if available, otherwise use today_words
+                    const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
+                    this.state.todayWords = data.today_words || serverTodaysCount || 0;
                     this.state.todayPronunciations = data.today_pronunciations || 0;
                     this.state.todayMalas = data.today_malas || 0;
                     this.state.todayDate = serverTodayDate;
-                    this.state.todaysCount = data.todays_count || this.state.todayWords;
+                    this.state.todaysCount = serverTodaysCount;
+                    
+                    // CRITICAL: Ensure todayWords reflects the actual count
+                    if (this.state.todayWords === 0 && this.state.todaysCount > 0) {
+                        this.state.todayWords = this.state.todaysCount;
+                    }
+                    
                     console.log('✅ Loaded today\'s data from server:', {
                         todayWords: this.state.todayWords,
                         todaysCount: this.state.todaysCount,
-                        todayDate: this.state.todayDate
+                        todayDate: this.state.todayDate,
+                        serverTodayDate: serverTodayDate,
+                        currentServerDate: currentServerDate,
+                        serverData: {
+                            today_words: data.today_words,
+                            todays_count: data.todays_count,
+                            today_malas: data.today_malas
+                        }
                     });
                 } else {
                     // Date changed - server date is different from current date
-                    // This means midnight passed - reset will be handled by checkForDateChange
-                    console.log('📅 Server date different from current date. Server:', serverTodayDate, 'Current:', currentDate);
-                    // Still set todayDate to current date to prevent false resets
-                    this.state.todayDate = currentDate;
+                    // This means IST midnight passed - reset will be handled by checkForDateChange
+                    console.log('📅 Date changed detected. Server stored:', serverTodayDate, 'Current:', currentServerDate);
+                    // Set todayDate to current server date to prevent false resets
+                    this.state.todayDate = currentServerDate;
+                    // Initialize today's counters to 0 for new day
+                    this.state.todayWords = 0;
+                    this.state.todayPronunciations = 0;
+                    this.state.todayMalas = 0;
+                    this.state.todaysCount = 0;
+                    this.state.currentMalaPronunciations = 0;
                 }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);

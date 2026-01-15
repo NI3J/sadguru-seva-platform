@@ -334,12 +334,12 @@ body::before {
     cursor: pointer !important;
     transition: all 0.3s ease;
     position: relative !important;
-    overflow: hidden;
+    overflow: visible;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     text-transform: none;
-    min-width: 140px;
-    max-width: 200px;
+    min-width: 160px;
+    max-width: none;
     flex-shrink: 0;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -348,6 +348,7 @@ body::before {
     user-select: none;
     -webkit-user-select: none;
     white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .btn::before {
