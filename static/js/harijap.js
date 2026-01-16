@@ -134,15 +134,10 @@ class HariJapCounter {
             console.log('🙏 Initializing Hari Jap Counter...');
 
             await this.authenticateUser();
-            // CRITICAL: Load server time FIRST and wait for it to complete
-            // This ensures serverDate is set before loading state
-            const serverDate = await this.getServerTime();
-            console.log('🕐 Server date loaded:', serverDate);
-            
+            await this.getServerTime(); // Get server time for date calculations
             this.cacheElements();
             this.initializeSpeechRecognition();
             this.attachEventListeners();
-            // Now load state - serverDate is guaranteed to be set
             await this.loadStateFromServer();
             this.startAutoProcesses();
             this.startSessionTimeout();
@@ -478,18 +473,22 @@ class HariJapCounter {
             }
         }, this.config.autoSaveInterval);
 
-        // Server sync
+        // Server sync - BUT don't overwrite local state with stale data
+        // Only sync when page is visible to prevent overwriting active sessions
         setInterval(() => {
-            this.loadStateFromServer();
+            // Only sync if page is visible and not actively listening
+            // This prevents overwriting local counts with stale server data during active chanting
+            if (!document.hidden && !this.state.isListening) {
+                this.loadStateFromServer();
+            }
         }, this.config.syncInterval);
 
-        // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
-        setInterval(async () => {
-            await this.getServerTime();
-            this.checkForDateChange();
+        // Server time sync (every 5 minutes)
+        setInterval(() => {
+            this.getServerTime();
         }, 5 * 60 * 1000);
 
-        // Check for date change (every minute) - CRITICAL for IST midnight reset
+        // Check for date change (every minute)
         setInterval(() => {
             this.checkForDateChange();
         }, 60 * 1000);
@@ -1030,54 +1029,40 @@ class HariJapCounter {
                 this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
                 
                 // CRITICAL FIX: Load today's data and check if date matches
-                // Use server date from response, and compare with serverDate (IST) from getServerTime
-                const serverTodayDate = data.today_date || this.serverDate || this.getTodayDateString();
-                const currentServerDate = this.serverDate || this.getTodayDateString();
+                const serverTodayDate = data.today_date || this.getTodayDateString();
+                const currentDate = this.getTodayDateString();
                 
-                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate);
-                
-                // CRITICAL FIX: Always load today's data from server if server date matches current server date
-                // This ensures today's count persists after logout/login
-                // Only skip loading if the date has actually changed (IST midnight passed)
-                if (serverTodayDate === currentServerDate) {
-                    // Server date matches current date - load today's data from server
-                    // CRITICAL: Use todays_count if available, otherwise use today_words
-                    const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
-                    this.state.todayWords = data.today_words || serverTodaysCount || 0;
-                    this.state.todayPronunciations = data.today_pronunciations || 0;
-                    this.state.todayMalas = data.today_malas || 0;
-                    this.state.todayDate = serverTodayDate;
-                    this.state.todaysCount = serverTodaysCount;
+                // Only load today's data if the date matches
+                // If date changed, keep existing data (will be reset by checkForDateChange)
+                if (serverTodayDate === this.state.todayDate || serverTodayDate === currentDate) {
+                    // CRITICAL FIX: Use Math.max to prevent overwriting with stale server data
+                    // This ensures local increments are not lost when sync happens
+                    const serverTodayWords = data.today_words || 0;
+                    const serverTodayPronunciations = data.today_pronunciations || 0;
+                    const serverTodayMalas = data.today_malas || 0;
+                    const serverTodaysCount = data.todays_count || serverTodayWords;
                     
-                    // CRITICAL: Ensure todayWords reflects the actual count
-                    if (this.state.todayWords === 0 && this.state.todaysCount > 0) {
-                        this.state.todayWords = this.state.todaysCount;
+                    // Use the greater value to prevent data loss from stale server data
+                    this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
+                    this.state.todayPronunciations = Math.max(this.state.todayPronunciations, serverTodayPronunciations);
+                    this.state.todayMalas = Math.max(this.state.todayMalas, serverTodayMalas);
+                    this.state.todaysCount = Math.max(this.state.todaysCount, serverTodaysCount);
+                    this.state.todayDate = serverTodayDate;
+                    
+                    // Ensure todaysCount reflects todayWords if it's higher
+                    if (this.state.todayWords > this.state.todaysCount) {
+                        this.state.todaysCount = this.state.todayWords;
                     }
                     
-                    console.log('✅ Loaded today\'s data from server:', {
-                        todayWords: this.state.todayWords,
-                        todaysCount: this.state.todaysCount,
-                        todayDate: this.state.todayDate,
-                        serverTodayDate: serverTodayDate,
-                        currentServerDate: currentServerDate,
-                        serverData: {
-                            today_words: data.today_words,
-                            todays_count: data.todays_count,
-                            today_malas: data.today_malas
-                        }
+                    console.log('✅ Today\'s data sync - using max values:', {
+                        localTodayWords: this.state.todayWords,
+                        serverTodayWords: serverTodayWords,
+                        localTodaysCount: this.state.todaysCount,
+                        serverTodaysCount: serverTodaysCount
                     });
                 } else {
-                    // Date changed - server date is different from current date
-                    // This means IST midnight passed - reset will be handled by checkForDateChange
-                    console.log('📅 Date changed detected. Server stored:', serverTodayDate, 'Current:', currentServerDate);
-                    // Set todayDate to current server date to prevent false resets
-                    this.state.todayDate = currentServerDate;
-                    // Initialize today's counters to 0 for new day
-                    this.state.todayWords = 0;
-                    this.state.todayPronunciations = 0;
-                    this.state.todayMalas = 0;
-                    this.state.todaysCount = 0;
-                    this.state.currentMalaPronunciations = 0;
+                    // Date changed - keep current state, will be handled by checkForDateChange
+                    console.log('📅 Server date different from client, keeping current state');
                 }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
@@ -1646,19 +1631,17 @@ class HariJapCounter {
     }
 
     checkForDateChange() {
-        const currentDate = this.getTodayDateString(); // Uses IST timezone from server
+        const currentDate = this.getTodayDateString();
         
-        // CRITICAL: Only reset if the date actually changed (IST 12:00 AM passed)
+        // Only reset if the date actually changed (e.g., midnight passed)
         // Do NOT reset if dates are the same (prevent false positives)
-        // CRITICAL: Only reset TODAY's counts - total count (totalWords, totalMalas) NEVER resets
-        if (this.state.todayDate && this.state.todayDate !== currentDate) {
-            console.log('📅 Date change detected (IST midnight)! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
+        if (this.state.todayDate && this.state.todayDate !== currentDate && currentDate !== this.state.todayDate) {
+            console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             
-            // CRITICAL: Save current day's progress BEFORE resetting
+            // CRITICAL FIX: Save current day's progress BEFORE resetting
             this.saveToServer(true);
             
-            // CRITICAL: Reset ONLY today's counters for the new day
-            // Total count (totalWords, totalMalas, totalPronunciations) is NEVER reset
+            // Now reset today's counters for the new day
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
