@@ -54,7 +54,9 @@ class HariJapCounter {
             pronunciationsPerMala: 108,
 
             // Recognition settings
-            recognitionLang: 'hi-IN',
+            // Use English for better recognition of "Jai Jai Ram Krishna Hari"
+            // Can also use 'hi-IN' for Hindi or 'en-US' for US English
+            recognitionLang: 'en-IN', // Changed to English (India) for better English recognition
             minTimeBetweenCounts: 300, // Reduced from 500ms for faster recognition
 
             // Auto-save settings
@@ -110,6 +112,7 @@ class HariJapCounter {
         this.serverHour = null;
         this.serverMinute = null;
         this.serverSecond = null;
+        this.serverTimeFetchedAt = null;
         this.serverTimeLoading = false;
 
         // ============================================================
@@ -244,7 +247,7 @@ class HariJapCounter {
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
             this.recognition.interimResults = false;
-            this.recognition.maxAlternatives = 3; // Reduced from 5 for faster processing
+            this.recognition.maxAlternatives = 5; // Increased to 5 for better matching of English phrases
             this.recognition.continuous = true;
 
             // Mobile optimization
@@ -253,6 +256,8 @@ class HariJapCounter {
                 this.recognition.continuous = false;
                 console.log('📱 Mobile device detected - optimized recognition');
             }
+            
+            console.log('✅ Recognition language set to:', this.config.recognitionLang);
 
             // Attach recognition event handlers
             this.recognition.onresult = (e) => this.onRecognitionResult(e);
@@ -635,21 +640,34 @@ class HariJapCounter {
                         console.log('🔄 Auto-restarting recognition');
                     } catch (error) {
                         console.error('❌ Auto-restart failed:', error);
-                        this.state.isListening = false;
-                        this.updateUI();
+                        // CRITICAL FIX: Don't stop listening if recognition is already started
+                        // This is a common error and doesn't mean recognition failed
+                        if (error.message && error.message.includes('already started')) {
+                            console.log('ℹ️ Recognition already running, continuing...');
+                            // Keep listening state as true
+                        } else {
+                            // Only stop on actual failures
+                            this.state.isListening = false;
+                            this.updateUI();
+                        }
                     }
                 }
             }, 500); // Reduced delay for faster restart
         } else {
-            this.state.isListening = false;
-            this.updateUI();
+            // Only stop if user explicitly stopped or page is hidden
+            if (!this.state.isListening) {
+                // User stopped it, don't restart
+                this.updateUI();
+            } else {
+                // Page might be hidden, but keep state
+                this.updateUI();
+            }
         }
     }
 
     onRecognitionError(event) {
         console.error('❌ Recognition error:', event.error);
-        this.state.isListening = false;
-
+        
         const errorMessages = {
             'no-speech': 'कोणी बोलत नाही असे वाटते',
             'audio-capture': 'मायक्रोफोन उपलब्ध नाही आहे',
@@ -657,11 +675,46 @@ class HariJapCounter {
             'network': 'नेटवर्क समस्या'
         };
 
-        if (event.error !== 'aborted' && errorMessages[event.error]) {
-            this.showNotification(errorMessages[event.error], 'error');
+        // CRITICAL FIX: Don't stop listening on 'no-speech' errors
+        // These are common and recognition should continue
+        // Only stop on critical errors
+        const criticalErrors = ['not-allowed', 'audio-capture', 'network'];
+        
+        if (criticalErrors.includes(event.error)) {
+            this.state.isListening = false;
+            if (errorMessages[event.error]) {
+                this.showNotification(errorMessages[event.error], 'error');
+            }
+        } else if (event.error === 'no-speech') {
+            // 'no-speech' is normal - just continue listening
+            console.log('ℹ️ No speech detected, continuing to listen...');
+            // Don't stop listening, just continue
+        } else if (event.error !== 'aborted') {
+            // For other errors, try to continue
+            console.log('⚠️ Recognition error, attempting to continue:', event.error);
+            // Don't stop listening on minor errors
         }
 
         this.updateUI();
+        
+        // Auto-restart if still in listening mode and not a critical error
+        if (this.state.isListening && !criticalErrors.includes(event.error) && event.error !== 'aborted') {
+            setTimeout(() => {
+                if (this.state.isListening && this.recognition) {
+                    try {
+                        this.recognition.start();
+                        console.log('🔄 Auto-restarting after error');
+                    } catch (error) {
+                        console.error('❌ Auto-restart after error failed:', error);
+                        // Only stop if it's a critical restart failure
+                        if (error.message && !error.message.includes('already started')) {
+                            this.state.isListening = false;
+                            this.updateUI();
+                        }
+                    }
+                }
+            }, 1000); // Slightly longer delay after error
+        }
     }
 
     handleSuccessfulRecognition(count, timestamp) {
@@ -766,25 +819,38 @@ class HariJapCounter {
         // CRITICAL FIX: Pattern-based matching that counts COMPLETE mantras only
         // This prevents double counting when text contains partial repetitions
         
-        // Primary pattern: "जय जय राम कृष्णा हारी" (complete mantra)
+        // Primary pattern: Hindi "जय जय राम कृष्णा हारी" (complete mantra)
         // This is the standard 5-word mantra
-        const completePattern = /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi;
+        const hindiCompletePattern = /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi;
         
-        // Find all complete mantra matches
-        const completeMatches = text.match(completePattern);
+        // English pattern: "jai jai ram krishna hari" (complete mantra)
+        const englishCompletePattern = /\b(?:jai|shri|shree)\s+(?:jai|shri|shree)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\b/gi;
         
-        if (completeMatches && completeMatches.length > 0) {
-            console.log(`✅ Found ${completeMatches.length} complete mantra(s):`, completeMatches);
-            return completeMatches.length;
+        // Find all complete mantra matches (Hindi)
+        const hindiMatches = text.match(hindiCompletePattern);
+        if (hindiMatches && hindiMatches.length > 0) {
+            console.log(`✅ Found ${hindiMatches.length} complete Hindi mantra(s):`, hindiMatches);
+            return hindiMatches.length;
+        }
+        
+        // Find all complete mantra matches (English)
+        const englishMatches = text.match(englishCompletePattern);
+        if (englishMatches && englishMatches.length > 0) {
+            console.log(`✅ Found ${englishMatches.length} complete English mantra(s):`, englishMatches);
+            return englishMatches.length;
         }
         
         // Secondary pattern: Look for partial patterns as single count
         // This handles cases where user says parts of the mantra
-        const partialPattern = /(?:जय|श्री)/gi;
-        const partialMatches = text.match(partialPattern);
+        const hindiPartialPattern = /(?:जय|श्री)/gi;
+        const englishPartialPattern = /\b(?:jai|shri|shree)\b/gi;
+        
+        const hindiPartialMatches = text.match(hindiPartialPattern);
+        const englishPartialMatches = text.match(englishPartialPattern);
         
         // If we found mantra-related words but no complete mantra, count as 1 single attempt
-        if (partialMatches && partialMatches.length >= 2) {
+        if ((hindiPartialMatches && hindiPartialMatches.length >= 2) || 
+            (englishPartialMatches && englishPartialMatches.length >= 2)) {
             console.log('⚠️ Found mantra words but not complete mantra, counting as 1');
             return 1;
         }
