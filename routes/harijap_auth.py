@@ -688,11 +688,25 @@ def harijap_save_state():
                 total_pronunciations = GREATEST(total_pronunciations, VALUES(total_pronunciations)),
                 last_spoken_at = NOW(),
                 updated_at = NOW(),
-                today_words = VALUES(today_words),
-                today_pronunciations = VALUES(today_pronunciations),
-                today_malas = VALUES(today_malas),
+                -- CRITICAL FIX: Use GREATEST for today's counts to prevent data loss
+                -- Only update if date matches, otherwise reset (handled by date check above)
+                today_words = CASE 
+                    WHEN today_date = VALUES(today_date) THEN GREATEST(COALESCE(today_words, 0), VALUES(today_words))
+                    ELSE VALUES(today_words)
+                END,
+                today_pronunciations = CASE 
+                    WHEN today_date = VALUES(today_date) THEN GREATEST(COALESCE(today_pronunciations, 0), VALUES(today_pronunciations))
+                    ELSE VALUES(today_pronunciations)
+                END,
+                today_malas = CASE 
+                    WHEN today_date = VALUES(today_date) THEN GREATEST(COALESCE(today_malas, 0), VALUES(today_malas))
+                    ELSE VALUES(today_malas)
+                END,
                 today_date = VALUES(today_date),
-                todays_count = VALUES(todays_count)
+                todays_count = CASE 
+                    WHEN today_date = VALUES(today_date) THEN GREATEST(COALESCE(todays_count, 0), VALUES(todays_count))
+                    ELSE VALUES(todays_count)
+                END
         """, (bhaktgan_id, name, phone, count, total_malas, 
               current_mala_pronunciations, total_pronunciations,
               today_words, today_pronunciations, today_malas, today_date, todays_count))

@@ -497,13 +497,16 @@ class HariJapCounter {
 
         // Server sync - BUT don't overwrite local state with stale data
         // Only sync when page is visible to prevent overwriting active sessions
-        setInterval(() => {
-            // Only sync if page is visible and not actively listening
-            // This prevents overwriting local counts with stale server data during active chanting
-            if (!document.hidden && !this.state.isListening) {
-                this.loadStateFromServer();
-            }
-        }, this.config.syncInterval);
+        // CRITICAL FIX: Disable periodic sync to prevent count resets
+        // Counts will be loaded on initial page load and saved periodically
+        // This prevents overwriting local increments with stale server data
+        // setInterval(() => {
+        //     // Only sync if page is visible and not actively listening
+        //     // This prevents overwriting local counts with stale server data during active chanting
+        //     if (!document.hidden && !this.state.isListening) {
+        //         this.loadStateFromServer();
+        //     }
+        // }, this.config.syncInterval);
 
         // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
         setInterval(async () => {
@@ -1643,14 +1646,17 @@ class HariJapCounter {
         this.sessionTimeout.lastActivity = Date.now();
         this.sessionTimeout.isWarningShown = false;
 
-        // Set warning timeout (4.5 minutes)
-        this.sessionTimeout.warningId = setTimeout(() => {
-            this.showSessionWarning();
-        }, this.sessionTimeout.duration - this.sessionTimeout.warningDuration);
-
-        // Set logout timeout (5 minutes)
+        // CRITICAL FIX: Show prompt at exactly 5 minutes of inactivity
+        // If user clicks "Yes", continue; if "No", logout immediately
+        // Don't show warning at 4.5 minutes - show prompt at 5 minutes
         this.sessionTimeout.timeoutId = setTimeout(() => {
-            this.forceLogout();
+            this.showSessionWarning();
+            // If user doesn't respond within 30 seconds, logout
+            this.sessionTimeout.warningId = setTimeout(() => {
+                if (this.sessionTimeout.isWarningShown) {
+                    this.forceLogout();
+                }
+            }, 30000); // 30 seconds to respond
         }, this.sessionTimeout.duration);
     }
 
@@ -1661,7 +1667,8 @@ class HariJapCounter {
 
         this.sessionTimeout.isWarningShown = true;
         
-        // Create warning dialog
+        // CRITICAL FIX: Show prompt asking "Do you want to continue chanting?"
+        // If Yes, continue session; If No, logout
         const warningDialog = document.createElement('div');
         warningDialog.id = 'sessionWarningDialog';
         warningDialog.style.cssText = `
@@ -1688,10 +1695,10 @@ class HariJapCounter {
                 box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             ">
                 <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
-                <h3 style="color: #f44336; margin-bottom: 15px;">सत्र समाप्त हो रहा है</h3>
+                <h3 style="color: #f44336; margin-bottom: 15px;">जप जारी रखना चाहते हैं?</h3>
                 <p style="margin-bottom: 20px; color: #666;">
-                    आपका सत्र 30 सेकंड में समाप्त हो जाएगा।<br>
-                    जारी रखने के लिए OK बटन दबाएं।
+                    आपने 5 मिनट से जप नहीं किया है।<br>
+                    क्या आप जप जारी रखना चाहते हैं?
                 </p>
                 <button id="continueSessionBtn" style="
                     background: #4caf50;
@@ -1702,7 +1709,7 @@ class HariJapCounter {
                     font-size: 16px;
                     cursor: pointer;
                     margin-right: 10px;
-                ">OK</button>
+                ">हाँ, जारी रखें</button>
                 <button id="logoutNowBtn" style="
                     background: #f44336;
                     color: white;
@@ -1711,7 +1718,7 @@ class HariJapCounter {
                     border-radius: 8px;
                     font-size: 16px;
                     cursor: pointer;
-                ">लॉगआउट</button>
+                ">नहीं, लॉगआउट</button>
             </div>
         `;
 
@@ -1726,7 +1733,7 @@ class HariJapCounter {
             this.logout();
         });
 
-        console.log('⚠️ Session warning shown');
+        console.log('⚠️ Session warning shown - asking user to continue chanting');
     }
 
     continueSession() {
@@ -1734,6 +1741,11 @@ class HariJapCounter {
         const dialog = document.getElementById('sessionWarningDialog');
         if (dialog) {
             dialog.remove();
+        }
+
+        // Clear the warning timeout if it exists
+        if (this.sessionTimeout.warningId) {
+            clearTimeout(this.sessionTimeout.warningId);
         }
 
         // Reset session timeout
@@ -1858,17 +1870,25 @@ class HariJapCounter {
     }
 
     checkForDateChange() {
-        const currentDate = this.getTodayDateString();
+        // CRITICAL FIX: Only check for date change if we have server time
+        // This ensures we're using IST timezone for accurate midnight detection
+        if (!this.serverDate) {
+            // Server time not loaded yet, skip check
+            return;
+        }
+        
+        const currentDate = this.serverDate; // Use server date (IST) for comparison
         
         // Only reset if the date actually changed (e.g., midnight passed)
         // Do NOT reset if dates are the same (prevent false positives)
-        if (this.state.todayDate && this.state.todayDate !== currentDate && currentDate !== this.state.todayDate) {
+        if (this.state.todayDate && this.state.todayDate !== currentDate) {
             console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
             
             // CRITICAL FIX: Save current day's progress BEFORE resetting
             this.saveToServer(true);
             
             // Now reset today's counters for the new day
+            // CRITICAL: Only reset today's fields, NEVER reset total count
             this.state.todayWords = 0;
             this.state.todayPronunciations = 0;
             this.state.todayMalas = 0;
@@ -1900,7 +1920,24 @@ class HariJapCounter {
     async logout() {
         try {
             console.log('👋 Logging out...');
+            
+            // CRITICAL FIX: Save all state to server before logging out
+            // This ensures count persists after logout/login
             await this.saveToServer(true);
+            console.log('✅ State saved before logout');
+
+            // Stop listening if active
+            if (this.state.isListening) {
+                this.stopListening();
+            }
+
+            // Clear session timeout
+            if (this.sessionTimeout.timeoutId) {
+                clearTimeout(this.sessionTimeout.timeoutId);
+            }
+            if (this.sessionTimeout.warningId) {
+                clearTimeout(this.sessionTimeout.warningId);
+            }
 
             await fetch('/harijap/auth/logout', {
                 method: 'POST',
@@ -1910,6 +1947,7 @@ class HariJapCounter {
             window.location.href = '/harijap/auth';
         } catch (error) {
             console.error('❌ Logout error:', error);
+            // Even if logout fails, redirect to login
             window.location.href = '/harijap/auth';
         }
     }
