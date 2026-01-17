@@ -546,6 +546,19 @@ def harijap_get_state():
                 
                 print(f"DEBUG: Today's count reset. Total count preserved: {row['count']}")
 
+        # CRITICAL FIX: Ensure today_date is always a string, never None
+        today_date_str = None
+        if row.get('today_date'):
+            if isinstance(row['today_date'], str):
+                today_date_str = row['today_date']
+            else:
+                today_date_str = row['today_date'].strftime('%Y-%m-%d') if hasattr(row['today_date'], 'strftime') else str(row['today_date'])
+        else:
+            # If today_date is None, use current IST date
+            today_date_str = current_ist_date
+        
+        print(f"DEBUG: Returning state - today_date: {today_date_str}, today_words: {row.get('today_words', 0)}, todays_count: {row.get('todays_count', 0)}")
+        
         return jsonify({
             'success': True, 
             'count': row['count'],  # Total count - NEVER resets
@@ -556,7 +569,7 @@ def harijap_get_state():
             'today_words': row.get('today_words', 0),  # Today's count - resets daily at IST 12:00 AM
             'today_pronunciations': row.get('today_pronunciations', 0),  # Today's pronunciations - resets daily
             'today_malas': row.get('today_malas', 0),  # Today's malas - resets daily
-            'today_date': row.get('today_date'),  # Current IST date
+            'today_date': today_date_str,  # Current IST date - always a string
             'todays_count': row.get('todays_count', 0)  # Today's count - resets daily
         }), 200
         

@@ -33,6 +33,7 @@ class HariJapCounter {
             isInitialized: false,
             isListening: false,
             isSaving: false,
+            isFirstLoad: true, // CRITICAL: Flag to track first load from server
 
             // User state
             userName: '',
@@ -1126,12 +1127,22 @@ class HariJapCounter {
                 const serverTodayDate = data.today_date || this.serverDate || this.getTodayDateString();
                 const currentServerDate = this.serverDate || this.getTodayDateString();
                 
-                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate);
+                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate, 'isFirstLoad:', this.state.isFirstLoad);
+                console.log('📅 Full server response:', {
+                    today_date: data.today_date,
+                    today_words: data.today_words,
+                    todays_count: data.todays_count,
+                    today_malas: data.today_malas
+                });
                 
                 // CRITICAL FIX: Always load today's data from server if server date matches current server date
                 // This ensures today's count persists after logout/login
                 // Only skip loading if the date has actually changed (IST midnight passed)
-                if (serverTodayDate === currentServerDate) {
+                // Also handle case where serverDate might not be loaded yet - use server's today_date as fallback
+                const datesMatch = serverTodayDate === currentServerDate || 
+                                  (!this.serverDate && serverTodayDate); // If serverDate not loaded, trust server's today_date
+                
+                if (datesMatch) {
                     // Server date matches current date - load today's data from server
                     // CRITICAL: Use todays_count if available, otherwise use today_words
                     const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
@@ -1144,6 +1155,7 @@ class HariJapCounter {
                     // On subsequent syncs, use Math.max to prevent overwriting local increments
                     if (this.state.isFirstLoad) {
                         // First load - directly assign from server
+                        // This is critical for preserving count after logout/login
                         this.state.todayWords = serverTodayWords;
                         this.state.todayPronunciations = serverTodayPronunciations;
                         this.state.todayMalas = serverTodayMalas;
@@ -1151,13 +1163,18 @@ class HariJapCounter {
                         this.state.todayDate = serverTodayDate;
                         this.state.isFirstLoad = false;  // Mark that first load is complete
                         
-                        console.log('✅ First load - directly loaded today\'s data from server:', {
+                        console.log('✅ FIRST LOAD - directly loaded today\'s data from server:', {
                             todayWords: this.state.todayWords,
                             todaysCount: this.state.todaysCount,
                             todayDate: this.state.todayDate,
                             serverTodayDate: serverTodayDate,
-                            currentServerDate: currentServerDate
+                            currentServerDate: currentServerDate,
+                            serverTodayWords: serverTodayWords,
+                            serverTodaysCount: serverTodaysCount
                         });
+                        
+                        // CRITICAL: Update UI immediately after first load
+                        this.updateUI();
                     } else {
                         // Subsequent sync - use Math.max to prevent overwriting local increments
                         this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
@@ -1181,14 +1198,30 @@ class HariJapCounter {
                     // Date changed - server date is different from current date
                     // This means IST midnight passed - reset will be handled by checkForDateChange
                     console.log('📅 Date changed detected. Server stored:', serverTodayDate, 'Current:', currentServerDate);
-                    // Set todayDate to current server date to prevent false resets
-                    this.state.todayDate = currentServerDate;
-                    // Initialize today's counters to 0 for new day
-                    this.state.todayWords = 0;
-                    this.state.todayPronunciations = 0;
-                    this.state.todayMalas = 0;
-                    this.state.todaysCount = 0;
-                    this.state.currentMalaPronunciations = 0;
+                    
+                    // CRITICAL FIX: On first load, if dates don't match but server has data,
+                    // it might be a timezone/format issue. Only reset if we're sure it's a new day.
+                    // If it's first load and server has non-zero count, be more cautious about resetting
+                    if (this.state.isFirstLoad && (serverTodayWords > 0 || serverTodaysCount > 0)) {
+                        console.warn('⚠️ First load: Dates don\'t match but server has count data. Loading anyway to preserve data.');
+                        // Load the data anyway - might be a date format issue
+                        this.state.todayWords = serverTodayWords;
+                        this.state.todayPronunciations = serverTodayPronunciations;
+                        this.state.todayMalas = serverTodayMalas;
+                        this.state.todaysCount = serverTodaysCount;
+                        this.state.todayDate = serverTodayDate || currentServerDate;
+                        this.state.isFirstLoad = false;
+                        this.updateUI();
+                    } else {
+                        // Set todayDate to current server date to prevent false resets
+                        this.state.todayDate = currentServerDate;
+                        // Initialize today's counters to 0 for new day
+                        this.state.todayWords = 0;
+                        this.state.todayPronunciations = 0;
+                        this.state.todayMalas = 0;
+                        this.state.todaysCount = 0;
+                        this.state.currentMalaPronunciations = 0;
+                    }
                 }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
