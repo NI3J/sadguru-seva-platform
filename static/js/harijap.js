@@ -107,6 +107,9 @@ class HariJapCounter {
         // ============================================================
         this.serverDate = null;
         this.serverTime = null;
+        this.serverHour = null;
+        this.serverMinute = null;
+        this.serverSecond = null;
         this.serverTimeLoading = false;
 
         // ============================================================
@@ -208,6 +211,16 @@ class HariJapCounter {
             this.elements.fullJapCount = fullJapElement;
         } else {
             console.warn('⚠️ Element not found: fullJapCount');
+        }
+        
+        // Cache datetimeDisplaySection and its child datetimeDisplay
+        const datetimeSection = document.getElementById('datetimeDisplaySection');
+        if (datetimeSection) {
+            this.elements.datetimeDisplaySection = datetimeSection;
+            const datetimeDisplay = datetimeSection.querySelector('#datetimeDisplay');
+            if (datetimeDisplay) {
+                this.elements.datetimeDisplay = datetimeDisplay;
+            }
         }
 
         if (this.elements.userName && this.state.userName) {
@@ -1054,31 +1067,47 @@ class HariJapCounter {
                     // CRITICAL: Use todays_count if available, otherwise use today_words
                     const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
                     
-                    // CRITICAL FIX: Use Math.max to prevent overwriting with stale server data
-                    // This ensures local increments are not lost when sync happens
                     const serverTodayWords = data.today_words || 0;
                     const serverTodayPronunciations = data.today_pronunciations || 0;
                     const serverTodayMalas = data.today_malas || 0;
                     
-                    // Use the greater value to prevent data loss from stale server data
-                    this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
-                    this.state.todayPronunciations = Math.max(this.state.todayPronunciations, serverTodayPronunciations);
-                    this.state.todayMalas = Math.max(this.state.todayMalas, serverTodayMalas);
-                    this.state.todaysCount = Math.max(this.state.todaysCount, serverTodaysCount);
-                    this.state.todayDate = serverTodayDate;
-                    
-                    // Ensure todaysCount reflects todayWords if it's higher
-                    if (this.state.todayWords > this.state.todaysCount) {
-                        this.state.todaysCount = this.state.todayWords;
+                    // CRITICAL FIX: On first load, directly assign server values
+                    // On subsequent syncs, use Math.max to prevent overwriting local increments
+                    if (this.state.isFirstLoad) {
+                        // First load - directly assign from server
+                        this.state.todayWords = serverTodayWords;
+                        this.state.todayPronunciations = serverTodayPronunciations;
+                        this.state.todayMalas = serverTodayMalas;
+                        this.state.todaysCount = serverTodaysCount;
+                        this.state.todayDate = serverTodayDate;
+                        this.state.isFirstLoad = false;  // Mark that first load is complete
+                        
+                        console.log('✅ First load - directly loaded today\'s data from server:', {
+                            todayWords: this.state.todayWords,
+                            todaysCount: this.state.todaysCount,
+                            todayDate: this.state.todayDate,
+                            serverTodayDate: serverTodayDate,
+                            currentServerDate: currentServerDate
+                        });
+                    } else {
+                        // Subsequent sync - use Math.max to prevent overwriting local increments
+                        this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
+                        this.state.todayPronunciations = Math.max(this.state.todayPronunciations, serverTodayPronunciations);
+                        this.state.todayMalas = Math.max(this.state.todayMalas, serverTodayMalas);
+                        this.state.todaysCount = Math.max(this.state.todaysCount, serverTodaysCount);
+                        this.state.todayDate = serverTodayDate;
+                        
+                        // Ensure todaysCount reflects todayWords if it's higher
+                        if (this.state.todayWords > this.state.todaysCount) {
+                            this.state.todaysCount = this.state.todayWords;
+                        }
+                        
+                        console.log('✅ Sync - loaded today\'s data from server (using Math.max):', {
+                            todayWords: this.state.todayWords,
+                            todaysCount: this.state.todaysCount,
+                            todayDate: this.state.todayDate
+                        });
                     }
-                    
-                    console.log('✅ Loaded today\'s data from server:', {
-                        todayWords: this.state.todayWords,
-                        todaysCount: this.state.todaysCount,
-                        todayDate: this.state.todayDate,
-                        serverTodayDate: serverTodayDate,
-                        currentServerDate: currentServerDate
-                    });
                 } else {
                     // Date changed - server date is different from current date
                     // This means IST midnight passed - reset will be handled by checkForDateChange
@@ -1262,54 +1291,98 @@ class HariJapCounter {
     }
 
     updateDateTimeDisplay() {
-        if (this.elements.datetimeDisplay) {
+        // Update both the datetimeDisplay in user-info and datetimeDisplaySection in counter-section
+        const displayElement = this.elements.datetimeDisplay || 
+                              (this.elements.datetimeDisplaySection ? 
+                               this.elements.datetimeDisplaySection.querySelector('#datetimeDisplay') : null);
+        
+        if (displayElement) {
             // Use server time if available, otherwise use client time
             let now;
-            if (this.serverTime) {
-                // Parse server datetime if available
+            
+            // Check if we have server time data (from getServerTime response)
+            if (this.serverHour !== null && this.serverMinute !== null && this.serverSecond !== null) {
+                // Use server-provided hour, minute, second directly (already in IST)
+                // Create a date object for today using server date
+                const serverDateParts = this.serverDate.split('-');
+                const year = parseInt(serverDateParts[0]);
+                const month = parseInt(serverDateParts[1]) - 1; // JavaScript months are 0-indexed
+                const day = parseInt(serverDateParts[2]);
+                
+                // Create date in IST (UTC+5:30)
+                // We'll create it in UTC and then adjust
+                now = new Date(Date.UTC(year, month, day, this.serverHour, this.serverMinute, this.serverSecond));
+                // Adjust for IST offset (subtract 5:30 from UTC to get IST)
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                now = new Date(now.getTime() - istOffset);
+            } else if (this.serverTime) {
+                // Fallback: Parse server datetime string if available
                 try {
+                    // Server time is already in IST, so parse it directly
                     now = new Date(this.serverTime);
-                    // Adjust for timezone to show IST
-                    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-                    const utcTime = now.getTime();
-                    now = new Date(utcTime + istOffset);
+                    if (isNaN(now.getTime())) {
+                        throw new Error('Invalid date');
+                    }
                 } catch (e) {
-                    now = new Date();
+                    console.error('Error parsing server time:', e, 'Server time:', this.serverTime);
+                    // Fallback to current time in IST
+                    now = this.getClientISTTime();
                 }
             } else {
                 // Fallback to client time with IST adjustment
-                const nowUTC = new Date();
-                const istOffset = 5.5 * 60 * 60 * 1000;
-                const utcTime = nowUTC.getTime() + (nowUTC.getTimezoneOffset() * 60 * 1000);
-                now = new Date(utcTime + istOffset);
+                now = this.getClientISTTime();
             }
             
-            // Format date and time in IST
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                timeZone: 'Asia/Kolkata'
-            };
-            
-            // Format: "16 जानेवारी 2025, 11:45:30 IST"
+            // Format date and time
+            // Format: "17 जानेवारी 2026, 18:10:04 IST"
             const dateStr = now.toLocaleDateString('mr-IN', { 
                 year: 'numeric', 
                 month: 'long', 
-                day: 'numeric' 
-            });
-            const timeStr = now.toLocaleTimeString('en-IN', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
+                day: 'numeric'
             });
             
-            this.elements.datetimeDisplay.textContent = `${dateStr}, ${timeStr} IST`;
+            // Format time manually to ensure correct display (use server time directly)
+            let hours, minutes, seconds;
+            if (this.serverHour !== null && this.serverMinute !== null && this.serverSecond !== null) {
+                // Use server time directly and add elapsed seconds for live clock
+                let currentSecond = this.serverSecond;
+                if (this.serverTimeFetchedAt) {
+                    const elapsedSeconds = Math.floor((Date.now() - this.serverTimeFetchedAt) / 1000);
+                    currentSecond = (this.serverSecond + elapsedSeconds) % 60;
+                    const additionalMinutes = Math.floor((this.serverSecond + elapsedSeconds) / 60);
+                    if (additionalMinutes > 0) {
+                        const currentMinute = (this.serverMinute + additionalMinutes) % 60;
+                        const additionalHours = Math.floor((this.serverMinute + additionalMinutes) / 60);
+                        minutes = String(currentMinute).padStart(2, '0');
+                        hours = String((this.serverHour + additionalHours) % 24).padStart(2, '0');
+                    } else {
+                        hours = String(this.serverHour).padStart(2, '0');
+                        minutes = String(this.serverMinute).padStart(2, '0');
+                    }
+                } else {
+                    hours = String(this.serverHour).padStart(2, '0');
+                    minutes = String(this.serverMinute).padStart(2, '0');
+                }
+                seconds = String(currentSecond).padStart(2, '0');
+            } else {
+                // Fallback: format from date object
+                hours = String(now.getHours()).padStart(2, '0');
+                minutes = String(now.getMinutes()).padStart(2, '0');
+                seconds = String(now.getSeconds()).padStart(2, '0');
+            }
+            const timeStr = `${hours}:${minutes}:${seconds}`;
+            
+            displayElement.textContent = `${dateStr}, ${timeStr} IST`;
         }
+    }
+    
+    getClientISTTime() {
+        // Get current time and convert to IST
+        const now = new Date();
+        // Convert to IST (UTC+5:30)
+        const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+        const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+        return new Date(utcTime + istOffset);
     }
 
     displayRecognizedText(text) {
@@ -1689,12 +1762,15 @@ class HariJapCounter {
                 if (data.success) {
                     this.serverDate = data.date;
                     this.serverTime = data.datetime;
-                    console.log('🕐 Server time loaded:', data.date, 'at', data.hour + ':' + data.minute + ':' + data.second);
+                    // Store hour, minute, second separately for accurate time display
+                    this.serverHour = data.hour !== undefined ? parseInt(data.hour) : null;
+                    this.serverMinute = data.minute !== undefined ? parseInt(data.minute) : null;
+                    this.serverSecond = data.second !== undefined ? parseInt(data.second) : null;
+                    this.serverTimeFetchedAt = Date.now(); // Store when we fetched the time for live clock
+                    console.log('🕐 Server time loaded:', data.date, 'at', this.serverHour + ':' + this.serverMinute + ':' + this.serverSecond, 'Server datetime:', data.datetime);
                     
                     // Update date/time display when server time is loaded
-                    if (this.elements.datetimeDisplay) {
-                        this.updateDateTimeDisplay();
-                    }
+                    this.updateDateTimeDisplay();
                     
                     // If server time was loaded, trigger date check
                     if (this.state.isInitialized) {
