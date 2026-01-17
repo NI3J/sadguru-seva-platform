@@ -88,19 +88,43 @@
           </div>
         </div>
         
+        <!-- OTP Input (Hidden by default) -->
+        <div class="form-group" id="otpGroup" style="display: none;">
+          <label for="otp">
+            OTP दर्ज करें *
+            <span class="tooltip" data-tooltip="आपके मोबाइल पर भेजा गया 6 अंकों का OTP">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔐</span>
+            <input 
+              type="text" 
+              id="otp" 
+              name="otp"
+              placeholder="6 अंकों का OTP"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              autocomplete="one-time-code"
+            >
+          </div>
+          <div class="otp-timer" id="otpTimer"></div>
+          <button type="button" class="resend-otp-btn" id="resendOtpBtn" onclick="resendOTP()" style="display: none;">
+            OTP पुनः भेजें
+          </button>
+        </div>
+        
         <!-- Submit Button -->
         <button type="submit" class="btn" id="sendOtpBtn">
           <div class="btn-content">
-            <span class="btn-text">प्रवेश करें</span>
+            <span class="btn-text" id="btnText">OTP भेजें</span>
             <div class="loading"></div>
           </div>
         </button>
         
         <!-- Progress Indicator -->
         <div class="progress-dots">
-          <div class="dot active"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
+          <div class="dot active" id="dot1"></div>
+          <div class="dot" id="dot2"></div>
+          <div class="dot" id="dot3"></div>
         </div>
       </form>
       

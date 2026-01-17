@@ -1,11 +1,22 @@
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from db_config import get_db_connection
 import pymysql
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
+import os
+import random
+import requests
 from functools import wraps
+from dotenv import load_dotenv
+
+# Load environment variables from database.env
+load_dotenv('database.env')
 
 harijap_auth_bp = Blueprint('harijap_auth', __name__)
+
+# Fast2SMS Configuration
+FAST2SMS_API_KEY = os.getenv("FAST2SMS_API_KEY")
+FAST2SMS_URL = "https://www.fast2sms.com/dev/bulkV2"
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -58,6 +69,55 @@ def is_valid_name(name: str) -> bool:
     if not name or len(name.strip()) < 2 or len(name.strip()) > 50:
         return False
     return bool(re.fullmatch(r'[A-Za-z\s]+', name.strip()))
+
+
+def send_otp_via_fast2sms(mobile, otp):
+    """
+    Send OTP via Fast2SMS API.
+    
+    Args:
+        mobile: Mobile number (10 digits)
+        otp: 6-digit OTP code
+        
+    Returns:
+        True if SMS sent successfully, False otherwise
+    """
+    if not FAST2SMS_API_KEY:
+        print("ERROR: FAST2SMS_API_KEY not configured")
+        return False
+    
+    try:
+        payload = {
+            'route': 'otp',
+            'variables_values': otp,
+            'flash': 0,
+            'numbers': mobile
+        }
+        
+        headers = {
+            'authorization': FAST2SMS_API_KEY,
+            'accept': "*/*",
+            'cache-control': "no-cache",
+            'content-type': "application/x-www-form-urlencoded"
+        }
+        
+        response = requests.post(FAST2SMS_URL, data=payload, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"DEBUG: Fast2SMS Response: {result}")
+            return result.get('return', False)
+        else:
+            print(f"ERROR: Fast2SMS API error - Status: {response.status_code}, Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"ERROR: Failed to send OTP via Fast2SMS: {e}")
+        return False
+
+
+def generate_otp():
+    """Generate a 6-digit OTP"""
+    return str(random.randint(100000, 999999))
 
 
 def _get_user_info():
@@ -120,11 +180,10 @@ def auth_page():
     return render_template('harijaplogin.html')
 
 
-@harijap_auth_bp.route('/harijap/auth/login', methods=['POST'])
-def harijap_login_without_otp():
+@harijap_auth_bp.route('/harijap/auth/send_otp', methods=['POST'])
+def send_otp():
     """
-    Validate user by name and mobile against bhaktgan table.
-    If matched, create authenticated session and redirect to harijap.
+    Send OTP to user's mobile number after validating name and mobile.
     
     Request JSON:
         {
@@ -133,7 +192,7 @@ def harijap_login_without_otp():
         }
         
     Returns:
-        JSON with success status and redirect URL or error message
+        JSON with success status and message
     """
     conn = None
     cursor = None
@@ -143,7 +202,7 @@ def harijap_login_without_otp():
         name = (data.get('name') or '').strip()
         mobile = normalize_mobile(data.get('mobile') or '')
         
-        print(f"DEBUG: Login attempt - Name: {name}, Mobile: {mobile}")
+        print(f"DEBUG: Send OTP request - Name: {name}, Mobile: {mobile}")
 
         # Validate input
         if not is_valid_name(name):
@@ -158,7 +217,7 @@ def harijap_login_without_otp():
                 'error': 'कृपया एक 10 अंकों का मोबाइल नंबर दर्ज करें'
             }), 400
 
-        # Query database
+        # Query database to verify user exists
         conn = get_db_connection()
         cursor = get_cursor(conn)
 
@@ -182,25 +241,37 @@ def harijap_login_without_otp():
                 'error': 'उपयोगकर्ता नहीं मिला। नाम/मोबाइल सत्यापित करें।'
             }), 404
 
-        # Set session
-        print(f"DEBUG: Setting session for user: {row['id']}")
-        session.clear()  # Clear any existing session data
-        session['authenticated'] = True
-        session['user_id'] = f"bhaktgan:{row['id']}"
-        session['user_name'] = row['name']
-        session['user_mobile'] = mobile
-        session.permanent = True
-        
-        print(f"DEBUG: Session set successfully - User: {session.get('user_name')}")
+        # Generate OTP
+        otp = generate_otp()
+        print(f"DEBUG: Generated OTP for {mobile}: {otp}")
 
-        return jsonify({
-            'success': True,
-            'message': 'स्वागत है! जय श्री कृष्ण।',
-            'redirect_url': url_for('wisdom.harijap')
-        }), 200
+        # Store OTP in session (valid for 10 minutes)
+        session['otp'] = otp
+        session['otp_mobile'] = mobile
+        session['otp_name'] = name
+        session['otp_user_id'] = row['id']
+        session['otp_expiry'] = (datetime.now() + timedelta(minutes=10)).isoformat()
+        session['otp_attempts'] = 0
+        session.permanent = True
+
+        # Send OTP via Fast2SMS
+        sms_sent = send_otp_via_fast2sms(mobile, otp)
+        
+        if sms_sent:
+            masked_mobile = f"******{mobile[-4:]}"
+            return jsonify({
+                'success': True,
+                'message': f'OTP {masked_mobile} नंबर पर भेजा गया है।',
+                'requires_otp': True
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'OTP भेजने में विफल। कृपया बाद में पुनः प्रयास करें।'
+            }), 500
 
     except Exception as e:
-        print(f"ERROR: Login failed - {e}")
+        print(f"ERROR: Send OTP failed - {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -213,6 +284,117 @@ def harijap_login_without_otp():
             cursor.close()
         if conn:
             conn.close()
+
+
+@harijap_auth_bp.route('/harijap/auth/verify_otp', methods=['POST'])
+def verify_otp():
+    """
+    Verify OTP and create authenticated session.
+    
+    Request JSON:
+        {
+            "otp": "123456"
+        }
+        
+    Returns:
+        JSON with success status and redirect URL or error message
+    """
+    try:
+        data = request.get_json() or {}
+        otp = (data.get('otp') or '').strip()
+        
+        print(f"DEBUG: OTP verification request - OTP: {otp}")
+
+        # Check if OTP exists in session
+        if 'otp' not in session:
+            return jsonify({
+                'success': False,
+                'error': 'OTP समय सीमा समाप्त हो गई। कृपया नया OTP प्राप्त करें।'
+            }), 400
+
+        # Check OTP expiry
+        otp_expiry = datetime.fromisoformat(session.get('otp_expiry', ''))
+        if datetime.now() > otp_expiry:
+            session.pop('otp', None)
+            return jsonify({
+                'success': False,
+                'error': 'OTP समय सीमा समाप्त हो गई। कृपया नया OTP प्राप्त करें।'
+            }), 400
+
+        # Check OTP attempts (max 5 attempts)
+        otp_attempts = session.get('otp_attempts', 0)
+        if otp_attempts >= 5:
+            session.pop('otp', None)
+            return jsonify({
+                'success': False,
+                'error': 'अधिकतम प्रयास समाप्त। कृपया नया OTP प्राप्त करें।'
+            }), 400
+
+        # Validate OTP input
+        if not otp or len(otp) != 6 or not otp.isdigit():
+            session['otp_attempts'] = otp_attempts + 1
+            return jsonify({
+                'success': False,
+                'error': 'कृपया 6 अंकों का OTP दर्ज करें।'
+            }), 400
+
+        # Verify OTP
+        stored_otp = session.get('otp', '')
+        if otp != stored_otp:
+            session['otp_attempts'] = otp_attempts + 1
+            remaining = 5 - (otp_attempts + 1)
+            return jsonify({
+                'success': False,
+                'error': f'गलत OTP। {remaining} प्रयास शेष हैं।'
+            }), 400
+
+        # OTP verified - create authenticated session
+        user_id = session.get('otp_user_id')
+        user_name = session.get('otp_name')
+        user_mobile = session.get('otp_mobile')
+        
+        # Clear OTP data
+        session.pop('otp', None)
+        session.pop('otp_mobile', None)
+        session.pop('otp_name', None)
+        session.pop('otp_user_id', None)
+        session.pop('otp_expiry', None)
+        session.pop('otp_attempts', None)
+
+        # Set authenticated session
+        session.clear()
+        session['authenticated'] = True
+        session['user_id'] = f"bhaktgan:{user_id}"
+        session['user_name'] = user_name
+        session['user_mobile'] = user_mobile
+        session.permanent = True
+        
+        print(f"DEBUG: OTP verified successfully - User: {user_name}")
+
+        return jsonify({
+            'success': True,
+            'message': 'स्वागत है! जय श्री कृष्ण।',
+            'redirect_url': url_for('wisdom.harijap')
+        }), 200
+
+    except Exception as e:
+        print(f"ERROR: OTP verification failed - {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'सर्वर त्रुटि। कृपया फिर से प्रयास करें।'
+        }), 500
+
+
+@harijap_auth_bp.route('/harijap/auth/login', methods=['POST'])
+def harijap_login_without_otp():
+    """
+    Legacy route - now redirects to OTP-based authentication.
+    This route is kept for backward compatibility.
+    """
+    # Redirect to send_otp for OTP-based authentication
+    return send_otp()
 
 
 @harijap_auth_bp.route('/harijap/auth/logout', methods=['POST'])

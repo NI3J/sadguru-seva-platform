@@ -5,7 +5,10 @@ const state = {
   isSubmitting: false,
   currentStep: 0,
   userName: '',
-  userMobile: ''
+  userMobile: '',
+  otpSent: false,
+  otpTimer: null,
+  otpExpiry: null
 };
 
 // DOM Elements
@@ -13,6 +16,10 @@ const elements = {
   form: null,
   nameInput: null,
   mobileInput: null,
+  otpInput: null,
+  otpGroup: null,
+  otpTimer: null,
+  resendOtpBtn: null,
   nameCount: null,
   sendOtpBtn: null,
   messageContainer: null,
@@ -33,12 +40,16 @@ function initializeElements() {
   elements.form = document.getElementById('loginForm');
   elements.nameInput = document.getElementById('name');
   elements.mobileInput = document.getElementById('mobile');
+  elements.otpInput = document.getElementById('otp');
+  elements.otpGroup = document.getElementById('otpGroup');
+  elements.otpTimer = document.getElementById('otpTimer');
+  elements.resendOtpBtn = document.getElementById('resendOtpBtn');
   elements.nameCount = document.getElementById('nameCount');
   elements.sendOtpBtn = document.getElementById('sendOtpBtn');
   elements.messageContainer = document.getElementById('messageContainer');
   elements.progressDots = document.querySelectorAll('.dot');
   elements.loading = document.querySelector('.loading');
-  elements.btnText = document.querySelector('.btn-text');
+  elements.btnText = document.getElementById('btnText');
 }
 
 // Attach event listeners
@@ -63,6 +74,29 @@ function attachEventListeners() {
     this.value = this.value.replace(/[^0-9]/g, '');
     this.classList.remove('error');
   });
+  
+  // OTP input validation - only numbers
+  if (elements.otpInput) {
+    elements.otpInput.addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      this.classList.remove('error');
+      
+      // Auto-submit when 6 digits entered
+      if (this.value.length === 6) {
+        setTimeout(() => {
+          if (state.otpSent && !state.isSubmitting) {
+            verifyOTP();
+          }
+        }, 300);
+      }
+    });
+    
+    elements.otpInput.addEventListener('keypress', function(e) {
+      if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete') {
+        e.preventDefault();
+      }
+    });
+  }
 
   // Mobile input formatting
   elements.mobileInput.addEventListener('keypress', function(e) {
@@ -107,10 +141,16 @@ function showFieldError(input, message) {
   showMessage(message, 'error');
 }
 
-// Main function to send OTP
+// Main function to send OTP or verify OTP
 function sendOTP() {
   // Prevent double submission
   if (state.isSubmitting) {
+    return;
+  }
+
+  // If OTP is already sent, verify OTP
+  if (state.otpSent) {
+    verifyOTP();
     return;
   }
 
@@ -133,23 +173,80 @@ function sendOTP() {
   // Start submission process
   startSubmission();
 
-  // Send actual API request to Flask backend
+  // Send OTP request to Flask backend
   sendOTPRequest(name, mobile)
     .then(response => {
-      if (response.success) {
-        // Pass the entire response to handle redirect_url
+      if (response.success && response.requires_otp) {
+        handleOTPSent(mobile, response);
+      } else if (response.success) {
+        // Legacy support - direct login
         handleOTPSuccess(mobile, response);
       } else {
-        handleOTPError(response.error || response.message || 'लॉगिन विफल रहा');
+        handleOTPError(response.error || response.message || 'OTP भेजने में विफल');
       }
     })
     .catch(error => {
-      console.error('Login Error:', error);
+      console.error('Send OTP Error:', error);
       handleOTPError(error.message || 'कुछ गलत हुआ। कृपया पुनः प्रयास करें।');
     })
     .finally(() => {
       endSubmission();
     });
+}
+
+// Verify OTP function
+function verifyOTP() {
+  if (state.isSubmitting) {
+    return;
+  }
+
+  const otp = elements.otpInput.value.trim();
+
+  // Clear previous messages
+  clearMessage();
+
+  // Validate OTP
+  if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+    showMessage('कृपया 6 अंकों का OTP दर्ज करें।', 'error');
+    return;
+  }
+
+  // Start submission process
+  startSubmission();
+
+  // Verify OTP request to Flask backend
+  verifyOTPRequest(otp)
+    .then(response => {
+      if (response.success) {
+        handleOTPSuccess(state.userMobile, response);
+      } else {
+        handleOTPError(response.error || response.message || 'OTP सत्यापन विफल');
+      }
+    })
+    .catch(error => {
+      console.error('Verify OTP Error:', error);
+      handleOTPError(error.message || 'कुछ गलत हुआ। कृपया पुनः प्रयास करें।');
+    })
+    .finally(() => {
+      endSubmission();
+    });
+}
+
+// Resend OTP function
+function resendOTP() {
+  if (state.isSubmitting) {
+    return;
+  }
+
+  // Clear OTP input
+  elements.otpInput.value = '';
+  clearMessage();
+
+  // Hide resend button
+  elements.resendOtpBtn.style.display = 'none';
+
+  // Resend OTP
+  sendOTP();
 }
 
 // Validate form
@@ -182,8 +279,16 @@ function startSubmission() {
   state.isSubmitting = true;
   elements.sendOtpBtn.disabled = true;
   elements.loading.classList.add('show');
-  elements.btnText.textContent = 'भेजा जा रहा है...';
-  updateProgressDots(1);
+  
+  if (state.otpSent) {
+    elements.btnText.textContent = 'सत्यापित किया जा रहा है...';
+  } else {
+    elements.btnText.textContent = 'भेजा जा रहा है...';
+  }
+  
+  if (!state.otpSent) {
+    updateProgressDots(1);
+  }
 }
 
 // End submission state
@@ -191,7 +296,12 @@ function endSubmission() {
   state.isSubmitting = false;
   elements.sendOtpBtn.disabled = false;
   elements.loading.classList.remove('show');
-  elements.btnText.textContent = 'प्रवेश करें';
+  
+  if (state.otpSent) {
+    elements.btnText.textContent = 'OTP सत्यापित करें';
+  } else {
+    elements.btnText.textContent = 'OTP भेजें';
+  }
 }
 
 // Send OTP request to Flask backend
@@ -208,8 +318,8 @@ function sendOTPRequest(name, mobile) {
     headers['X-CSRFToken'] = csrfToken.value;
   }
 
-  // Use the correct endpoint from Flask blueprint
-  return fetch('/harijap/auth/login', {
+  // Use the new OTP endpoint
+  return fetch('/harijap/auth/send_otp', {
     method: 'POST',
     headers: headers,
     body: JSON.stringify({
@@ -233,13 +343,85 @@ function sendOTPRequest(name, mobile) {
   });
 }
 
+// Verify OTP request to Flask backend
+function verifyOTPRequest(otp) {
+  // Get CSRF token if exists
+  const csrfToken = document.querySelector('input[name="csrf_token"]');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
+  
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken.value;
+  }
+
+  // Use the OTP verification endpoint
+  return fetch('/harijap/auth/verify_otp', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({
+      otp: otp
+    }),
+    credentials: 'same-origin'
+  })
+  .then(response => {
+    // Parse JSON response
+    return response.json().then(data => {
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Network error');
+      }
+      return data;
+    });
+  })
+  .catch(error => {
+    console.error('Fetch error:', error);
+    throw error;
+  });
+}
+
 // Generate random OTP (for demo purposes)
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Handle OTP success
+// Handle OTP sent successfully
+function handleOTPSent(mobile, response) {
+  state.otpSent = true;
+  state.otpExpiry = Date.now() + (10 * 60 * 1000); // 10 minutes
+  
+  // Show OTP input field
+  elements.otpGroup.style.display = 'block';
+  elements.otpInput.focus();
+  elements.otpInput.required = true;
+  
+  // Disable name and mobile inputs
+  elements.nameInput.disabled = true;
+  elements.mobileInput.disabled = true;
+  
+  // Update button text
+  elements.btnText.textContent = 'OTP सत्यापित करें';
+  
+  // Update progress
+  updateProgressDots(1);
+  
+  // Show message
+  const message = response.message || 'OTP आपके मोबाइल पर भेजा गया है।';
+  showMessage(message, 'success');
+  
+  // Start OTP timer
+  startOTPTimer();
+}
+
+// Handle OTP verification success
 function handleOTPSuccess(mobile, messageOrResponse) {
+  // Stop timer
+  if (state.otpTimer) {
+    clearInterval(state.otpTimer);
+    state.otpTimer = null;
+  }
+  
   // Handle both string message and response object
   let message = '';
   let redirectUrl = '/harijap';  // default redirect
@@ -268,6 +450,33 @@ function handleOTPSuccess(mobile, messageOrResponse) {
   setTimeout(() => {
     window.location.href = redirectUrl;
   }, 1500);
+}
+
+// Start OTP timer
+function startOTPTimer() {
+  const expiryTime = state.otpExpiry;
+  
+  if (state.otpTimer) {
+    clearInterval(state.otpTimer);
+  }
+  
+  state.otpTimer = setInterval(() => {
+    const now = Date.now();
+    const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
+    
+    if (remaining <= 0) {
+      clearInterval(state.otpTimer);
+      state.otpTimer = null;
+      elements.otpTimer.textContent = 'OTP समय सीमा समाप्त हो गई';
+      elements.resendOtpBtn.style.display = 'block';
+      showMessage('OTP समय सीमा समाप्त हो गई। कृपया नया OTP प्राप्त करें।', 'error');
+      return;
+    }
+    
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    elements.otpTimer.textContent = `OTP ${minutes}:${seconds.toString().padStart(2, '0')} मिनट तक वैध है`;
+  }, 1000);
 }
 
 // Handle OTP error
@@ -325,8 +534,10 @@ function updateProgressDots(step = 0) {
   });
 }
 
-// Make sendOTP function globally accessible
+// Make functions globally accessible
 window.sendOTP = sendOTP;
+window.verifyOTP = verifyOTP;
+window.resendOTP = resendOTP;
 
 // Form validation on enter key
 elements.form.addEventListener('keypress', function(e) {

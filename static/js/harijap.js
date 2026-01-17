@@ -134,7 +134,11 @@ class HariJapCounter {
             console.log('🙏 Initializing Hari Jap Counter...');
 
             await this.authenticateUser();
-            await this.getServerTime(); // Get server time for date calculations
+            // CRITICAL: Load server time FIRST and wait for it to complete
+            // This ensures serverDate is set before loading state
+            const serverDate = await this.getServerTime();
+            console.log('🕐 Server date loaded:', serverDate);
+            
             this.cacheElements();
             this.initializeSpeechRecognition();
             this.attachEventListeners();
@@ -186,7 +190,7 @@ class HariJapCounter {
             'countDisplay', 'malaStatus', 'totalMalas', 'startBtn', 'stopBtn',
             'manualBtn', 'resetBtn', 'listeningStatus', 'recognitionText',
             'progressFill', 'remainingCount', 'celebration', 'userName',
-            'logoutBtn', 'sessionTime', 'todayCount', 'accuracy'
+            'logoutBtn', 'sessionTime', 'todayCount', 'accuracy', 'datetimeDisplay'
         ];
 
         elementIds.forEach(id => {
@@ -483,15 +487,22 @@ class HariJapCounter {
             }
         }, this.config.syncInterval);
 
-        // Server time sync (every 5 minutes)
-        setInterval(() => {
-            this.getServerTime();
+        // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
+        setInterval(async () => {
+            await this.getServerTime();
+            this.checkForDateChange();
+            this.updateDateTimeDisplay();
         }, 5 * 60 * 1000);
 
-        // Check for date change (every minute)
+        // Check for date change (every minute) - CRITICAL for IST midnight reset
         setInterval(() => {
             this.checkForDateChange();
         }, 60 * 1000);
+        
+        // Update date/time display every second
+        setInterval(() => {
+            this.updateDateTimeDisplay();
+        }, 1000);
 
         console.log('✅ Auto-save, sync, and time sync started');
     }
@@ -1029,18 +1040,25 @@ class HariJapCounter {
                 this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
                 
                 // CRITICAL FIX: Load today's data and check if date matches
-                const serverTodayDate = data.today_date || this.getTodayDateString();
-                const currentDate = this.getTodayDateString();
+                // Use server date from response, and compare with serverDate (IST) from getServerTime
+                const serverTodayDate = data.today_date || this.serverDate || this.getTodayDateString();
+                const currentServerDate = this.serverDate || this.getTodayDateString();
                 
-                // Only load today's data if the date matches
-                // If date changed, keep existing data (will be reset by checkForDateChange)
-                if (serverTodayDate === this.state.todayDate || serverTodayDate === currentDate) {
+                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate);
+                
+                // CRITICAL FIX: Always load today's data from server if server date matches current server date
+                // This ensures today's count persists after logout/login
+                // Only skip loading if the date has actually changed (IST midnight passed)
+                if (serverTodayDate === currentServerDate) {
+                    // Server date matches current date - load today's data from server
+                    // CRITICAL: Use todays_count if available, otherwise use today_words
+                    const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
+                    
                     // CRITICAL FIX: Use Math.max to prevent overwriting with stale server data
                     // This ensures local increments are not lost when sync happens
                     const serverTodayWords = data.today_words || 0;
                     const serverTodayPronunciations = data.today_pronunciations || 0;
                     const serverTodayMalas = data.today_malas || 0;
-                    const serverTodaysCount = data.todays_count || serverTodayWords;
                     
                     // Use the greater value to prevent data loss from stale server data
                     this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
@@ -1054,15 +1072,25 @@ class HariJapCounter {
                         this.state.todaysCount = this.state.todayWords;
                     }
                     
-                    console.log('✅ Today\'s data sync - using max values:', {
-                        localTodayWords: this.state.todayWords,
-                        serverTodayWords: serverTodayWords,
-                        localTodaysCount: this.state.todaysCount,
-                        serverTodaysCount: serverTodaysCount
+                    console.log('✅ Loaded today\'s data from server:', {
+                        todayWords: this.state.todayWords,
+                        todaysCount: this.state.todaysCount,
+                        todayDate: this.state.todayDate,
+                        serverTodayDate: serverTodayDate,
+                        currentServerDate: currentServerDate
                     });
                 } else {
-                    // Date changed - keep current state, will be handled by checkForDateChange
-                    console.log('📅 Server date different from client, keeping current state');
+                    // Date changed - server date is different from current date
+                    // This means IST midnight passed - reset will be handled by checkForDateChange
+                    console.log('📅 Date changed detected. Server stored:', serverTodayDate, 'Current:', currentServerDate);
+                    // Set todayDate to current server date to prevent false resets
+                    this.state.todayDate = currentServerDate;
+                    // Initialize today's counters to 0 for new day
+                    this.state.todayWords = 0;
+                    this.state.todayPronunciations = 0;
+                    this.state.todayMalas = 0;
+                    this.state.todaysCount = 0;
+                    this.state.currentMalaPronunciations = 0;
                 }
 
                 console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
@@ -1148,6 +1176,7 @@ class HariJapCounter {
         this.updateSessionStats();
         this.updateFullJapDisplay();
         this.updateMantraDisplay();
+        this.updateDateTimeDisplay();
     }
 
     updateCountDisplay() {
@@ -1229,6 +1258,57 @@ class HariJapCounter {
                 (this.metrics.recognitionSuccesses / this.metrics.recognitionAttempts) * 100
             );
             this.elements.accuracy.textContent = accuracy + '%';
+        }
+    }
+
+    updateDateTimeDisplay() {
+        if (this.elements.datetimeDisplay) {
+            // Use server time if available, otherwise use client time
+            let now;
+            if (this.serverTime) {
+                // Parse server datetime if available
+                try {
+                    now = new Date(this.serverTime);
+                    // Adjust for timezone to show IST
+                    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+                    const utcTime = now.getTime();
+                    now = new Date(utcTime + istOffset);
+                } catch (e) {
+                    now = new Date();
+                }
+            } else {
+                // Fallback to client time with IST adjustment
+                const nowUTC = new Date();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const utcTime = nowUTC.getTime() + (nowUTC.getTimezoneOffset() * 60 * 1000);
+                now = new Date(utcTime + istOffset);
+            }
+            
+            // Format date and time in IST
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'Asia/Kolkata'
+            };
+            
+            // Format: "16 जानेवारी 2025, 11:45:30 IST"
+            const dateStr = now.toLocaleDateString('mr-IN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            const timeStr = now.toLocaleTimeString('en-IN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            this.elements.datetimeDisplay.textContent = `${dateStr}, ${timeStr} IST`;
         }
     }
 
@@ -1610,6 +1690,11 @@ class HariJapCounter {
                     this.serverDate = data.date;
                     this.serverTime = data.datetime;
                     console.log('🕐 Server time loaded:', data.date, 'at', data.hour + ':' + data.minute + ':' + data.second);
+                    
+                    // Update date/time display when server time is loaded
+                    if (this.elements.datetimeDisplay) {
+                        this.updateDateTimeDisplay();
+                    }
                     
                     // If server time was loaded, trigger date check
                     if (this.state.isInitialized) {
