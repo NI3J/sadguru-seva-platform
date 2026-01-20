@@ -58,28 +58,30 @@ class HariJapCounter {
             // Use English for better recognition of "Jai Jai Ram Krishna Hari"
             // Can also use 'hi-IN' for Hindi or 'en-US' for US English
             recognitionLang: 'en-IN', // Changed to English (India) for better English recognition
-            minTimeBetweenCounts: 300, // Reduced from 500ms for faster recognition
+            minTimeBetweenCounts: 100, // Reduced to 100ms for faster recognition of continuous chanting
 
             // Auto-save settings
             autoSaveInterval: 10000,
             syncInterval: 30000,
 
-            // Target phrases for recognition
+            // Target phrases for recognition (prioritized order - exact matches first)
             targetPhrases: [
-                'जय जय राम कृष्णा हारी',
-                'जय जय राम कृष्ण हारी',
-                'जय जय राम कृष्णा हरी',
-                'जय जय राम कृष्णो हारी',
-                'जय श्री राम कृष्ण हरि',
-                'जय श्री राम कृष्णा हारी',
-                'जय श्री राम कृष्ण हारी',
-                'जय श्री राम कृष्णा हरी',
+                // Priority 1: Exact "Jai Jai" patterns (most preferred)
                 'jai jai ram krishna hari',
                 'jai jai ram krishna haari',
                 'jai jai ram krishna hare',
                 'jai jai ram krishna harry',
+                'जय जय राम कृष्णा हारी',
+                'जय जय राम कृष्ण हारी',
+                'जय जय राम कृष्णा हरी',
+                'जय जय राम कृष्णो हारी',
+                // Priority 2: Variations with "Shri" (fallback)
                 'jai shri ram krishna hari',
-                'jai shri ram krishna haari'
+                'jai shri ram krishna haari',
+                'जय श्री राम कृष्ण हरि',
+                'जय श्री राम कृष्णा हारी',
+                'जय श्री राम कृष्ण हारी',
+                'जय श्री राम कृष्णा हरी'
             ],
 
             // Milestone celebrations
@@ -247,7 +249,7 @@ class HariJapCounter {
 
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = false;
+            this.recognition.interimResults = true; // Enable interim results for faster recognition
             this.recognition.maxAlternatives = 5; // Increased to 5 for better matching of English phrases
             this.recognition.continuous = true;
 
@@ -598,7 +600,22 @@ class HariJapCounter {
         const results = event.results;
         const lastResult = results[results.length - 1];
 
-        if (!lastResult.isFinal) return;
+        // Process both interim and final results for faster recognition
+        // Check if we have a complete mantra even in interim results
+        let shouldProcess = lastResult.isFinal;
+        
+        // Also process interim results if they contain a complete mantra pattern
+        if (!shouldProcess && lastResult.length > 0) {
+            const interimTranscript = lastResult[0].transcript.toLowerCase();
+            // Quick check for complete mantra pattern in interim results
+            if (/\b(?:jai\s+jai|जय\s+जय)\s+ram\s+krishna\s+hari\b/i.test(interimTranscript) ||
+                /जय\s+जय\s+राम\s+कृष्णा?\s+हारी?/i.test(interimTranscript)) {
+                shouldProcess = true;
+                console.log('⚡ Processing interim result with complete mantra:', interimTranscript);
+            }
+        }
+        
+        if (!shouldProcess) return;
 
         let matchCount = 0;
         let bestTranscript = '';
@@ -656,7 +673,7 @@ class HariJapCounter {
                         }
                     }
                 }
-            }, 500); // Reduced delay for faster restart
+            }, 100); // Reduced delay to 100ms for faster continuous recognition
         } else {
             // Only stop if user explicitly stopped or page is hidden
             if (!this.state.isListening) {
@@ -717,7 +734,7 @@ class HariJapCounter {
                         }
                     }
                 }
-            }, 1000); // Slightly longer delay after error
+            }, 200); // Reduced delay to 200ms for faster recovery after errors
         }
     }
 
@@ -766,11 +783,18 @@ class HariJapCounter {
         // Clean the text to remove unwanted words like "Shri", "Shree", etc.
         const cleanedText = this.cleanMantraText(normalized);
         
-        console.log('🔍 Counting mantra in: "' + cleanedText + '"');
+        console.log('🔍 Counting mantra in: "' + cleanedText + '" (original: "' + text + '")');
         
         // CRITICAL FIX: Use pattern matching first to find actual complete mantras
         // This prevents double counting from overlapping patterns
+        // Try both cleaned and original text for better recognition
         let totalCount = this.countMantraPatterns(cleanedText);
+        
+        // If cleaned text didn't match, try original normalized text (before cleaning)
+        // This helps catch mantras that might have been affected by cleaning
+        if (totalCount === 0) {
+            totalCount = this.countMantraPatterns(normalized);
+        }
         
         // If pattern matching found something, use it
         if (totalCount > 0) {
@@ -778,8 +802,8 @@ class HariJapCounter {
             return totalCount;
         }
         
-        // Fallback: Try exact phrase matching (but only count once per recognition)
-        // This prevents double counting when speech has slight variations
+        // Fallback: Try exact phrase matching (prioritize exact "jai jai" patterns)
+        // Check target phrases in order (exact "jai jai" patterns first)
         for (let pattern of this.config.targetPhrases) {
             const patternLower = pattern.toLowerCase();
             
@@ -789,7 +813,7 @@ class HariJapCounter {
                 return 1;
             }
             
-            // If the pattern appears in the text, count occurrences
+            // If the pattern appears in the text, count non-overlapping occurrences
             if (cleanedText.includes(patternLower)) {
                 // Count non-overlapping occurrences
                 let count = 0;
@@ -804,6 +828,23 @@ class HariJapCounter {
                 
                 if (count > 0) {
                     console.log('✅ Found ' + count + ' occurrences of: ' + pattern);
+                    return count;
+                }
+            }
+            
+            // Also try matching in original normalized text
+            if (normalized.includes(patternLower)) {
+                let count = 0;
+                let searchText = normalized;
+                
+                while (searchText.includes(patternLower)) {
+                    const index = searchText.indexOf(patternLower);
+                    count++;
+                    searchText = searchText.substring(index + patternLower.length + 1);
+                }
+                
+                if (count > 0) {
+                    console.log('✅ Found ' + count + ' occurrences in original text: ' + pattern);
                     return count;
                 }
             }
@@ -823,21 +864,41 @@ class HariJapCounter {
         // CRITICAL FIX: Pattern-based matching that counts COMPLETE mantras only
         // This prevents double counting when text contains partial repetitions
         
-        // Primary pattern: Hindi "जय जय राम कृष्णा हारी" (complete mantra)
-        // This is the standard 5-word mantra
+        // PRIORITY 1: Exact "Jai Jai" pattern (Hindi) - most preferred
+        const hindiJaiJaiPattern = /जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi;
+        const hindiJaiJaiMatches = text.match(hindiJaiJaiPattern);
+        if (hindiJaiJaiMatches && hindiJaiJaiMatches.length > 0) {
+            console.log(`✅ Found ${hindiJaiJaiMatches.length} exact "जय जय" Hindi mantra(s):`, hindiJaiJaiMatches);
+            return hindiJaiJaiMatches.length;
+        }
+        
+        // PRIORITY 2: Exact "Jai Jai" pattern (English) - most preferred
+        const englishJaiJaiPattern = /\bjai\s+jai\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\b/gi;
+        const englishJaiJaiMatches = text.match(englishJaiJaiPattern);
+        if (englishJaiJaiMatches && englishJaiJaiMatches.length > 0) {
+            console.log(`✅ Found ${englishJaiJaiMatches.length} exact "jai jai" English mantra(s):`, englishJaiJaiMatches);
+            return englishJaiJaiMatches.length;
+        }
+        
+        // PRIORITY 3: Hindi pattern with variations (fallback)
         const hindiCompletePattern = /(?:जय|श्री)\s+(?:जय|श्री)\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)/gi;
-        
-        // English pattern: "jai jai ram krishna hari" (complete mantra)
-        const englishCompletePattern = /\b(?:jai|shri|shree)\s+(?:jai|shri|shree)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\b/gi;
-        
-        // Find all complete mantra matches (Hindi)
         const hindiMatches = text.match(hindiCompletePattern);
         if (hindiMatches && hindiMatches.length > 0) {
             console.log(`✅ Found ${hindiMatches.length} complete Hindi mantra(s):`, hindiMatches);
             return hindiMatches.length;
         }
         
-        // Find all complete mantra matches (English)
+        // PRIORITY 4: English pattern with variations (fallback, but prioritize jai over shri)
+        // First try to find patterns that start with "jai" (even if second word varies)
+        const englishJaiFirstPattern = /\bjai\s+(?:jai|shri|shree)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\b/gi;
+        const englishJaiFirstMatches = text.match(englishJaiFirstPattern);
+        if (englishJaiFirstMatches && englishJaiFirstMatches.length > 0) {
+            console.log(`✅ Found ${englishJaiFirstMatches.length} English mantra(s) starting with "jai":`, englishJaiFirstMatches);
+            return englishJaiFirstMatches.length;
+        }
+        
+        // PRIORITY 5: Full English pattern with all variations (last resort)
+        const englishCompletePattern = /\b(?:jai|shri|shree)\s+(?:jai|shri|shree)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\b/gi;
         const englishMatches = text.match(englishCompletePattern);
         if (englishMatches && englishMatches.length > 0) {
             console.log(`✅ Found ${englishMatches.length} complete English mantra(s):`, englishMatches);
@@ -905,7 +966,6 @@ class HariJapCounter {
     cleanMantraText(text) {
         // Remove unwanted words that might interfere with mantra recognition
         const unwantedWords = [
-            'shri', 'shree', 'श्री', 'श्री', 'sri', 'sree',
             'om', 'ओम', 'aum', 'औम',
             'namah', 'नमः', 'namo', 'नमो',
             'swami', 'स्वामी', 'guruji', 'गुरुजी',
@@ -920,10 +980,11 @@ class HariJapCounter {
             cleanedText = cleanedText.replace(regex, '');
         });
         
+        // CRITICAL FIX: Don't remove "shri" or "shree" - let pattern matching handle it
+        // Instead, normalize variations to help with matching
         // Normalize common word substitutions
         // Handle cases where speech recognition substitutes words
         cleanedText = cleanedText
-            .replace(/\bश्री\b/g, 'जय')  // Replace श्री with जय for consistency
             .replace(/\bहरि\b/g, 'हारी')  // Normalize हरि to हारी
             .replace(/\bहरी\b/g, 'हारी')  // Normalize हरी to हारी
             .replace(/\bकृष्ण\b/g, 'कृष्णा'); // Normalize कृष्ण to कृष्णा
