@@ -101,11 +101,24 @@
 
           <div class="programs-content" id="programs-{{ loop.index }}">
             {% if day.programs %}
-              <ul>
+              <ul class="programs-list-items">
                 {% for program in day.programs %}
                   <li>
-                    • {{ program }}
-                    <button class="share-btn" data-program="{{ program }}">📤</button>
+                    <div class="program-item">
+                      <div class="program-text">
+                        <span class="program-bullet">•</span>
+                        {{ program.content if program.content is defined else program }}
+                      </div>
+                      {% if program.image_path is defined and program.image_path %}
+                        <div class="program-image-container">
+                          <img src="{{ url_for('static', filename=program.image_path) }}" 
+                               alt="कार्यक्रम प्रतिमा" 
+                               class="program-image"
+                               loading="lazy">
+                        </div>
+                      {% endif %}
+                      <button class="share-btn" data-program="{{ program.content if program.content is defined else program }}">📤</button>
+                    </div>
                   </li>
                 {% endfor %}
               </ul>

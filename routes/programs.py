@@ -2,6 +2,7 @@
 import os
 import datetime
 from collections import defaultdict
+from werkzeug.utils import secure_filename
 from flask import (
     Blueprint, render_template, request, flash,
     redirect, url_for, session, current_app
@@ -17,7 +18,7 @@ def fetch_daily_programs():
     try:
         connection = get_db_connection()
         cursor = connection.cursor(DictCursor)
-        cursor.execute("SELECT date, content FROM daily_programs ORDER BY date DESC")
+        cursor.execute("SELECT date, content, image_path FROM daily_programs ORDER BY date DESC")
         records = cursor.fetchall()
         print(f"✅ Fetched {len(records)} program records from database")
     except Exception as err:
@@ -36,7 +37,19 @@ def group_programs_by_day(records):
     for entry in records:
         # Convert date to string if it's a date object
         date_str = str(entry['date']) if entry['date'] else 'Unknown'
-        grouped[date_str].append(entry['content'])
+        # Handle both old format (string) and new format (dict with image_path)
+        if isinstance(entry.get('content'), str):
+            program_data = {
+                'content': entry['content'],
+                'image_path': entry.get('image_path')
+            }
+        else:
+            # Fallback for old format
+            program_data = {
+                'content': entry.get('content', ''),
+                'image_path': entry.get('image_path')
+            }
+        grouped[date_str].append(program_data)
     
     # Sort by date descending
     sorted_dates = sorted(grouped.items(), key=lambda x: x[0], reverse=True)
@@ -114,6 +127,7 @@ def programs():
 # 📝 Route: Submit New Program
 @programs_bp.route('/submit_program', methods=['POST'])
 def submit_program():
+    image_path = None
     try:
         date = request.form.get('date')
         content = request.form.get('content')
@@ -125,11 +139,38 @@ def submit_program():
             flash("⚠️ कृपया सर्व आवश्यक माहिती भरा.", 'error')
             return redirect(url_for('admin.admin_dashboard'))
         
+        # Handle image upload
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file and image_file.filename:
+                # Validate file extension
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+                filename = secure_filename(image_file.filename)
+                if '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions:
+                    # Create uploads directory if it doesn't exist
+                    upload_folder = os.path.join(current_app.static_folder, 'uploads', 'programs')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Generate unique filename
+                    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                    file_extension = filename.rsplit('.', 1)[1].lower()
+                    unique_filename = f"{timestamp}_{filename}"
+                    file_path = os.path.join(upload_folder, unique_filename)
+                    
+                    # Save the file
+                    image_file.save(file_path)
+                    
+                    # Store relative path for database
+                    image_path = f"uploads/programs/{unique_filename}"
+                    print(f"✅ Image uploaded: {image_path}")
+                else:
+                    flash("⚠️ अवैध प्रतिमा फॉर्मेट. फक्त PNG, JPG, JPEG, GIF किंवा WEBP फाइल्स परवानगी आहेत.", 'warning')
+        
         connection = get_db_connection()
         cursor = connection.cursor()
         cursor.execute(
-            "INSERT INTO daily_programs (date, content, created_by) VALUES (%s, %s, %s)",
-            (date, content, created_by)
+            "INSERT INTO daily_programs (date, content, image_path, created_by) VALUES (%s, %s, %s, %s)",
+            (date, content, image_path, created_by)
         )
         connection.commit()
         

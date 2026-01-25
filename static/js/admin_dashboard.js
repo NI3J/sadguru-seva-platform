@@ -62,6 +62,7 @@ class AdminDashboard {
     setupProgramFormValidation(form) {
         const dateField = document.getElementById('date');
         const contentField = document.getElementById('content');
+        const imageField = document.getElementById('image');
 
         // Real-time validation
         if (dateField) {
@@ -77,6 +78,13 @@ class AdminDashboard {
 
             // Character counter
             this.addCharacterCounter(contentField);
+        }
+
+        // Image preview
+        if (imageField) {
+            imageField.addEventListener('change', (e) => {
+                this.handleImagePreview(e);
+            });
         }
     }
 
@@ -422,6 +430,47 @@ class AdminDashboard {
                 e.target.click();
             }
         });
+    }
+
+    handleImagePreview(event) {
+        const file = event.target.files[0];
+        const previewDiv = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        if (file) {
+            // Validate file type
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.showFieldError(event.target, 'कृपया वैध प्रतिमा फाइल निवडा (PNG, JPG, GIF, WEBP)');
+                event.target.value = '';
+                if (previewDiv) previewDiv.style.display = 'none';
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                this.showFieldError(event.target, 'प्रतिमा फाइल 5MB पेक्षा लहान असावी');
+                event.target.value = '';
+                if (previewDiv) previewDiv.style.display = 'none';
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (previewImg) {
+                    previewImg.src = e.target.result;
+                }
+                if (previewDiv) {
+                    previewDiv.style.display = 'block';
+                }
+            };
+            reader.readAsDataURL(file);
+            this.clearFieldError(event.target);
+        } else {
+            if (previewDiv) previewDiv.style.display = 'none';
+        }
     }
 
     initializeAnimations() {

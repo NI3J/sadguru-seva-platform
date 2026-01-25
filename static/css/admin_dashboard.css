@@ -321,3 +321,49 @@ body {
     100% { transform: rotate(360deg); }
   }
 }
+
+/* Image Upload Styles */
+.form-hint {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 5px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.image-preview {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+  text-align: center;
+}
+
+.image-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+input[type="file"] {
+  padding: 8px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+input[type="file"]:hover {
+  border-color: #4B0082;
+  background: rgba(75, 0, 130, 0.05);
+}
+
+input[type="file"]:focus {
+  outline: none;
+  border-color: #4B0082;
+  box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+}

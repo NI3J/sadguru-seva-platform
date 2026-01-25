@@ -43,7 +43,7 @@
           </div>
           
           <div class="form-wrapper">
-            <form method="POST" action="{{ url_for('programs.submit_program') }}" id="programForm" class="program-form">
+            <form method="POST" action="{{ url_for('programs.submit_program') }}" id="programForm" class="program-form" enctype="multipart/form-data">
               <div class="form-row">
                 <div class="form-group">
                   <label for="date" class="form-label">
@@ -80,6 +80,26 @@
                   >{{ request.form.get('content', '') }}</textarea>
                   <div class="character-count">
                     <span id="charCount">0</span>/500 अक्षरे
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="image" class="form-label">
+                    <span class="label-icon">🖼️</span>
+                    <span class="label-text">प्रतिमा अपलोड करा:</span>
+                  </label>
+                  <input 
+                    type="file" 
+                    name="image" 
+                    id="image" 
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                    class="form-input"
+                  >
+                  <small class="form-hint">PNG, JPG, JPEG, GIF किंवा WEBP फाइल्स (अपलोड केलेली प्रतिमा दैनिक कार्यक्रमात दिसेल)</small>
+                  <div id="imagePreview" class="image-preview" style="display: none; margin-top: 10px;">
+                    <img id="previewImg" src="" alt="Preview" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 2px solid #ddd;">
                   </div>
                 </div>
               </div>
