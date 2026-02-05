@@ -59,7 +59,7 @@ class HariJapCounter {
             // Use English for better recognition of "Jai Jai Ram Krishna Hari"
             // Can also use 'hi-IN' for Hindi or 'en-US' for US English
             recognitionLang: 'en-IN', // Changed to English (India) for better English recognition
-            minTimeBetweenCounts: 50, // Reduced to 50ms for very fast recognition of continuous chanting
+            minTimeBetweenCounts: 300, // Minimum time between counts to prevent automatic counting
 
             // Auto-save settings
             autoSaveInterval: 10000,
@@ -250,7 +250,7 @@ class HariJapCounter {
 
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = true; // Enable interim results for faster recognition
+            this.recognition.interimResults = false; // Only process final results to prevent automatic counting
             this.recognition.maxAlternatives = 5; // Increased to 5 for better matching of English phrases
             this.recognition.continuous = true;
 
@@ -599,79 +599,41 @@ class HariJapCounter {
     onRecognitionResult(event) {
         const now = Date.now();
         const results = event.results;
-        
-        // CRITICAL FIX: Process ALL results, not just the last one
-        // This allows detection of multiple mantras in continuous chanting
-        let totalMatchCount = 0;
-        let bestTranscript = '';
-        let processedResults = [];
+        const lastResult = results[results.length - 1];
 
-        // Process all results to find all mantras
-        for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
-            const result = results[resultIndex];
-            
-            // Process both interim and final results for faster recognition
-            let shouldProcess = result.isFinal;
-            
-            // Also process interim results if they contain a complete mantra pattern
-            if (!shouldProcess && result.length > 0) {
-                const interimTranscript = result[0].transcript.toLowerCase();
-                // Quick check for complete mantra pattern in interim results
-                if (/\b(?:jai\s+jai|जय\s+जय)\s+ram\s+krishna\s+hari\b/i.test(interimTranscript) ||
-                    /जय\s+जय\s+राम\s+कृष्णा?\s+हारी?/i.test(interimTranscript)) {
-                    shouldProcess = true;
-                    console.log('⚡ Processing interim result with complete mantra:', interimTranscript);
-                }
-            }
-            
-            if (!shouldProcess) continue;
-
-            // Check all alternatives for this result
-            for (let i = 0; i < result.length; i++) {
-                const transcript = result[i].transcript;
-                const confidence = result[i].confidence;
-
-                if (i === 0 && resultIndex === results.length - 1) {
-                    bestTranscript = transcript; // Use last result's first alternative for display
-                }
-
-                console.log('🎤 Result ' + (resultIndex + 1) + ', Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
-
-                const count = this.countMantraRepetitions(transcript);
-                if (count > 0) {
-                    // Only count if we haven't processed this result yet
-                    if (!processedResults.includes(resultIndex)) {
-                        totalMatchCount += count;
-                        processedResults.push(resultIndex);
-                        console.log('✅ MATCH: ' + count + ' repetitions in result ' + (resultIndex + 1) + ', alt ' + (i + 1));
-                        break; // Use first matching alternative
-                    }
-                }
-            }
+        // CRITICAL FIX: Only process FINAL results to prevent automatic counting
+        // This ensures count only increases when user actually says the mantra
+        if (!lastResult.isFinal) {
+            return; // Don't process interim results - prevents automatic counting
         }
 
-        // If no matches found in all results, check the last result's best transcript
-        if (totalMatchCount === 0 && results.length > 0) {
-            const lastResult = results[results.length - 1];
-            if (lastResult.length > 0) {
-                bestTranscript = lastResult[0].transcript;
-                this.displayRecognizedText(bestTranscript);
-                this.metrics.recognitionAttempts++;
-                
-                if (bestTranscript.trim().length > 0) {
-                    console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
-                    this.handleInvalidSpeech();
-                }
-                return;
+        let matchCount = 0;
+        let bestTranscript = '';
+
+        // Check all alternatives in the final result
+        for (let i = 0; i < lastResult.length; i++) {
+            const transcript = lastResult[i].transcript;
+            const confidence = lastResult[i].confidence;
+
+            if (i === 0) bestTranscript = transcript;
+
+            console.log('🎤 Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
+
+            const count = this.countMantraRepetitions(transcript);
+            if (count > 0) {
+                matchCount = count;
+                bestTranscript = transcript;
+                console.log('✅ MATCH: ' + count + ' repetitions in alt ' + (i + 1));
+                break; // Use first matching alternative
             }
         }
 
         this.displayRecognizedText(bestTranscript);
         this.metrics.recognitionAttempts++;
 
-        if (totalMatchCount > 0) {
-            console.log('✅ Total mantras found across all results: ' + totalMatchCount);
-            this.handleSuccessfulRecognition(totalMatchCount, now);
+        if (matchCount > 0) {
+            console.log('✅ Found ' + matchCount + ' mantra(s) in recognition');
+            this.handleSuccessfulRecognition(matchCount, now);
         } else if (bestTranscript.trim().length > 0) {
             console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
             this.handleInvalidSpeech();
@@ -820,34 +782,34 @@ class HariJapCounter {
     }
 
     handleSuccessfulRecognition(count, timestamp) {
-        // CRITICAL FIX: Allow rapid recognition for continuous chanting
-        // Only prevent duplicates if it's the exact same count within a very short time
-        const timeSinceLastRecognition = timestamp - this.state.lastRecognitionTime;
-        if (timeSinceLastRecognition < 50 && count === this.state.lastRecognitionCount) {
-            console.log('⏭️ Duplicate detection - skipping');
+        // CRITICAL FIX: Prevent too-rapid duplicates to avoid automatic counting
+        // Only process if enough time has passed since last recognition
+        if (timestamp - this.state.lastRecognitionTime < this.config.minTimeBetweenCounts) {
+            console.log('⏭️ Too rapid - skipping to prevent automatic counting');
             return;
         }
 
         this.metrics.recognitionSuccesses++;
         this.state.lastRecognitionTime = timestamp;
-        this.state.lastRecognitionCount = count; // Store last count for duplicate detection
         this.updateActivity(); // Reset session timeout on successful recognition
 
         // Handle complete mantra disappearing animation ONCE (not per count)
         this.disappearCompleteMantra();
 
         // Calculate total words added (each complete sequence = 5 words)
-        // CRITICAL: Ensure 5 mantras = 25 words (5 words per mantra)
+        // CRITICAL: Each mantra = 5 words, rosary count increases by 1 per mantra
+        // Example: 1 mantra = 5 words + 1 rosary, 2 mantras = 10 words + 2 rosary
         const totalWordsAdded = count * this.config.wordsPerPronunciation;
 
-        // Increment counter only once with the total count
+        // Increment counter - count mantras = count * 5 words, count rosary increments
+        // The incrementCounterByCount function handles: words = count * 5, rosary = count
         this.incrementCounterByCount(count);
 
         // Show appropriate notification with word count
         if (count === 1) {
-            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले!', 'success', 600);
+            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले! (1 माला)', 'success', 800);
         } else {
-            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले!', 'success', 800);
+            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले! (' + count + ' माला)', 'success', 1000);
         }
 
         this.triggerSuccessFeedback();
