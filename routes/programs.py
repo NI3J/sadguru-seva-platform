@@ -181,14 +181,22 @@ def submit_program():
         print(f"⚠️ Database error: {err}")
         import traceback
         traceback.print_exc()
-        flash("⚠️ कार्यक्रम नोंदवता आला नाही. कृपया पुन्हा प्रयत्न करा.", 'error')
+        # More specific error message
+        error_msg = str(err)
+        if 'connection' in error_msg.lower() or 'database' in error_msg.lower():
+            flash("⚠️ डेटाबेस कनेक्शन त्रुटी. कृपया पुन्हा प्रयत्न करा.", 'error')
+        elif 'duplicate' in error_msg.lower() or 'unique' in error_msg.lower():
+            flash("⚠️ हा कार्यक्रम आधीच नोंदवला गेला आहे.", 'warning')
+        else:
+            flash("⚠️ कार्यक्रम व्यवस्थीतरित्या सबमीट झाला नाही. कृपया पुन्हा प्रयत्न करा.", 'error')
     finally:
         if 'cursor' in locals():
             cursor.close()
         if 'connection' in locals():
             connection.close()
     
-    return redirect(url_for('programs.programs'))
+    # Redirect to admin dashboard instead of programs page to show flash message
+    return redirect(url_for('admin.admin_dashboard'))
 
 # 📽️ Route: Sadguru Katha Page
 @programs_bp.route('/katha')
