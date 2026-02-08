@@ -67,11 +67,15 @@ class HariJapCounter {
 
             // Target phrases for recognition (prioritized order - exact matches first)
             targetPhrases: [
-                // Priority 1: Exact "Jai Jai" patterns (most preferred)
+                // Priority 1: Exact "Jai Jai" / "Jay Jay" patterns (most preferred)
                 'jai jai ram krishna hari',
                 'jai jai ram krishna haari',
                 'jai jai ram krishna hare',
                 'jai jai ram krishna harry',
+                'jay jay ram krishna hari',
+                'jay jay ram krishna haari',
+                'jay jay ram krishna hare',
+                'jay jay ram krishna harry',
                 'जय जय राम कृष्णा हारी',
                 'जय जय राम कृष्ण हारी',
                 'जय जय राम कृष्णा हरी',
@@ -79,6 +83,8 @@ class HariJapCounter {
                 // Priority 2: Variations with "Shri" (fallback)
                 'jai shri ram krishna hari',
                 'jai shri ram krishna haari',
+                'jay shri ram krishna hari',
+                'jay shri ram krishna haari',
                 'जय श्री राम कृष्ण हरि',
                 'जय श्री राम कृष्णा हारी',
                 'जय श्री राम कृष्ण हारी',
@@ -830,9 +836,34 @@ class HariJapCounter {
         // Clean the text to remove unwanted words like "Shri", "Shree", etc.
         const cleanedText = this.cleanMantraText(normalized);
         
-        console.log('🔍 Counting mantra in: "' + cleanedText + '" (original: "' + text + '")');
+        console.log('🔍 Counting mantra in: "' + cleanedText + '" (original: "' + text + '", normalized: "' + normalized + '")');
         
-        // CRITICAL FIX: Use pattern matching first to find actual complete mantras
+        // PRIORITY 1: Try exact phrase matching first (fastest and most accurate)
+        // CRITICAL: Only accept patterns that start with "जय जय", "jai jai", or "jay jay" for 100% accuracy
+        // Filter to only patterns that start with "jai jai", "jay jay", or "जय जय"
+        const strictPatterns = this.config.targetPhrases.filter(pattern => {
+            const lower = pattern.toLowerCase();
+            return lower.startsWith('jai jai') || lower.startsWith('jay jay') || lower.startsWith('जय जय');
+        });
+        
+        // First check for exact matches (most common case)
+        for (let pattern of strictPatterns) {
+            const patternLower = pattern.toLowerCase();
+            
+            // If the cleaned text exactly matches the pattern, count as 1
+            if (cleanedText === patternLower || cleanedText.trim() === patternLower) {
+                console.log('✅ Exact phrase match: ' + pattern);
+                return 1;
+            }
+            
+            // Also check normalized text (before cleaning)
+            if (normalized === patternLower || normalized.trim() === patternLower) {
+                console.log('✅ Exact phrase match in normalized text: ' + pattern);
+                return 1;
+            }
+        }
+        
+        // PRIORITY 2: Use pattern matching to find multiple mantras in continuous speech
         // This prevents double counting from overlapping patterns
         // Try both cleaned and original text for better recognition
         let totalCount = this.countMantraPatterns(cleanedText);
@@ -849,22 +880,9 @@ class HariJapCounter {
             return totalCount;
         }
         
-        // Fallback: Try exact phrase matching (ONLY patterns starting with "jai jai" or "जय जय")
-        // CRITICAL: Only accept patterns that start with "जय जय" or "jai jai" for 100% accuracy
-        // Filter to only patterns that start with "jai jai" or "जय जय"
-        const strictPatterns = this.config.targetPhrases.filter(pattern => {
-            const lower = pattern.toLowerCase();
-            return lower.startsWith('jai jai') || lower.startsWith('जय जय');
-        });
-        
+        // PRIORITY 3: Fallback - Try phrase matching for partial matches (for continuous repetitions)
         for (let pattern of strictPatterns) {
             const patternLower = pattern.toLowerCase();
-            
-            // If the cleaned text exactly matches the pattern, count as 1
-            if (cleanedText === patternLower) {
-                console.log('✅ Exact match: ' + pattern);
-                return 1;
-            }
             
             // If the pattern appears in the text, count non-overlapping occurrences
             // Use a more robust method to count multiple continuous repetitions
@@ -936,15 +954,17 @@ class HariJapCounter {
 
     countMantraPatterns(text) {
         // CRITICAL FIX: Pattern-based matching that counts COMPLETE mantras only
-        // STRICT REQUIREMENT: Must start with "जय जय" (jai jai) - NO partial mantras accepted
+        // STRICT REQUIREMENT: Must start with "जय जय" (jai jai/jay jay) - NO partial mantras accepted
         // This ensures 100% accuracy by rejecting "राम कृष्णा हारी" without "जय जय"
         // Enhanced to detect multiple mantras in continuous chanting
+        
+        console.log('🔍 Pattern matching on text: "' + text + '"');
         
         // PRIORITY 1: Exact "जय जय" pattern (Hindi) - STRICT REQUIREMENT
         // Pattern must start with "जय जय" - this ensures we don't accept partial mantras
         // Enhanced to catch multiple continuous repetitions - allow flexible spacing between repetitions
         // Pattern: जय जय राम कृष्णा हारी (with variations for कृष्णा and हारी)
-        const hindiJaiJaiPattern = /(?:^|[\s])(जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि))(?=[\s]|$|जय|jai)/gi;
+        const hindiJaiJaiPattern = /(?:^|[\s])(जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि))(?=[\s]|$|जय|jai|jay)/gi;
         let hindiJaiJaiMatches = [];
         let match;
         // Reset regex lastIndex to ensure we get all matches
@@ -961,43 +981,71 @@ class HariJapCounter {
             return hindiJaiJaiMatches.length;
         }
         
-        // PRIORITY 2: Exact "jai jai" pattern (English) - STRICT REQUIREMENT
-        // Pattern must start with "jai jai" - this ensures we don't accept partial mantras
+        // PRIORITY 2: Exact "jai jai" / "jay jay" pattern (English) - STRICT REQUIREMENT
+        // Pattern must start with "jai jai" or "jay jay" - this ensures we don't accept partial mantras
         // Enhanced pattern to catch multiple mantras in continuous speech
         // Allow for cases where mantras are said continuously without clear separation
-        const englishJaiJaiPattern = /(?:^|[\s])(jai\s+jai\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary))(?=[\s]|$|jai|जय)/gi;
+        // Accept both "jai" and "jay" pronunciations (common speech recognition variations)
+        // More flexible pattern: allow word boundaries or start/end of string
+        // First try the full pattern for multiple mantras
+        const englishJaiJaiPattern = /(?:^|[\s])((?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary))(?=[\s]|$|(?:jai|jay)|जय)/gi;
         let englishJaiJaiMatches = [];
         // Reset regex lastIndex to ensure we get all matches
         englishJaiJaiPattern.lastIndex = 0;
         while ((match = englishJaiJaiPattern.exec(text)) !== null) {
             englishJaiJaiMatches.push(match[1]);
+            console.log('🔍 Matched English pattern:', match[1], 'at index', match.index);
             // Prevent infinite loop if regex doesn't advance
             if (match.index === englishJaiJaiPattern.lastIndex) {
                 englishJaiJaiPattern.lastIndex++;
             }
         }
         if (englishJaiJaiMatches.length > 0) {
-            console.log(`✅ Found ${englishJaiJaiMatches.length} exact "jai jai" English mantra(s):`, englishJaiJaiMatches);
+            console.log(`✅ Found ${englishJaiJaiMatches.length} exact "jai/jay jai/jay" English mantra(s):`, englishJaiJaiMatches);
             return englishJaiJaiMatches.length;
         }
         
-        // CRITICAL: Do NOT accept patterns that don't start with "जय जय" or "jai jai"
+        // If no matches found, try a simpler pattern for single mantra detection
+        // This helps catch cases where the text is exactly one mantra (most common case)
+        // Use a more permissive pattern that allows for slight variations
+        const trimmedText = text.trim();
+        const simpleEnglishPattern = /^(?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)$/i;
+        if (simpleEnglishPattern.test(trimmedText)) {
+            console.log('✅ Found single English mantra via simple pattern');
+            return 1;
+        }
+        
+        // Also try with flexible spacing (in case normalization didn't catch all cases)
+        const flexibleEnglishPattern = /^(?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\s*$/i;
+        if (flexibleEnglishPattern.test(trimmedText)) {
+            console.log('✅ Found single English mantra via flexible pattern');
+            return 1;
+        }
+        
+        const simpleHindiPattern = /^जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)$/i;
+        if (simpleHindiPattern.test(trimmedText)) {
+            console.log('✅ Found single Hindi mantra via simple pattern');
+            return 1;
+        }
+        
+        // CRITICAL: Do NOT accept patterns that don't start with "जय जय" or "jai jai"/"jay jay"
         // This ensures 100% accuracy - if only "राम कृष्णा हारी" is recognized, it should NOT count
         // Return 0 to maintain accuracy requirement
         
+        console.log('❌ No pattern match found in: "' + text + '"');
         return 0;
     }
 
     isMantraPhrase(text) {
-        // CRITICAL: Only accept phrases that start with "जय जय" or "jai jai"
+        // CRITICAL: Only accept phrases that start with "जय जय", "jai jai", or "jay jay"
         // This ensures we don't accept partial mantras like "राम कृष्णा हारी"
         const normalized = this.normalizeText(text);
         const cleanedText = this.cleanMantraText(normalized);
 
-        // Filter to only patterns that start with "jai jai" or "जय जय"
+        // Filter to only patterns that start with "jai jai", "jay jay", or "जय जय"
         const strictPatterns = this.config.targetPhrases.filter(pattern => {
             const lower = pattern.toLowerCase();
-            return lower.startsWith('jai jai') || lower.startsWith('जय जय');
+            return lower.startsWith('jai jai') || lower.startsWith('jay jay') || lower.startsWith('जय जय');
         });
 
         // Exact match with cleaned text
