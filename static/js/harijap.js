@@ -1,9 +1,10 @@
 /**
  * =====================================================================
- * HARI JAP COUNTER APPLICATION - FIXED VERSION
+ * HARI JAP COUNTER APPLICATION - FINAL FIXED VERSION
  * =====================================================================
  * Voice-recognition based counter for chanting "जय जय राम कृष्णा हारी"
  * Features: Multi-repetition detection, instant feedback, milestone tracking
+ * FIXED: Enhanced fuzzy matching for better speech recognition
  * =====================================================================
  */
 
@@ -55,40 +56,38 @@ class HariJapCounter {
             wordsPerPronunciation: 5,
             pronunciationsPerMala: 108,
 
-            // Recognition settings
-            // Use English for better recognition of "Jai Jai Ram Krishna Hari"
-            // Can also use 'hi-IN' for Hindi or 'en-US' for US English
-            recognitionLang: 'en-IN', // Changed to English (India) for better English recognition
-            minTimeBetweenCounts: 300, // Minimum time between counts to prevent automatic counting
+            // Recognition settings - CRITICAL FIX
+            recognitionLang: 'en-IN', // Keep English (India) for better recognition
+            minTimeBetweenCounts: 300,
 
             // Auto-save settings
             autoSaveInterval: 10000,
             syncInterval: 30000,
 
-            // Target phrases for recognition (prioritized order - exact matches first)
+            // SIMPLIFIED target phrases - prioritize most common variations
             targetPhrases: [
-                // Priority 1: Exact "Jai Jai" / "Jay Jay" patterns (most preferred)
+                // Primary English patterns (most common)
                 'jai jai ram krishna hari',
-                'jai jai ram krishna haari',
-                'jai jai ram krishna hare',
-                'jai jai ram krishna harry',
                 'jay jay ram krishna hari',
+                'jai jai ram krishna haari',
                 'jay jay ram krishna haari',
+                'jai jai ram krishna hare',
                 'jay jay ram krishna hare',
-                'jay jay ram krishna harry',
+                
+                // Common speech recognition variations
+                'jai jai ramkrishna hari',     // Sometimes recognized as one word
+                'jay jay ramkrishna hari',
+                'jai jai ram krishn hari',     // Missing 'a' in krishna
+                'jay jay ram krishn hari',
+                
+                // With "Shri" (less common but valid)
+                'jai shri ram krishna hari',
+                'jay shri ram krishna hari',
+                
+                // Hindi patterns (if Hindi is spoken)
                 'जय जय राम कृष्णा हारी',
                 'जय जय राम कृष्ण हारी',
-                'जय जय राम कृष्णा हरी',
-                'जय जय राम कृष्णो हारी',
-                // Priority 2: Variations with "Shri" (fallback)
-                'jai shri ram krishna hari',
-                'jai shri ram krishna haari',
-                'jay shri ram krishna hari',
-                'jay shri ram krishna haari',
-                'जय श्री राम कृष्ण हरि',
-                'जय श्री राम कृष्णा हारी',
-                'जय श्री राम कृष्ण हारी',
-                'जय श्री राम कृष्णा हरी'
+                'जय जय राम कृष्णा हरी'
             ],
 
             // Milestone celebrations
@@ -256,8 +255,8 @@ class HariJapCounter {
 
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = false; // Only process final results to prevent automatic counting
-            this.recognition.maxAlternatives = 5; // Increased to 5 for better matching of English phrases
+            this.recognition.interimResults = false;
+            this.recognition.maxAlternatives = 5;
             this.recognition.continuous = true;
 
             // Mobile optimization
@@ -267,14 +266,18 @@ class HariJapCounter {
                 console.log('📱 Mobile device detected - optimized recognition');
             }
             
-            console.log('✅ Recognition language set to:', this.config.recognitionLang);
+            // CRITICAL: Log what we're listening for
+            console.log('✅ Recognition initialized');
+            console.log('📝 Listening for variations of: "Jay Jay Ram Krishna Hari"');
+            console.log('🌐 Language:', this.config.recognitionLang);
+            console.log('📋 Accepted patterns:', this.config.targetPhrases.slice(0, 6));
 
             // Attach recognition event handlers
             this.recognition.onresult = (e) => this.onRecognitionResult(e);
             this.recognition.onend = () => this.onRecognitionEnd();
             this.recognition.onerror = (e) => this.onRecognitionError(e);
             this.recognition.onstart = () => {
-                console.log('🎤 Recognition started');
+                console.log('🎤 Recognition started - Listening...');
                 this.state.isListening = true;
                 this.updateUI();
             };
@@ -504,19 +507,6 @@ class HariJapCounter {
                 this.saveToServer();
             }
         }, this.config.autoSaveInterval);
-
-        // Server sync - BUT don't overwrite local state with stale data
-        // Only sync when page is visible to prevent overwriting active sessions
-        // CRITICAL FIX: Disable periodic sync to prevent count resets
-        // Counts will be loaded on initial page load and saved periodically
-        // This prevents overwriting local increments with stale server data
-        // setInterval(() => {
-        //     // Only sync if page is visible and not actively listening
-        //     // This prevents overwriting local counts with stale server data during active chanting
-        //     if (!document.hidden && !this.state.isListening) {
-        //         this.loadStateFromServer();
-        //     }
-        // }, this.config.syncInterval);
 
         // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
         setInterval(async () => {
@@ -827,330 +817,121 @@ class HariJapCounter {
     }
 
     // ================================================================
-    // MANTRA DETECTION LOGIC
+    // MANTRA DETECTION LOGIC - FINAL FIXED VERSION
     // ================================================================
 
     countMantraRepetitions(text) {
         const normalized = this.normalizeText(text);
-
-        // Clean the text to remove unwanted words like "Shri", "Shree", etc.
-        const cleanedText = this.cleanMantraText(normalized);
+        const cleaned = this.cleanMantraText(normalized);
         
-        console.log('🔍 Counting mantra in: "' + cleanedText + '" (original: "' + text + '", normalized: "' + normalized + '")');
+        console.log('🔍 Original text:', text);
+        console.log('🔍 Normalized text:', normalized);
+        console.log('🔍 Cleaned text:', cleaned);
         
-        // PRIORITY 1: Try exact phrase matching first (fastest and most accurate)
-        // CRITICAL: Only accept patterns that start with "जय जय", "jai jai", or "jay jay" for 100% accuracy
-        // Filter to only patterns that start with "jai jai", "jay jay", or "जय जय"
-        const strictPatterns = this.config.targetPhrases.filter(pattern => {
-            const lower = pattern.toLowerCase();
-            return lower.startsWith('jai jai') || lower.startsWith('jay jay') || lower.startsWith('जय जय');
-        });
-        
-        // First check for exact matches (most common case)
-        for (let pattern of strictPatterns) {
+        // STRATEGY 1: Exact phrase matching (fastest and most accurate)
+        for (let pattern of this.config.targetPhrases) {
             const patternLower = pattern.toLowerCase();
             
-            // If the cleaned text exactly matches the pattern, count as 1
-            if (cleanedText === patternLower || cleanedText.trim() === patternLower) {
-                console.log('✅ Exact phrase match: ' + pattern);
+            // Exact match
+            if (normalized === patternLower || cleaned === patternLower) {
+                console.log('✅ EXACT MATCH:', pattern);
                 return 1;
             }
             
-            // Also check normalized text (before cleaning)
-            if (normalized === patternLower || normalized.trim() === patternLower) {
-                console.log('✅ Exact phrase match in normalized text: ' + pattern);
-                return 1;
-            }
-        }
-        
-        // PRIORITY 2: Use pattern matching to find multiple mantras in continuous speech
-        // This prevents double counting from overlapping patterns
-        // Try both cleaned and original text for better recognition
-        let totalCount = this.countMantraPatterns(cleanedText);
-        
-        // If cleaned text didn't match, try original normalized text (before cleaning)
-        // This helps catch mantras that might have been affected by cleaning
-        if (totalCount === 0) {
-            totalCount = this.countMantraPatterns(normalized);
-        }
-        
-        // If pattern matching found something, use it
-        if (totalCount > 0) {
-            console.log('✅ Found ' + totalCount + ' mantras via pattern matching');
-            return totalCount;
-        }
-        
-        // PRIORITY 3: Fallback - Try phrase matching for partial matches (for continuous repetitions)
-        for (let pattern of strictPatterns) {
-            const patternLower = pattern.toLowerCase();
-            
-            // If the pattern appears in the text, count non-overlapping occurrences
-            // Use a more robust method to count multiple continuous repetitions
-            if (cleanedText.includes(patternLower)) {
-                let count = 0;
-                let searchText = cleanedText;
-                let lastIndex = -1;
-                
-                // Find all non-overlapping occurrences
-                while (true) {
-                    const index = searchText.indexOf(patternLower, lastIndex + 1);
-                    if (index === -1) break;
-                    
-                    // Check if this is a valid match (not part of a larger word)
-                    const before = index === 0 || /[\s]/.test(searchText[index - 1]);
-                    const after = index + patternLower.length >= searchText.length || 
-                                 /[\s]/.test(searchText[index + patternLower.length]);
-                    
-                    if (before && after) {
-                        count++;
-                        lastIndex = index + patternLower.length - 1;
-                    } else {
-                        lastIndex = index;
-                    }
-                }
-                
-                if (count > 0) {
-                    console.log('✅ Found ' + count + ' occurrences of: ' + pattern);
-                    return count;
-                }
-            }
-            
-            // Also try matching in original normalized text
-            if (normalized.includes(patternLower)) {
-                let count = 0;
-                let searchText = normalized;
-                let lastIndex = -1;
-                
-                while (true) {
-                    const index = searchText.indexOf(patternLower, lastIndex + 1);
-                    if (index === -1) break;
-                    
-                    const before = index === 0 || /[\s]/.test(searchText[index - 1]);
-                    const after = index + patternLower.length >= searchText.length || 
-                                 /[\s]/.test(searchText[index + patternLower.length]);
-                    
-                    if (before && after) {
-                        count++;
-                        lastIndex = index + patternLower.length - 1;
-                    } else {
-                        lastIndex = index;
-                    }
-                }
-                
-                if (count > 0) {
-                    console.log('✅ Found ' + count + ' occurrences in original text: ' + pattern);
-                    return count;
+            // Contains match (for multiple repetitions)
+            if (normalized.includes(patternLower) || cleaned.includes(patternLower)) {
+                const textToUse = normalized.includes(patternLower) ? normalized : cleaned;
+                const matches = this.countOccurrences(textToUse, patternLower);
+                if (matches > 0) {
+                    console.log(`✅ FOUND ${matches} occurrence(s) of:`, pattern);
+                    return matches;
                 }
             }
         }
-
-        // CRITICAL: Do NOT use fuzzy matching - it might accept partial mantras
-        // Only accept exact matches that start with "जय जय" or "jai jai"
-        // This ensures 100% accuracy requirement
         
-        console.log('❌ No mantra found in: "' + text + '"');
+        // STRATEGY 2: Fuzzy matching for common speech recognition errors
+        const fuzzyScore = this.fuzzyMatchMantra(normalized);
+        if (fuzzyScore > 0) {
+            console.log('✅ FUZZY MATCH found:', fuzzyScore, 'mantras');
+            return fuzzyScore;
+        }
+        
+        console.log('❌ No match found in:', text);
         return 0;
     }
 
-    countMantraPatterns(text) {
-        // CRITICAL FIX: Pattern-based matching that counts COMPLETE mantras only
-        // STRICT REQUIREMENT: Must start with "जय जय" (jai jai/jay jay) - NO partial mantras accepted
-        // This ensures 100% accuracy by rejecting "राम कृष्णा हारी" without "जय जय"
-        // Enhanced to detect multiple mantras in continuous chanting
+    // Helper: Count non-overlapping occurrences
+    countOccurrences(text, pattern) {
+        let count = 0;
+        let pos = 0;
         
-        console.log('🔍 Pattern matching on text: "' + text + '"');
-        
-        // PRIORITY 1: Exact "जय जय" pattern (Hindi) - STRICT REQUIREMENT
-        // Pattern must start with "जय जय" - this ensures we don't accept partial mantras
-        // Enhanced to catch multiple continuous repetitions - allow flexible spacing between repetitions
-        // Pattern: जय जय राम कृष्णा हारी (with variations for कृष्णा and हारी)
-        const hindiJaiJaiPattern = /(?:^|[\s])(जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि))(?=[\s]|$|जय|jai|jay)/gi;
-        let hindiJaiJaiMatches = [];
-        let match;
-        // Reset regex lastIndex to ensure we get all matches
-        hindiJaiJaiPattern.lastIndex = 0;
-        while ((match = hindiJaiJaiPattern.exec(text)) !== null) {
-            hindiJaiJaiMatches.push(match[1]);
-            // Prevent infinite loop if regex doesn't advance
-            if (match.index === hindiJaiJaiPattern.lastIndex) {
-                hindiJaiJaiPattern.lastIndex++;
+        while (true) {
+            const index = text.indexOf(pattern, pos);
+            if (index === -1) break;
+            
+            // Verify word boundaries
+            const beforeOk = index === 0 || /\s/.test(text[index - 1]);
+            const afterOk = index + pattern.length >= text.length || 
+                           /\s/.test(text[index + pattern.length]);
+            
+            if (beforeOk && afterOk) {
+                count++;
+                pos = index + pattern.length;
+            } else {
+                pos = index + 1;
             }
         }
-        if (hindiJaiJaiMatches.length > 0) {
-            console.log(`✅ Found ${hindiJaiJaiMatches.length} exact "जय जय" Hindi mantra(s):`, hindiJaiJaiMatches);
-            return hindiJaiJaiMatches.length;
-        }
         
-        // PRIORITY 2: Exact "jai jai" / "jay jay" pattern (English) - STRICT REQUIREMENT
-        // Pattern must start with "jai jai" or "jay jay" - this ensures we don't accept partial mantras
-        // Enhanced pattern to catch multiple mantras in continuous speech
-        // Allow for cases where mantras are said continuously without clear separation
-        // Accept both "jai" and "jay" pronunciations (common speech recognition variations)
-        // More flexible pattern: allow word boundaries or start/end of string
-        // First try the full pattern for multiple mantras
-        const englishJaiJaiPattern = /(?:^|[\s])((?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary))(?=[\s]|$|(?:jai|jay)|जय)/gi;
-        let englishJaiJaiMatches = [];
-        // Reset regex lastIndex to ensure we get all matches
-        englishJaiJaiPattern.lastIndex = 0;
-        while ((match = englishJaiJaiPattern.exec(text)) !== null) {
-            englishJaiJaiMatches.push(match[1]);
-            console.log('🔍 Matched English pattern:', match[1], 'at index', match.index);
-            // Prevent infinite loop if regex doesn't advance
-            if (match.index === englishJaiJaiPattern.lastIndex) {
-                englishJaiJaiPattern.lastIndex++;
-            }
-        }
-        if (englishJaiJaiMatches.length > 0) {
-            console.log(`✅ Found ${englishJaiJaiMatches.length} exact "jai/jay jai/jay" English mantra(s):`, englishJaiJaiMatches);
-            return englishJaiJaiMatches.length;
-        }
-        
-        // If no matches found, try a simpler pattern for single mantra detection
-        // This helps catch cases where the text is exactly one mantra (most common case)
-        // Use a more permissive pattern that allows for slight variations
-        const trimmedText = text.trim();
-        const simpleEnglishPattern = /^(?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)$/i;
-        if (simpleEnglishPattern.test(trimmedText)) {
-            console.log('✅ Found single English mantra via simple pattern');
-            return 1;
-        }
-        
-        // Also try with flexible spacing (in case normalization didn't catch all cases)
-        const flexibleEnglishPattern = /^(?:jai|jay)\s+(?:jai|jay)\s+ram\s+(?:krishna|krishn)\s+(?:hari|haari|hare|harry|hary)\s*$/i;
-        if (flexibleEnglishPattern.test(trimmedText)) {
-            console.log('✅ Found single English mantra via flexible pattern');
-            return 1;
-        }
-        
-        const simpleHindiPattern = /^जय\s+जय\s+राम\s+(?:कृष्ण|कृष्णा)\s+(?:हारी|हरी|हरि)$/i;
-        if (simpleHindiPattern.test(trimmedText)) {
-            console.log('✅ Found single Hindi mantra via simple pattern');
-            return 1;
-        }
-        
-        // CRITICAL: Do NOT accept patterns that don't start with "जय जय" or "jai jai"/"jay jay"
-        // This ensures 100% accuracy - if only "राम कृष्णा हारी" is recognized, it should NOT count
-        // Return 0 to maintain accuracy requirement
-        
-        console.log('❌ No pattern match found in: "' + text + '"');
-        return 0;
+        return count;
     }
 
-    isMantraPhrase(text) {
-        // CRITICAL: Only accept phrases that start with "जय जय", "jai jai", or "jay jay"
-        // This ensures we don't accept partial mantras like "राम कृष्णा हारी"
-        const normalized = this.normalizeText(text);
-        const cleanedText = this.cleanMantraText(normalized);
-
-        // Filter to only patterns that start with "jai jai", "jay jay", or "जय जय"
-        const strictPatterns = this.config.targetPhrases.filter(pattern => {
-            const lower = pattern.toLowerCase();
-            return lower.startsWith('jai jai') || lower.startsWith('jay jay') || lower.startsWith('जय जय');
+    // NEW: Fuzzy matching for common variations
+    fuzzyMatchMantra(text) {
+        // Core components that MUST be present
+        const hasJaiJay = /\b(jai|jay)\s+(jai|jay)\b/i.test(text) || 
+                          /\bजय\s+जय\b/.test(text);
+        const hasRam = /\bram\b/i.test(text) || /\bराम\b/.test(text);
+        const hasKrishna = /\b(krishna|krishn|कृष्णा|कृष्ण)\b/i.test(text);
+        const hasHari = /\b(hari|haari|hare|harry|हारी|हरी|हरि)\b/i.test(text);
+        
+        // Log what was found
+        console.log('🔍 Fuzzy match components:', {
+            hasJaiJay,
+            hasRam,
+            hasKrishna,
+            hasHari
         });
-
-        // Exact match with cleaned text
-        for (let phrase of strictPatterns) {
-            if (cleanedText === phrase.toLowerCase()) {
-                console.log('✓ Exact: "' + phrase + '"');
-                return true;
-            }
+        
+        // All components must be present for fuzzy match
+        if (hasJaiJay && hasRam && hasKrishna && hasHari) {
+            console.log('✅ Fuzzy match - all components found');
+            
+            // Count how many times the pattern appears
+            // Split by "jai jai" or "jay jay" to count repetitions
+            const jaiJayPattern = /\b(jai|jay)\s+(jai|jay)\b/gi;
+            const matches = text.match(jaiJayPattern);
+            return matches ? matches.length : 1;
         }
-
-        // Contains match with cleaned text (but must be a complete phrase)
-        for (let phrase of strictPatterns) {
-            const phraseLower = phrase.toLowerCase();
-            if (cleanedText.includes(phraseLower)) {
-                // Verify it's a complete phrase match, not partial
-                const index = cleanedText.indexOf(phraseLower);
-                const before = index === 0 || /[\s]/.test(cleanedText[index - 1]);
-                const after = index + phraseLower.length >= cleanedText.length || 
-                             /[\s]/.test(cleanedText[index + phraseLower.length]);
-                if (before && after) {
-                    console.log('✓ Contains: "' + phrase + '"');
-                    return true;
-                }
-            }
-        }
-
-        // Do NOT use fuzzy matching - it might accept partial mantras
-        // This ensures 100% accuracy requirement
-
-        console.log('✗ No match: "' + text + '" (cleaned: "' + cleanedText + '")');
-        return false;
+        
+        return 0;
     }
 
     normalizeText(text) {
         return text
             .toLowerCase()
-            .replace(/[।,\.\!]/g, '')
-            .replace(/\s+/g, ' ')
+            .replace(/[।,\.!\?;:"']/g, ' ')  // Replace punctuation with space
+            .replace(/\s+/g, ' ')             // Normalize multiple spaces
             .trim();
     }
 
     cleanMantraText(text) {
-        // Remove unwanted words that might interfere with mantra recognition
-        const unwantedWords = [
-            'om', 'ओम', 'aum', 'औम',
-            'namah', 'नमः', 'namo', 'नमो',
-            'swami', 'स्वामी', 'guruji', 'गुरुजी',
-            'baba', 'बाबा', 'sadguru', 'सद्गुरु'
-        ];
-        
-        let cleanedText = text;
-        
-        // Remove unwanted words with word boundaries
-        unwantedWords.forEach(word => {
-            const regex = new RegExp(`\\b${word}\\b`, 'gi');
-            cleanedText = cleanedText.replace(regex, '');
-        });
-        
-        // CRITICAL FIX: Don't remove "shri" or "shree" - let pattern matching handle it
-        // Instead, normalize variations to help with matching
-        // Normalize common word substitutions
-        // Handle cases where speech recognition substitutes words
-        cleanedText = cleanedText
-            .replace(/\bहरि\b/g, 'हारी')  // Normalize हरि to हारी
-            .replace(/\bहरी\b/g, 'हारी')  // Normalize हरी to हारी
-            .replace(/\bकृष्ण\b/g, 'कृष्णा'); // Normalize कृष्ण to कृष्णा
-        
-        // Clean up extra spaces
-        cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
-        
-        return cleanedText;
-    }
-
-    fuzzyMatch(text, target) {
-        const distance = this.levenshteinDistance(text, target);
-        const wordMatch = text.split(' ').length === target.split(' ').length;
-        return wordMatch && distance <= 2;
-    }
-
-    levenshteinDistance(str1, str2) {
-        const matrix = [];
-
-        for (let i = 0; i <= str2.length; i++) {
-            matrix[i] = [i];
-        }
-
-        for (let j = 0; j <= str1.length; j++) {
-            matrix[0][j] = j;
-        }
-
-        for (let i = 1; i <= str2.length; i++) {
-            for (let j = 1; j <= str1.length; j++) {
-                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-                    matrix[i][j] = matrix[i - 1][j - 1];
-                } else {
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j - 1] + 1,
-                        matrix[i][j - 1] + 1,
-                        matrix[i - 1][j] + 1
-                    );
-                }
-            }
-        }
-
-        return matrix[str2.length][str1.length];
+        // Minimal cleaning - just normalize variations
+        return text
+            .replace(/\bhare\b/gi, 'hari')      // Normalize hare → hari
+            .replace(/\bharry\b/gi, 'hari')     // Normalize harry → hari  
+            .replace(/\bkrishn\b/gi, 'krishna') // Normalize krishn → krishna
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     // ================================================================
