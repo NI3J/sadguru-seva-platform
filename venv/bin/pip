@@ -1,4 +1,4 @@
-#!/home/ubuntu/sadguru-seva-platform/venv/bin/python3.12
+#!/home/babaji/sadguru-seva-platform/venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys
