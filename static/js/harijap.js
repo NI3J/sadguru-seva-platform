@@ -65,29 +65,48 @@ class HariJapCounter {
             syncInterval: 30000,
 
             // SIMPLIFIED target phrases - prioritize most common variations
+            // Based on actual pronunciation: "Jai Jai Ram Krishna Hare"
             targetPhrases: [
-                // Primary English patterns (most common)
+                // PRIMARY: Exact match for "Jai Jai Ram Krishna Hare" (most common)
+                'jai jai ram krishna hare',
+                'jay jay ram krishna hare',
+                'jai jai ram krishna haare',
+                'jay jay ram krishna haare',
+                
+                // Full mantra with "hari" variations
                 'jai jai ram krishna hari',
                 'jay jay ram krishna hari',
                 'jai jai ram krishna haari',
                 'jay jay ram krishna haari',
-                'jai jai ram krishna hare',
-                'jay jay ram krishna hare',
                 
-                // Common speech recognition variations
-                'jai jai ramkrishna hari',     // Sometimes recognized as one word
-                'jay jay ramkrishna hari',
-                'jai jai ram krishn hari',     // Missing 'a' in krishna
-                'jay jay ram krishn hari',
+                // Partial patterns (without jay jay prefix) - very common
+                'ram krishna hare',      // Most common partial
+                'ram krishna haare',
+                'ram krishna hari',
+                'ram krishna haari',
+                'ram krishna',           // Just core mantra
+                
+                // Speech recognition variations (no spaces, missing letters)
+                'jai jai ramkrishna hare',     // "ramkrishna" as one word
+                'jay jay ramkrishna hare',
+                'jai jai ramkrishna hari',
+                'jai jai ram krishn hare',     // Missing 'a' in krishna
+                'jay jay ram krishn hare',
+                'ramkrishna hare',              // Partial without jay jay
+                'ramkrishna hari',
+                'ram krishn hare',              // Missing 'a'
                 
                 // With "Shri" (less common but valid)
+                'jai shri ram krishna hare',
+                'jay shri ram krishna hare',
                 'jai shri ram krishna hari',
-                'jay shri ram krishna hari',
                 
                 // Hindi patterns (if Hindi is spoken)
                 'जय जय राम कृष्णा हारी',
                 'जय जय राम कृष्ण हारी',
-                'जय जय राम कृष्णा हरी'
+                'जय जय राम कृष्णा हरी',
+                'राम कृष्णा हारी',  // Partial Hindi
+                'राम कृष्णा'        // Core Hindi
             ],
 
             // Milestone celebrations
@@ -828,6 +847,16 @@ class HariJapCounter {
         console.log('🔍 Normalized text:', normalized);
         console.log('🔍 Cleaned text:', cleaned);
         
+        // STRATEGY 0: Quick check for exact "jai jai ram krishna hare" pattern
+        // This is the most common pronunciation, so check it first
+        const exactHarePattern = /jai\s+jai\s+ram\s+krishna\s+hare/i;
+        if (exactHarePattern.test(normalized)) {
+            const matches = normalized.match(new RegExp(exactHarePattern.source, 'gi'));
+            const count = matches ? matches.length : 1;
+            console.log('✅ EXACT MATCH (jai jai ram krishna hare):', count);
+            return count;
+        }
+        
         // STRATEGY 1: Exact phrase matching (fastest and most accurate)
         for (let pattern of this.config.targetPhrases) {
             const patternLower = pattern.toLowerCase();
@@ -850,7 +879,7 @@ class HariJapCounter {
         }
         
         // STRATEGY 2: Fuzzy matching for common speech recognition errors
-        const fuzzyScore = this.fuzzyMatchMantra(normalized);
+        const fuzzyScore = this.fuzzyMatchMantra(text); // Pass original text to preserve "hare"
         if (fuzzyScore > 0) {
             console.log('✅ FUZZY MATCH found:', fuzzyScore, 'mantras');
             return fuzzyScore;
@@ -885,32 +914,94 @@ class HariJapCounter {
         return count;
     }
 
-    // NEW: Fuzzy matching for common variations
-    fuzzyMatchMantra(text) {
-        // Core components that MUST be present
-        const hasJaiJay = /\b(jai|jay)\s+(jai|jay)\b/i.test(text) || 
-                          /\bजय\s+जय\b/.test(text);
-        const hasRam = /\bram\b/i.test(text) || /\bराम\b/.test(text);
-        const hasKrishna = /\b(krishna|krishn|कृष्णा|कृष्ण)\b/i.test(text);
-        const hasHari = /\b(hari|haari|hare|harry|हारी|हरी|हरि)\b/i.test(text);
+    // NEW: Enhanced fuzzy matching for common variations
+    // Handles "Jai Jai Ram Krishna Hare" and all variations
+    fuzzyMatchMantra(originalText) {
+        // Normalize the text first
+        const normalized = this.normalizeText(originalText);
+        const cleaned = this.cleanMantraText(normalized);
+        
+        // ENHANCED: Check for "ram krishna" together (with or without space)
+        // Speech recognition might output "ramkrishna" as one word
+        const ramKrishnaPattern = /\bram\s*krishna\b/i;
+        const ramKrishnaNoSpace = /\bramkrishna\b/i;
+        const hasRamKrishna = ramKrishnaPattern.test(cleaned) || ramKrishnaNoSpace.test(cleaned);
+        
+        // Also check if "krishna" appears near "ram" (within 3 words)
+        let hasRamKrishnaNearby = false;
+        if (!hasRamKrishna) {
+            const ramIndex = cleaned.search(/\bram\b/i);
+            const krishnaIndex = cleaned.search(/\bkrishna\b/i);
+            if (ramIndex !== -1 && krishnaIndex !== -1) {
+                // Check if they're within reasonable distance (max 3 words apart)
+                const textBetween = cleaned.substring(ramIndex, krishnaIndex);
+                const wordsBetween = textBetween.split(/\s+/).filter(w => w.length > 0).length;
+                if (wordsBetween <= 3 && krishnaIndex > ramIndex) {
+                    hasRamKrishnaNearby = true;
+                }
+            }
+        }
+        
+        const hasCoreMantra = hasRamKrishna || hasRamKrishnaNearby;
+        
+        if (!hasCoreMantra) {
+            console.log('🔍 Fuzzy match: "ram krishna" not found in:', cleaned);
+            return 0;
+        }
+        
+        // Check for optional "jai jai" or "jay jay" prefix
+        // Accept "jai jai", "jay jay", "jai", or just "jai" appearing once or twice
+        const hasJaiJay = /\b(jai|jay)\s+(jai|jay)\b/i.test(cleaned);
+        const hasSingleJai = /\b(jai|jay)\b/i.test(cleaned);
+        
+        // Check for optional "hari/hare/haare" suffix
+        // Note: cleaned text converts all to "hari", but we check original normalized too
+        const hasHari = /\b(hari|hare|haare|harry)\b/i.test(normalized) || /\bhari\b/i.test(cleaned);
         
         // Log what was found
         console.log('🔍 Fuzzy match components:', {
+            hasRamKrishna,
+            hasRamKrishnaNearby,
             hasJaiJay,
-            hasRam,
-            hasKrishna,
-            hasHari
+            hasSingleJai,
+            hasHari,
+            originalText: originalText,
+            normalizedText: normalized,
+            cleanedText: cleaned
         });
         
-        // All components must be present for fuzzy match
-        if (hasJaiJay && hasRam && hasKrishna && hasHari) {
-            console.log('✅ Fuzzy match - all components found');
-            
-            // Count how many times the pattern appears
-            // Split by "jai jai" or "jay jay" to count repetitions
+        // ACCEPT if "ram krishna" is present (core requirement met)
+        // This handles:
+        // - "jai jai ram krishna hare" (full mantra)
+        // - "ram krishna hare" (without jai jai)
+        // - "krishna hare" (if ram is nearby)
+        // - "ram krishna" (without suffix)
+        // - "ramkrishna" (no space)
+        
+        // Count occurrences - prioritize "jai jai" count if present (more accurate)
+        if (hasJaiJay) {
             const jaiJayPattern = /\b(jai|jay)\s+(jai|jay)\b/gi;
-            const matches = text.match(jaiJayPattern);
-            return matches ? matches.length : 1;
+            const jaiJayMatches = cleaned.match(jaiJayPattern) || normalized.match(jaiJayPattern);
+            const jaiJayCount = jaiJayMatches ? jaiJayMatches.length : 0;
+            if (jaiJayCount > 0) {
+                console.log('✅ Using jai jai count:', jaiJayCount);
+                return jaiJayCount;
+            }
+        }
+        
+        // Count "ram krishna" occurrences (with or without space)
+        const ramKrishnaMatches = cleaned.match(ramKrishnaPattern) || cleaned.match(ramKrishnaNoSpace);
+        const coreMatches = ramKrishnaMatches ? ramKrishnaMatches.length : 0;
+        
+        if (coreMatches > 0) {
+            console.log('✅ Fuzzy match - "ram krishna" found:', coreMatches, 'time(s)');
+            return coreMatches;
+        }
+        
+        // If we have ram and krishna nearby, count as 1
+        if (hasRamKrishnaNearby) {
+            console.log('✅ Fuzzy match - "ram" and "krishna" found nearby, counting as 1');
+            return 1;
         }
         
         return 0;
@@ -925,11 +1016,29 @@ class HariJapCounter {
     }
 
     cleanMantraText(text) {
-        // Minimal cleaning - just normalize variations
+        // Normalize common word variations for better matching
+        // IMPORTANT: This normalization helps with matching but we also check
+        // the original normalized text in fuzzyMatchMantra for "hare" specifically
         return text
-            .replace(/\bhare\b/gi, 'hari')      // Normalize hare → hari
-            .replace(/\bharry\b/gi, 'hari')     // Normalize harry → hari  
-            .replace(/\bkrishn\b/gi, 'krishna') // Normalize krishn → krishna
+            // Normalize hari/hare/haare variations (all are acceptable)
+            // Keep "hare" recognizable - convert to "hari" for consistency
+            .replace(/\b(haare|hare|harry|her|hair)\b/gi, 'hari')  // Normalize all variations → hari
+            .replace(/\bहारी\b/g, 'hari')                  // Hindi हारी → hari
+            .replace(/\bहरी\b/g, 'hari')                   // Hindi हरी → hari
+            .replace(/\bहरि\b/g, 'hari')                    // Hindi हरि → hari
+            // Normalize krishna variations
+            .replace(/\bkrishn\b/gi, 'krishna')            // Normalize krishn → krishna
+            .replace(/\bकृष्ण\b/g, 'krishna')              // Hindi कृष्ण → krishna
+            .replace(/\bकृष्णा\b/g, 'krishna')             // Hindi कृष्णा → krishna
+            // Normalize jay/jai variations
+            .replace(/\bjay\b/gi, 'jai')                   // Normalize jay → jai
+            .replace(/\bजय\b/g, 'jai')                     // Hindi जय → jai
+            // Normalize ram (handle common mispronunciations)
+            .replace(/\bराम\b/g, 'ram')                   // Hindi राम → ram
+            // Handle "ramkrishna" as one word - add space for better matching
+            .replace(/\bramkrishna\b/gi, 'ram krishna')
+            .replace(/\bramkrishn\b/gi, 'ram krishna')
+            // Clean up extra spaces
             .replace(/\s+/g, ' ')
             .trim();
     }
