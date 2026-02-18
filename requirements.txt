@@ -23,10 +23,14 @@ bcrypt>=4.0.1
 python-dotenv==1.1.1
 
 # Production Server
-gunicorn==20.1.0
+# Upgraded to latest version for Python 3.12 compatibility
+# Gunicorn 21.2.0+ has better Python 3.12 support
+gunicorn>=21.2.0
 
-# Build & Packaging (required for pkg_resources)
-setuptools<66.0.0
+# Build & Packaging
+# Required for pkg_resources (needed by gunicorn)
+# Using version that includes pkg_resources but we patch ImpImporter issue
+setuptools>=65.5.0,<66.0.0
 
 # Development & Testing (optional)
 pytest==7.4.3
