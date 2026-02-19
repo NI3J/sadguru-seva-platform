@@ -10,7 +10,7 @@ def get_today_page_number():
     return max(1, (today - SATSANG_START_DATE).days + 1)
 
 def read_file(path):
-    """📖 Read and return content from a text file."""
+    """?? Read and return content from a text file."""
     with open(path, 'r', encoding='utf-8') as f:
         return f.read().strip()
 
@@ -23,7 +23,7 @@ def insert_satsang_entry(
     date,
     is_active=1
 ):
-    """🌸 Insert a satsang entry into the database."""
+    """?? Insert a satsang entry into the database."""
     marathi_content = read_file(marathi_path)
     english_content = read_file(english_path)
 
@@ -69,11 +69,11 @@ def insert_satsang_entry(
         conn.commit()
         rows_affected = cursor.rowcount
         if rows_affected == 1:
-            print(f"✅ Satsang entry for page {page_number} inserted successfully.")
+            print(f"? Satsang entry for page {page_number} inserted successfully.")
         else:
-            print(f"✅ Satsang entry for page {page_number} updated successfully.")
+            print(f"? Satsang entry for page {page_number} updated successfully.")
     except Exception as e:
-        print(f"❌ Error inserting satsang entry: {e}")
+        print(f"? Error inserting satsang entry: {e}")
     finally:
         if cursor is not None:
             try:
@@ -99,12 +99,12 @@ if __name__ == "__main__":
 
     insert_satsang_entry(
         page_number=page_num,
-        title=':शिवमहापुराण कथा:',
+        title=':शिवमहापुराण कथा माैजे टाकळी',
         marathi_path='content/satsang_001_marathi.txt',
         english_path='content/satsang_001_english.txt',
-        author='प.पु.श्री.गुरुदेव विद्यानंद महाराज(बाबा)',
+        author='प.पु.श्री.विद्यानंदसागर महाराज(बाबा) गातेगावकर',
         date=page_date.strftime('%Y-%m-%d')
     )
-    print(f"💡 View at: /knowledge/satsang?page={page_num}")
+    print(f"?? View at: /knowledge/satsang?page={page_num}")
 
 
