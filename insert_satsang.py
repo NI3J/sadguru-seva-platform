@@ -1,4 +1,13 @@
+from datetime import date, timedelta
 from db_config import get_db_connection
+
+# Must match routes/wisdom.py - satsang starts Aug 17, 2025
+SATSANG_START_DATE = date(2025, 8, 17)
+
+def get_today_page_number():
+    """Get today's page number (same logic as the satsang web page)."""
+    today = date.today()
+    return max(1, (today - SATSANG_START_DATE).days + 1)
 
 def read_file(path):
     """📖 Read and return content from a text file."""
@@ -78,13 +87,24 @@ def insert_satsang_entry(
                 pass
 
 if __name__ == "__main__":
+    import sys
+
+    # Use today's page by default, or pass a specific page: python3.10 insert_satsang.py 183
+    if len(sys.argv) > 1 and sys.argv[1].isdigit():
+        page_num = int(sys.argv[1])
+    else:
+        page_num = get_today_page_number()
+
+    page_date = SATSANG_START_DATE + timedelta(days=page_num - 1)
+
     insert_satsang_entry(
-        page_number=1,
-        title=': सर्व आपल्या कर्माच फळ आहे:',
+        page_number=page_num,
+        title=':शिवमहापुराण कथा:',
         marathi_path='content/satsang_001_marathi.txt',
         english_path='content/satsang_001_english.txt',
-        author='प.पु.श्री.अशोककाका शास्त्री',
-        date='2025-08-28'
+        author='प.पु.श्री.गुरुदेव विद्यानंद महाराज(बाबा)',
+        date=page_date.strftime('%Y-%m-%d')
     )
+    print(f"💡 View at: /knowledge/satsang?page={page_num}")
 
 
