@@ -30,8 +30,19 @@ def insert_satsang_entry(
             marathi_content,
             english_content
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            title = VALUES(title),
+            content = VALUES(content),
+            content_en = VALUES(content_en),
+            author = VALUES(author),
+            date = VALUES(date),
+            is_active = VALUES(is_active),
+            marathi_content = VALUES(marathi_content),
+            english_content = VALUES(english_content)
     """
 
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -47,12 +58,24 @@ def insert_satsang_entry(
             english_content
         ))
         conn.commit()
-        print(f"✅ Satsang entry for page {page_number} inserted successfully.")
+        rows_affected = cursor.rowcount
+        if rows_affected == 1:
+            print(f"✅ Satsang entry for page {page_number} inserted successfully.")
+        else:
+            print(f"✅ Satsang entry for page {page_number} updated successfully.")
     except Exception as e:
         print(f"❌ Error inserting satsang entry: {e}")
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     insert_satsang_entry(

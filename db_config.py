@@ -12,7 +12,10 @@ def get_db_connection():
         user=os.getenv("MYSQL_USER"),
         password=os.getenv("MYSQL_PASSWORD"),
         database=os.getenv("MYSQL_DB"),
-        cursorclass=pymysql.cursors.DictCursor  # Optional: for JSON-style rows
+        cursorclass=pymysql.cursors.DictCursor,  # Optional: for JSON-style rows
+        connect_timeout=30,
+        read_timeout=60,
+        write_timeout=60,
     )
 
 @contextmanager
