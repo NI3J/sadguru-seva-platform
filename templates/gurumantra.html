@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>गुरु मंत्र साधना - Divine Chanting Counter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/harijap.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+</head>
+<body>
+    <!-- Divine glow effect -->
+    <div class="divine-glow"></div>
+    
+    <!-- Floating Om symbols -->
+    <div class="floating-om om-1">🕉️</div>
+    <div class="floating-om om-2">🕉️</div>
+    <div class="floating-om om-3">🕉️</div>
+    <div class="floating-om om-4">🕉️</div>
+    <div class="floating-om om-5">🕉️</div>
+
+    <div class="container">
+        <!-- User Info Section -->
+        <div class="user-info">
+            <div class="user-name" id="userName">🙏 भक्त</div>
+            <div class="datetime-display" id="datetimeDisplay">--</div>
+            <button class="logout-btn" id="logoutBtn">लॉगआउट</button>
+        </div>
+
+        <!-- Title -->
+        <h1 class="title">🕉️ गुरु मंत्र साधना 🕉️</h1>
+        
+        <!-- Mantra Display -->
+        <div class="mantra-container">
+            <div class="mantra" id="mantraDisplay">
+                <span class="mantra-word" data-word="ॐ" data-index="0">ॐ</span>
+                <span class="mantra-word" data-word="तत्पुरुषाय" data-index="1">तत्पुरुषाय</span>
+                <span class="mantra-word" data-word="विद्महे" data-index="2">विद्महे</span>
+                <span class="mantra-word" data-word="महादेवाय" data-index="3">महादेवाय</span>
+                <span class="mantra-word" data-word="धीमहि" data-index="4">धीमहि</span>
+                <span class="mantra-word" data-word="तन्नो" data-index="5">तन्नो</span>
+                <span class="mantra-word" data-word="रुद्रः" data-index="6">रुद्रः</span>
+                <span class="mantra-word" data-word="प्रचोदयात्" data-index="7">प्रचोदयात्</span>
+            </div>
+        </div>
+
+        <!-- Counter Section -->
+        <div class="counter-section">
+            <div class="datetime-section">
+                <div class="datetime-display" id="datetimeDisplay">--</div>
+            </div>
+            <div class="today-label">आजचा जप</div>
+            <div class="count-display" id="countDisplay">0</div>
+            <div class="mala-status" id="malaStatus">जप शुरू करें</div>
+            <div class="total-malas" id="totalMalas">कुल माला: 0</div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text">
+                <span id="remainingCount">108 जप</span> बाकी
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn" onclick="handleStartClick(event)">
+                🎤 जप शुरू करें
+            </button>
+            <button class="btn btn-secondary" id="stopBtn" disabled onclick="handleStopClick(event)">
+                ⏹️ रोकें
+            </button>
+            <button class="btn btn-manual" id="manualBtn" onclick="handleManualClick(event)">
+                ➕ मैन्युअल गिनती
+            </button>
+            <button class="btn btn-danger" id="resetBtn" onclick="handleResetClick(event)">
+                🔄 रीसेट
+            </button>
+        </div>
+
+        <!-- Status Section -->
+        <div class="status-section">
+            <div class="listening-status" id="listeningStatus">
+                🎤 माइक्रोफोन तैयार है
+            </div>
+            <div class="recognition-text" id="recognitionText">
+                मंत्र बोलना शुरू करें...
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">सत्र समय</div>
+                <div class="stat-value" id="sessionTime">0 मिनट</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">आज के जप</div>
+                <div class="stat-value" id="todayCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">इस सप्ताह</div>
+                <div class="stat-value" id="weekCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">सटीकता</div>
+                <div class="stat-value" id="accuracy">--</div>
+            </div>
+        </div>
+
+        <!-- Full Jap Till Now Card -->
+        <div class="full-jap-card">
+            <div class="full-jap-label">आजतक जप</div>
+            <div class="full-jap-value" id="fullJapCount">0</div>
+            <div class="full-jap-subtitle">कुल जप की संख्या</div>
+        </div>
+
+        <!-- Keyboard Shortcuts Info -->
+        <div style="margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="color: #ffd700; margin-bottom: 10px; font-size: 1.1rem;">⌨️ कीबोर्ड शॉर्टकट:</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Space</kbd> - जप शुरू करें</div>
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Esc</kbd> - जप रोकें</div>
+                <div>• <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">Ctrl + Enter</kbd> - मैन्युअल गिनती</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration Overlay -->
+    <div class="celebration" id="celebration" style="display: none;">
+        <div class="celebration-text">🎉 माला पूर्ण हुई! 🎉</div>
+        <div class="celebration-subtext">जय श्री राम!</div>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="{{ url_for('static', filename='js/gurumantra.js') }}"></script>
+    
+    <!-- Immediate button handlers (fallback) -->
+    <script>
+        // Immediate handlers that work even if main script fails
+        function handleStartClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for startBtn');
+            if (window.guruMantraCounter && typeof window.guruMantraCounter.startListening === 'function') {
+                window.guruMantraCounter.startListening();
+            } else {
+                console.error('❌ hariJapCounter not ready, retrying...');
+                setTimeout(() => {
+                    if (window.guruMantraCounter && typeof window.guruMantraCounter.startListening === 'function') {
+                        window.guruMantraCounter.startListening();
+                    } else {
+                        alert('जप शुरू करने में समस्या। कृपया पृष्ठ को रीफ्रेश करें।');
+                    }
+                }, 500);
+            }
+            return false;
+        }
+        
+        function handleStopClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for stopBtn');
+            if (window.guruMantraCounter && typeof window.guruMantraCounter.stopListening === 'function') {
+                window.guruMantraCounter.stopListening();
+            }
+            return false;
+        }
+        
+        function handleManualClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for manualBtn');
+            if (window.guruMantraCounter && typeof window.guruMantraCounter.addManualCount === 'function') {
+                window.guruMantraCounter.addManualCount();
+            }
+            return false;
+        }
+        
+        function handleResetClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔴 INLINE onclick handler triggered for resetBtn');
+            if (window.guruMantraCounter && typeof window.guruMantraCounter.confirmReset === 'function') {
+                window.guruMantraCounter.confirmReset();
+            }
+            return false;
+        }
+        
+        // Also attach event listeners immediately (before DOMContentLoaded)
+        (function() {
+            function attachImmediateHandlers() {
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const manualBtn = document.getElementById('manualBtn');
+                const resetBtn = document.getElementById('resetBtn');
+                
+                if (startBtn) {
+                    console.log('✅ Found startBtn, attaching immediate handlers');
+                    startBtn.style.pointerEvents = 'auto';
+                    startBtn.style.cursor = 'pointer';
+                    startBtn.style.zIndex = '9999';
+                    startBtn.style.position = 'relative';
+                    
+                    // Multiple event types
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        startBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🎯 Immediate handler triggered:', eventType);
+                            if (window.guruMantraCounter && typeof window.guruMantraCounter.startListening === 'function') {
+                                window.guruMantraCounter.startListening();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (stopBtn) {
+                    stopBtn.style.pointerEvents = 'auto';
+                    stopBtn.style.cursor = 'pointer';
+                    stopBtn.style.zIndex = '9999';
+                    stopBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        stopBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.guruMantraCounter && typeof window.guruMantraCounter.stopListening === 'function') {
+                                window.guruMantraCounter.stopListening();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (manualBtn) {
+                    manualBtn.style.pointerEvents = 'auto';
+                    manualBtn.style.cursor = 'pointer';
+                    manualBtn.style.zIndex = '9999';
+                    manualBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        manualBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.guruMantraCounter && typeof window.guruMantraCounter.addManualCount === 'function') {
+                                window.guruMantraCounter.addManualCount();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+                
+                if (resetBtn) {
+                    resetBtn.style.pointerEvents = 'auto';
+                    resetBtn.style.cursor = 'pointer';
+                    resetBtn.style.zIndex = '9999';
+                    resetBtn.style.position = 'relative';
+                    ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                        resetBtn.addEventListener(eventType, function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.guruMantraCounter && typeof window.guruMantraCounter.confirmReset === 'function') {
+                                window.guruMantraCounter.confirmReset();
+                            }
+                        }, { capture: true, passive: false });
+                    });
+                }
+            }
+            
+            // Try immediately
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', attachImmediateHandlers);
+            } else {
+                attachImmediateHandlers();
+            }
+            
+            // Also try after a short delay
+            setTimeout(attachImmediateHandlers, 100);
+            setTimeout(attachImmediateHandlers, 500);
+            setTimeout(attachImmediateHandlers, 1000);
+        })();
+    </script>
+</body>
+</html>

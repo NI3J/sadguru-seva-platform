@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="गुरु मंत्र साधना - आध्यात्मिक यात्रा">
+  <title>गुरु मंत्र साधना - लॉगिन</title>
+  
+  <!-- Flask static file URLs -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/harijaplogin.css') }}">
+  
+  <!-- Google Fonts for Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Animated background decorations -->
+  <div class="bg-decoration"></div>
+  <div class="bg-decoration"></div>
+  <div class="bg-decoration"></div>
+  
+  <div class="container">
+    <div class="login-card">
+      <!-- Header Section -->
+      <div class="header">
+        <div class="om-symbol">🕉️</div>
+        <h1 class="title">गुरु मंत्र साधना</h1>
+        <p class="subtitle">आध्यात्मिक यात्रा शुरू करें</p>
+      </div>
+      
+      <!-- Information Banner -->
+      <div class="info-banner">
+        गुरु मंत्र साधना शुरु करणेसे पहीले भक्तगन नोंदणीमे आपना नाम, मोबाईल नंबर दर्ज करे।
+      </div>
+      
+      <!-- Message Container for Success/Error -->
+      <div id="messageContainer"></div>
+      
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="event.preventDefault(); sendOTP();">
+        <!-- CSRF Token (if using Flask-WTF) -->
+        {% if csrf_token %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+        
+        <!-- Name Input -->
+        <div class="form-group">
+          <label for="name">
+            नाम (अंग्रेजी में) *
+            <span class="tooltip" data-tooltip="कृपया अपना पूरा नाम अंग्रेजी में दर्ज करें">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input 
+              type="text" 
+              id="name" 
+              name="name"
+              placeholder="अपना नाम अंग्रेजी में दर्ज करें"
+              maxlength="50"
+              required
+              autocomplete="name"
+              value="{{ name if name else '' }}"
+            >
+          </div>
+          <div class="char-count" id="nameCount">0 / 50</div>
+        </div>
+        
+        <!-- Mobile Input -->
+        <div class="form-group">
+          <label for="mobile">
+            मोबाइल नंबर *
+            <span class="tooltip" data-tooltip="10 अंकों का भारतीय मोबाइल नंबर">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">📱</span>
+            <input 
+              type="tel" 
+              id="mobile" 
+              name="mobile"
+              placeholder="10 अंकों का मोबाइल नंबर"
+              maxlength="10"
+              pattern="[6-9][0-9]{9}"
+              required
+              autocomplete="tel"
+              value="{{ mobile if mobile else '' }}"
+            >
+          </div>
+        </div>
+        
+        <!-- OTP Input (Hidden by default) -->
+        <div class="form-group" id="otpGroup" style="display: none;">
+          <label for="otp">
+            OTP दर्ज करें *
+            <span class="tooltip" data-tooltip="आपके मोबाइल पर भेजा गया 6 अंकों का OTP">ℹ️</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔐</span>
+            <input 
+              type="text" 
+              id="otp" 
+              name="otp"
+              placeholder="6 अंकों का OTP"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              autocomplete="one-time-code"
+            >
+          </div>
+          <div class="otp-timer" id="otpTimer"></div>
+          <button type="button" class="resend-otp-btn" id="resendOtpBtn" onclick="resendOTP()" style="display: none;">
+            OTP पुनः भेजें
+          </button>
+        </div>
+        
+        <!-- Submit Button -->
+        <button type="submit" class="btn" id="sendOtpBtn">
+          <div class="btn-content">
+            <span class="btn-text" id="btnText">OTP भेजें</span>
+            <div class="loading"></div>
+          </div>
+        </button>
+        
+        <!-- Progress Indicator -->
+        <div class="progress-dots">
+          <div class="dot active" id="dot1"></div>
+          <div class="dot" id="dot2"></div>
+          <div class="dot" id="dot3"></div>
+        </div>
+      </form>
+      
+      <!-- Footer -->
+      <div class="footer">
+        <p>भारतीय रेलवे की सेवा</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Flask static file URLs -->
+  <script src="{{ url_for('static', filename='js/gurumantralogin.js') }}"></script>
+  
+  <!-- Pass Flask messages to JavaScript -->
+  <script>
+    // Check for Flask flash messages
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        window.addEventListener('DOMContentLoaded', function() {
+          {% for category, message in messages %}
+            showMessage('{{ message | safe }}', '{{ category }}');
+          {% endfor %}
+        });
+      {% endif %}
+    {% endwith %}
+  </script>
+</body>
+</html>

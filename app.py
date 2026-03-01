@@ -30,6 +30,7 @@ from routes.utils import send_email
 from middleware.auth_middleware import login_required
 from routes.japa_auth import japa_auth_bp
 from routes.harijap_auth import harijap_auth_bp, require_harijap_auth
+from routes.guru_mantra_auth import guru_mantra_auth_bp
 from routes.krishna_lila import krishna_lila_bp
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -75,6 +76,7 @@ def create_app():
     app.register_blueprint(japa_bp)  # ✅ Japa blueprint now active
     app.register_blueprint(japa_auth_bp)
     app.register_blueprint(harijap_auth_bp)
+    app.register_blueprint(guru_mantra_auth_bp)
     app.register_blueprint(krishna_lila_bp)
 
     print("✅ All blueprints registered successfully")
