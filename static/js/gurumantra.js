@@ -67,8 +67,26 @@ class GuruMantraCounter {
             // COMPREHENSIVE target phrases - prioritize most common variations
             // Based on actual pronunciation: "Om Tatpurushaya Vidmahe Mahadevaya Dhimahi Tanno Rudra Prachodayat"
             // Rudra Gayatri Mantra recognition patterns
+            // ACTUAL RECOGNITION FROM AUDIO: "Om tatpurushon with Mahesh dhimahi tanno Rudra prachodyat"
             targetPhrases: [
-                // PRIMARY: Complete mantra variations (most common)
+                // PRIMARY: ACTUAL RECOGNITION FROM RECORDED AUDIO (HIGHEST PRIORITY)
+                'om tatpurushon with mahesh dhimahi tanno rudra prachodyat',
+                'om tatpurushon with mahesh dhimahi tanno rudra prachodayat',
+                'tatpurushon with mahesh dhimahi tanno rudra prachodyat',
+                'tatpurushon with mahesh dhimahi tanno rudra prachodayat',
+                
+                // Variations of "tatpurushon" (common mispronunciation)
+                'om tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodayat',
+                'om tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodyat',
+                'tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodayat',
+                
+                // Variations with "with Mahesh" (actual recognition)
+                'om tatpurushaya with mahesh dhimahi tanno rudra prachodyat',
+                'tatpurushaya with mahesh dhimahi tanno rudra prachodyat',
+                'with mahesh dhimahi tanno rudra prachodyat',
+                'mahesh dhimahi tanno rudra prachodyat',
+                
+                // Complete mantra variations (standard)
                 'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
                 'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudrah prachodayat',
                 'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayath',
@@ -95,6 +113,13 @@ class GuruMantraCounter {
                 'dhimahi tanno rudra prachodayat',
                 'tanno rudra prachodayat',
                 'rudra prachodayat',
+                // Actual recognition partials
+                'tatpurushon with mahesh dhimahi',
+                'with mahesh dhimahi tanno rudra',
+                'mahesh dhimahi tanno rudra prachodyat',
+                'dhimahi tanno rudra prachodyat',
+                'tanno rudra prachodyat',
+                'rudra prachodyat',
                 
                 // Speech recognition variations (no spaces, merged words)
                 'om tatpurushayavidmahe mahadevayadhimahi tannorudra prachodayat',
@@ -115,14 +140,54 @@ class GuruMantraCounter {
                 'तन्नो रुद्रः प्रचोदयात्',
                 'रुद्रः प्रचोदयात्',
                 
+                // Common mispronunciations and regional variations
+                'mohe mahadeva',  // Common variation of "mahadevaya"
+                'mohe mahadevaya',
+                'mohe mahadev',
+                'mahadeva dhimahi',
+                'mahadev dhimahi',
+                'mohe mahadeva dhimahi',
+                'mohe mahadevaya dhimahi',
+                
+                // Variations with "mahiti" (common mispronunciation of "vidmahe")
+                'tatpurushaya mahiti mahadevaya',
+                'mahiti mahadevaya dhimahi',
+                'mohe mahadeva mahiti',
+                
+                // Variations with "prachod" (shortened "prachodayat")
+                'rudra prachod',
+                'tanno rudra prachod',
+                'dhimahi tanno rudra prachod',
+                'mahadevaya dhimahi tanno rudra prachod',
+                'mohe mahadeva dhimahi tanno rudra prachod',
+                
+                // Partial patterns with common variations
+                'mohe mahadeva yachi',
+                'mahadeva yachi mahiti',
+                'yachi mahiti prachod',
+                'mohe mahadeva yachi mahiti',
+                'mahadeva yachi mahiti prachod',
+                'mohe mahadeva yachi mahiti prachod',
+                
+                // Patterns matching the actual recognition: "Mohe Mahadeva yachi mahiti prachod"
+                'mohe mahadeva yachi mahiti prachod',
+                'mohe mahadevaya yachi mahiti prachodayat',
+                'mahadeva yachi mahiti prachodayat',
+                
                 // Key words that indicate mantra (for partial matching)
                 'tatpurushaya',
+                'tatpurushon',  // Actual recognition variation
                 'vidmahe',
                 'mahadevaya',
+                'mahadeva',
+                'mahesh',  // Actual recognition variation
+                'mohe mahadeva',
                 'dhimahi',
                 'tanno',
                 'rudra',
-                'prachodayat'
+                'prachodayat',
+                'prachodyat',  // Actual recognition variation
+                'prachod'
             ],
 
             // Milestone celebrations
@@ -863,8 +928,26 @@ class GuruMantraCounter {
         console.log('🔍 Normalized text:', normalized);
         console.log('🔍 Cleaned text:', cleaned);
         
-        // STRATEGY 0: Quick check for exact Guru Mantra pattern
-        // This is the most common pronunciation, so check it first
+        // STRATEGY 0: Quick check for ACTUAL RECOGNITION PATTERN (HIGHEST PRIORITY)
+        // This matches the actual audio recognition: "Om tatpurushon with Mahesh dhimahi tanno Rudra prachodyat"
+        const actualRecognitionPattern = /om\s+tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat/i;
+        if (actualRecognitionPattern.test(normalized)) {
+            const matches = normalized.match(new RegExp(actualRecognitionPattern.source, 'gi'));
+            const count = matches ? matches.length : 1;
+            console.log('✅ EXACT MATCH (Actual Audio Recognition):', count);
+            return count;
+        }
+        
+        // Also check without "om" prefix
+        const actualRecognitionNoOmPattern = /tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat/i;
+        if (actualRecognitionNoOmPattern.test(normalized)) {
+            const matches = normalized.match(new RegExp(actualRecognitionNoOmPattern.source, 'gi'));
+            const count = matches ? matches.length : 1;
+            console.log('✅ EXACT MATCH (Actual Audio Recognition without Om):', count);
+            return count;
+        }
+        
+        // Check for standard Guru Mantra pattern
         const exactMantraPattern = /om\s+tatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i;
         if (exactMantraPattern.test(normalized)) {
             const matches = normalized.match(new RegExp(exactMantraPattern.source, 'gi'));
@@ -949,22 +1032,46 @@ class GuruMantraCounter {
         // Check for key Guru Mantra words/phrases
         // Core phrases that indicate the mantra
         const keyPhrases = [
+            // ACTUAL RECOGNITION PATTERNS (HIGHEST PRIORITY)
+            /\btatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
+            /\bwith\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
+            /\bmahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
+            /\bdhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
+            /\btanno\s+rudra\s+prachodyat\b/i,
+            // Standard patterns
             /\btatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\b/i,
             /\bvidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\b/i,
             /\bmahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat\b/i,
             /\bdhimahi\s+tanno\s+rudra\s+prachodayat\b/i,
-            /\btanno\s+rudra\s+prachodayat\b/i
+            /\btanno\s+rudra\s+prachodayat\b/i,
+            // Common variations
+            /\bmohe\s+mahadeva\s+dhimahi\b/i,
+            /\bmahadeva\s+dhimahi\s+tanno\s+rudra\b/i,
+            /\bmohe\s+mahadeva\s+yachi\s+mahiti\b/i,
+            /\bmahadeva\s+yachi\s+mahiti\s+prachod/i,
+            /\bmohe\s+mahadeva\s+yachi\s+mahiti\s+prachod/i,
+            /\bmahadeva\s+mahiti\s+prachod/i
         ];
         
         // Check for individual key words (at least 3-4 should be present)
+        // Include common variations and mispronunciations
         const keyWords = [
             /\btatpurushaya\b/i,
+            /\btatpurushon\b/i,  // Actual recognition variation
             /\bvidmahe\b/i,
+            /\bmahiti\b/i,  // Common mispronunciation of "vidmahe"
             /\bmahadevaya\b/i,
+            /\bmahadeva\b/i,  // Without "ya" ending
+            /\bmahesh\b/i,  // Actual recognition variation
+            /\bwith\s+mahesh\b/i,  // Actual recognition pattern
+            /\bmohe\s+mahadeva\b/i,  // Common variation
+            /\bmohe\s+mahadevaya\b/i,
             /\bdhimahi\b/i,
             /\btanno\b/i,
             /\brudra\b/i,
-            /\bprachodayat\b/i
+            /\bprachodayat\b/i,
+            /\bprachodyat\b/i,  // Actual recognition variation
+            /\bprachod\b/i  // Shortened version
         ];
         
         // Check for key phrases first (more reliable)
@@ -1008,15 +1115,76 @@ class GuruMantraCounter {
             return 1; // Count as one mantra
         }
         
-        // ACCEPT if "rudra prachodayat" is present (distinctive ending)
-        if (/\brudra\s+prachodayat\b/i.test(cleaned) || /\brudra\s+prachodayat\b/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "rudra prachodayat"');
+        // ACCEPT if "rudra prachodayat" or "rudra prachodyat" is present (distinctive ending)
+        if (/\brudra\s+prachodayat\b/i.test(cleaned) || /\brudra\s+prachodayat\b/i.test(normalized) ||
+            /\brudra\s+prachodyat\b/i.test(cleaned) || /\brudra\s+prachodyat\b/i.test(normalized)) {
+            console.log('✅ Fuzzy match: Found "rudra prachodayat/prachodyat"');
             return 1;
         }
         
-        // ACCEPT if "mahadevaya dhimahi" is present (distinctive middle)
-        if (/\bmahadevaya\s+dhimahi\b/i.test(cleaned) || /\bmahadevaya\s+dhimahi\b/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "mahadevaya dhimahi"');
+        // ACCEPT if "mahadevaya dhimahi" or "mahesh dhimahi" is present (distinctive middle)
+        if (/\bmahadevaya\s+dhimahi\b/i.test(cleaned) || /\bmahadevaya\s+dhimahi\b/i.test(normalized) ||
+            /\bmahesh\s+dhimahi\b/i.test(cleaned) || /\bmahesh\s+dhimahi\b/i.test(normalized) ||
+            /\bwith\s+mahesh\s+dhimahi\b/i.test(cleaned) || /\bwith\s+mahesh\s+dhimahi\b/i.test(normalized)) {
+            console.log('✅ Fuzzy match: Found "mahadevaya/mahesh dhimahi"');
+            return 1;
+        }
+        
+        // ACCEPT if "tatpurushon" + "mahesh" + "dhimahi" pattern (actual recognition)
+        const hasTatpurushon = /\btatpurushon\b/i.test(cleaned) || /\btatpurushon\b/i.test(normalized);
+        const hasMahesh = /\bmahesh\b/i.test(cleaned) || /\bmahesh\b/i.test(normalized);
+        const hasDhimahi = /\bdhimahi\b/i.test(cleaned) || /\bdhimahi\b/i.test(normalized);
+        if (hasTatpurushon && hasMahesh && hasDhimahi) {
+            console.log('✅ Fuzzy match: Found "tatpurushon mahesh dhimahi" pattern');
+            return 1;
+        }
+        
+        // ACCEPT if "mohe mahadeva" variations are present (common pronunciation)
+        if (/\bmohe\s+mahadeva\b/i.test(cleaned) || /\bmohe\s+mahadeva\b/i.test(normalized) ||
+            /\bmahadeva\s+dhimahi\b/i.test(cleaned) || /\bmahadeva\s+dhimahi\b/i.test(normalized)) {
+            console.log('✅ Fuzzy match: Found "mohe mahadeva" or "mahadeva dhimahi"');
+            // Check if other key words are present
+            const hasDhimahi = /\bdhimahi\b/i.test(cleaned) || /\bdhimahi\b/i.test(normalized);
+            const hasRudra = /\brudra\b/i.test(cleaned) || /\brudra\b/i.test(normalized);
+            const hasPrachod = /\bprachod/i.test(cleaned) || /\bprachod/i.test(normalized);
+            if (hasDhimahi || hasRudra || hasPrachod) {
+                return 1;
+            }
+        }
+        
+        // ACCEPT if "rudra prachod" is present (common shortened ending)
+        if (/\brudra\s+prachod/i.test(cleaned) || /\brudra\s+prachod/i.test(normalized)) {
+            console.log('✅ Fuzzy match: Found "rudra prachod"');
+            return 1;
+        }
+        
+        // ACCEPT if "mahiti" (vidmahe variation) + "mahadeva" + "prachod" are present
+        const hasMahiti = /\bmahiti\b/i.test(cleaned) || /\bmahiti\b/i.test(normalized);
+        const hasMahadeva = /\bmahadeva/i.test(cleaned) || /\bmahadeva/i.test(normalized);
+        const hasPrachod = /\bprachod/i.test(cleaned) || /\bprachod/i.test(normalized);
+        const hasYachi = /\byachi\b/i.test(cleaned) || /\byachi\b/i.test(normalized);
+        
+        // Pattern: "mohe mahadeva yachi mahiti prachod" (actual recognition)
+        if (hasMahadeva && hasMahiti && hasPrachod) {
+            console.log('✅ Fuzzy match: Found "mahadeva mahiti prachod" pattern');
+            return 1;
+        }
+        
+        // Pattern: "mohe mahadeva yachi mahiti" (with yachi)
+        if (hasMahadeva && hasYachi && hasMahiti) {
+            console.log('✅ Fuzzy match: Found "mahadeva yachi mahiti" pattern');
+            return 1;
+        }
+        
+        // Pattern: "mahadeva" + "prachod" (minimal but distinctive)
+        if (hasMahadeva && hasPrachod) {
+            console.log('✅ Fuzzy match: Found "mahadeva prachod" pattern');
+            return 1;
+        }
+        
+        // ACCEPT if at least 3 key words are present (more lenient for variations)
+        if (wordMatches >= 3) {
+            console.log(`✅ Fuzzy match: Found ${wordMatches} key words (lenient match)`);
             return 1;
         }
         
