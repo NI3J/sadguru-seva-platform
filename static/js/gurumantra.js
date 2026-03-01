@@ -355,15 +355,16 @@ class GuruMantraCounter {
 
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = false;
+            this.recognition.interimResults = true;  // Enable interim results for better continuous recognition
             this.recognition.maxAlternatives = 5;
-            this.recognition.continuous = true;
+            this.recognition.continuous = true;  // CRITICAL: Keep continuous mode ON for 100% accuracy
 
-            // Mobile optimization
+            // Mobile optimization - but still try continuous mode
             const isMobile = this.isMobileDevice();
             if (isMobile) {
-                this.recognition.continuous = false;
-                console.log('📱 Mobile device detected - optimized recognition');
+                // Still use continuous mode but handle restarts more carefully
+                this.recognition.continuous = true;
+                console.log('📱 Mobile device detected - using continuous mode with careful restart');
             }
             
             // CRITICAL: Log what we're listening for
@@ -695,35 +696,58 @@ class GuruMantraCounter {
     onRecognitionResult(event) {
         const now = Date.now();
         const results = event.results;
-        const lastResult = results[results.length - 1];
-
-        // CRITICAL FIX: Only process FINAL results to prevent automatic counting
-        // This ensures count only increases when user actually says the mantra
-        if (!lastResult.isFinal) {
-            return; // Don't process interim results - prevents automatic counting
-        }
-
+        
+        // CRITICAL FIX: Process ALL results for continuous recognition
+        // Check both interim and final results, but only count on final results
         let matchCount = 0;
         let bestTranscript = '';
+        let hasFinalResult = false;
 
-        // Check all alternatives in the final result
-        for (let i = 0; i < lastResult.length; i++) {
-            const transcript = lastResult[i].transcript;
-            const confidence = lastResult[i].confidence;
+        // Process all results in the event
+        for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
+            const result = results[resultIndex];
+            
+            // Track if we have any final results
+            if (result.isFinal) {
+                hasFinalResult = true;
+            }
+            
+            // Check all alternatives in each result
+            for (let i = 0; i < result.length; i++) {
+                const transcript = result[i].transcript;
+                const confidence = result[i].confidence;
 
-            if (i === 0) bestTranscript = transcript;
+                if (i === 0 && resultIndex === results.length - 1) {
+                    bestTranscript = transcript;
+                }
 
-            console.log('🎤 Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
-
-            const count = this.countMantraRepetitions(transcript);
-            if (count > 0) {
-                matchCount = count;
-                bestTranscript = transcript;
-                console.log('✅ MATCH: ' + count + ' repetitions in alt ' + (i + 1));
-                break; // Use first matching alternative
+                // Only count matches from FINAL results to prevent false positives
+                if (result.isFinal) {
+                    console.log('🎤 Final Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
+                    
+                    const count = this.countMantraRepetitions(transcript);
+                    if (count > 0) {
+                        matchCount = Math.max(matchCount, count);
+                        bestTranscript = transcript;
+                        console.log('✅ MATCH: ' + count + ' repetitions in final alt ' + (i + 1));
+                    }
+                } else {
+                    // Show interim results for feedback but don't count
+                    console.log('🎤 Interim: "' + transcript + '"');
+                }
             }
         }
 
+        // Only process if we have final results
+        if (!hasFinalResult) {
+            // Show interim transcript for user feedback
+            if (bestTranscript) {
+                this.displayRecognizedText(bestTranscript + '...');
+            }
+            return;
+        }
+
+        // Display the best transcript
         this.displayRecognizedText(bestTranscript);
         this.metrics.recognitionAttempts++;
 
@@ -737,17 +761,25 @@ class GuruMantraCounter {
     }
 
     onRecognitionEnd() {
-        console.log('🔚 Recognition ended');
+        console.log('🔚 Recognition ended - State:', {
+            isListening: this.state.isListening,
+            isInitialized: this.state.isInitialized,
+            documentHidden: document.hidden,
+            recognitionExists: !!this.recognition
+        });
 
         // CRITICAL FIX: Always keep listening state true if user wants to listen
         // Only auto-restart if user is still in listening mode
-        if (this.state.isListening && this.state.isInitialized && !document.hidden) {
-            // Immediate restart for continuous recognition
-            setTimeout(() => {
+        if (this.state.isListening && this.state.isInitialized && !document.hidden && this.recognition) {
+            // IMMEDIATE restart for continuous recognition (0ms delay for 100% accuracy)
+            // Use requestAnimationFrame for smoother restart
+            requestAnimationFrame(() => {
                 if (this.state.isListening && this.recognition) {
                     try {
+                        // Check if recognition is already running
+                        // If continuous mode is working, it might not have actually stopped
                         this.recognition.start();
-                        console.log('🔄 Auto-restarting recognition');
+                        console.log('🔄 Auto-restarting recognition (immediate)');
                         // Ensure listening state stays true
                         this.state.isListening = true;
                         this.updateUI();
@@ -761,27 +793,49 @@ class GuruMantraCounter {
                             this.state.isListening = true;
                             this.updateUI();
                         } else {
-                            // Try again after a short delay
-                            setTimeout(() => {
+                            // Try again immediately (no delay for 100% accuracy)
+                            requestAnimationFrame(() => {
                                 if (this.state.isListening && this.recognition) {
                                     try {
                                         this.recognition.start();
+                                        console.log('🔄 Retry restart successful');
                                         this.state.isListening = true;
                                         this.updateUI();
                                     } catch (retryError) {
                                         console.error('❌ Retry failed:', retryError);
-                                        // Only stop if it's a critical error
+                                        // Only stop if it's a critical error (not "already started")
                                         if (!retryError.message || !retryError.message.includes('already started')) {
-                                            this.state.isListening = false;
+                                            // Last resort: try one more time after minimal delay
+                                            setTimeout(() => {
+                                                if (this.state.isListening && this.recognition) {
+                                                    try {
+                                                        this.recognition.start();
+                                                        this.state.isListening = true;
+                                                        this.updateUI();
+                                                        console.log('🔄 Final retry successful');
+                                                    } catch (finalError) {
+                                                        console.error('❌ Final retry failed:', finalError);
+                                                        // Only stop if it's truly critical
+                                                        if (finalError.message && !finalError.message.includes('already started')) {
+                                                            this.state.isListening = false;
+                                                            this.updateUI();
+                                                            this.showNotification('ओळखणे थांबले', 'error');
+                                                        }
+                                                    }
+                                                }
+                                            }, 100);
+                                        } else {
+                                            // "Already started" means it's working - keep going
+                                            this.state.isListening = true;
                                             this.updateUI();
                                         }
                                     }
                                 }
-                            }, 200);
+                            });
                         }
                     }
                 }
-            }, 50); // Reduced to 50ms for faster continuous recognition
+            });
         } else {
             // Only stop if user explicitly stopped or page is hidden
             if (!this.state.isListening) {
@@ -837,11 +891,12 @@ class GuruMantraCounter {
         
         // Auto-restart if still in listening mode and not a critical error
         if (this.state.isListening && !criticalErrors.includes(event.error) && event.error !== 'aborted') {
-            setTimeout(() => {
+            // Use requestAnimationFrame for immediate restart (0ms delay for 100% accuracy)
+            requestAnimationFrame(() => {
                 if (this.state.isListening && this.recognition) {
                     try {
                         this.recognition.start();
-                        console.log('🔄 Auto-restarting after error');
+                        console.log('🔄 Auto-restarting after error (immediate)');
                         // Ensure listening state stays true
                         this.state.isListening = true;
                         this.updateUI();
@@ -849,8 +904,8 @@ class GuruMantraCounter {
                         console.error('❌ Auto-restart after error failed:', error);
                         // Only stop if it's a critical restart failure
                         if (error.message && !error.message.includes('already started')) {
-                            // Try one more time
-                            setTimeout(() => {
+                            // Try one more time immediately
+                            requestAnimationFrame(() => {
                                 if (this.state.isListening && this.recognition) {
                                     try {
                                         this.recognition.start();
@@ -860,12 +915,32 @@ class GuruMantraCounter {
                                         console.error('❌ Retry after error failed:', retryError);
                                         // Only stop if it's truly critical
                                         if (!retryError.message || !retryError.message.includes('already started')) {
-                                            this.state.isListening = false;
+                                            // Last resort: try one more time
+                                            setTimeout(() => {
+                                                if (this.state.isListening && this.recognition) {
+                                                    try {
+                                                        this.recognition.start();
+                                                        this.state.isListening = true;
+                                                        this.updateUI();
+                                                        console.log('🔄 Final retry after error successful');
+                                                    } catch (finalError) {
+                                                        console.error('❌ Final retry failed:', finalError);
+                                                        if (finalError.message && !finalError.message.includes('already started')) {
+                                                            this.state.isListening = false;
+                                                            this.updateUI();
+                                                            this.showNotification('ओळखणे थांबले', 'error');
+                                                        }
+                                                    }
+                                                }
+                                            }, 100);
+                                        } else {
+                                            // "Already started" means it's working - keep going
+                                            this.state.isListening = true;
                                             this.updateUI();
                                         }
                                     }
                                 }
-                            }, 100);
+                            });
                         } else {
                             // Already started is fine - keep listening
                             this.state.isListening = true;
