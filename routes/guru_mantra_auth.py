@@ -112,8 +112,11 @@ def require_guru_mantra_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         print(f"DEBUG: Checking auth for {f.__name__}")
+        print(f"DEBUG: Session keys: {list(session.keys())}")
+        print(f"DEBUG: guru_mantra_authenticated: {session.get('guru_mantra_authenticated')}")
+        print(f"DEBUG: guru_mantra_user_id: {session.get('guru_mantra_user_id')}")
         
-        if not session.get('authenticated') or not session.get('user_id'):
+        if not session.get('guru_mantra_authenticated') or not session.get('guru_mantra_user_id'):
             print("DEBUG: Not authenticated, redirecting to auth page")
             return redirect(url_for('guru_mantra_auth.auth_page'))
         return f(*args, **kwargs)
@@ -128,8 +131,11 @@ def require_guru_mantra_auth(f):
 def auth_page():
     """Render Guru Mantra login page."""
     print("DEBUG: Auth page accessed")
+    print(f"DEBUG: Session keys: {list(session.keys())}")
+    print(f"DEBUG: guru_mantra_authenticated: {session.get('guru_mantra_authenticated')}")
+    print(f"DEBUG: guru_mantra_user_id: {session.get('guru_mantra_user_id')}")
     
-    if session.get('authenticated') and session.get('user_id'):
+    if session.get('guru_mantra_authenticated') and session.get('guru_mantra_user_id'):
         print("DEBUG: Already authenticated, redirecting to guru-mantra")
         return redirect(url_for('guru_mantra_auth.guru_mantra'))
     
