@@ -106,20 +106,9 @@ class GuruMantraCounter {
                 'tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
                 'tatpurushaya vidmahe mahadevaya dhimahi tanno rudrah prachodayat',
                 
-                // Partial patterns - common when chanting (key phrases)
-                'tatpurushaya vidmahe mahadevaya dhimahi',
-                'vidmahe mahadevaya dhimahi tanno rudra',
-                'mahadevaya dhimahi tanno rudra prachodayat',
-                'dhimahi tanno rudra prachodayat',
-                'tanno rudra prachodayat',
-                'rudra prachodayat',
-                // Actual recognition partials
-                'tatpurushon with mahesh dhimahi',
-                'with mahesh dhimahi tanno rudra',
-                'mahesh dhimahi tanno rudra prachodyat',
-                'dhimahi tanno rudra prachodyat',
-                'tanno rudra prachodyat',
-                'rudra prachodyat',
+                // REMOVED: Partial patterns with less than 5 words
+                // Only complete mantra patterns (5+ words) are accepted to prevent false matches
+                // These were causing individual words like "om" to trigger counts
                 
                 // Speech recognition variations (no spaces, merged words)
                 'om tatpurushayavidmahe mahadevayadhimahi tannorudra prachodayat',
@@ -154,40 +143,22 @@ class GuruMantraCounter {
                 'mahiti mahadevaya dhimahi',
                 'mohe mahadeva mahiti',
                 
-                // Variations with "prachod" (shortened "prachodayat")
-                'rudra prachod',
-                'tanno rudra prachod',
-                'dhimahi tanno rudra prachod',
+                // Variations with "prachod" (shortened "prachodayat") - only complete patterns
                 'mahadevaya dhimahi tanno rudra prachod',
                 'mohe mahadeva dhimahi tanno rudra prachod',
                 
-                // Partial patterns with common variations
-                'mohe mahadeva yachi',
-                'mahadeva yachi mahiti',
-                'yachi mahiti prachod',
-                'mohe mahadeva yachi mahiti',
-                'mahadeva yachi mahiti prachod',
+                // Complete patterns with common variations (5+ words only)
+                'mohe mahadeva yachi mahiti prachod',
+                'mahadeva yachi mahiti prachodayat',
                 'mohe mahadeva yachi mahiti prachod',
                 
                 // Patterns matching the actual recognition: "Mohe Mahadeva yachi mahiti prachod"
                 'mohe mahadeva yachi mahiti prachod',
                 'mohe mahadevaya yachi mahiti prachodayat',
-                'mahadeva yachi mahiti prachodayat',
+                'mahadeva yachi mahiti prachodayat'
                 
-                // Key words that indicate mantra (for partial matching)
-                'tatpurushaya',
-                'tatpurushon',  // Actual recognition variation
-                'vidmahe',
-                'mahadevaya',
-                'mahadeva',
-                'mahesh',  // Actual recognition variation
-                'mohe mahadeva',
-                'dhimahi',
-                'tanno',
-                'rudra',
-                'prachodayat',
-                'prachodyat',  // Actual recognition variation
-                'prachod'
+                // REMOVED: Individual key words - these cause false positives
+                // Only complete mantra patterns (5+ words) are accepted
             ],
 
             // Milestone celebrations
@@ -1040,35 +1011,46 @@ class GuruMantraCounter {
             return count;
         }
         
-        // STRATEGY 1: Exact phrase matching (fastest and most accurate)
-        for (let pattern of this.config.targetPhrases) {
+        // STRATEGY 1: Exact phrase matching - ONLY COMPLETE MANTRA PATTERNS
+        // CRITICAL: Only match COMPLETE mantras, not individual words
+        // Filter to only complete mantra patterns (at least 5-6 words)
+        const completeMantraPatterns = this.config.targetPhrases.filter(pattern => {
+            const wordCount = pattern.split(/\s+/).length;
+            // Only accept patterns with at least 5 words (complete mantra)
+            return wordCount >= 5;
+        });
+        
+        for (let pattern of completeMantraPatterns) {
             const patternLower = pattern.toLowerCase();
             
-            // Exact match
+            // Exact match - must be complete mantra
             if (normalized === patternLower || cleaned === patternLower) {
-                console.log('✅ EXACT MATCH:', pattern);
-                return 1;
+                console.log('✅ EXACT MATCH (Complete Mantra):', pattern);
+                return 1; // Always return 1 for complete mantra
             }
             
-            // Contains match (for multiple repetitions)
+            // Contains match - but verify it's a complete mantra match
             if (normalized.includes(patternLower) || cleaned.includes(patternLower)) {
                 const textToUse = normalized.includes(patternLower) ? normalized : cleaned;
-                const matches = this.countOccurrences(textToUse, patternLower);
+                // Use word boundary matching to ensure complete mantra
+                const regexPattern = new RegExp('\\b' + patternLower.replace(/\s+/g, '\\s+') + '\\b', 'gi');
+                const matches = (textToUse.match(regexPattern) || []).length;
                 if (matches > 0) {
-                    console.log(`✅ FOUND ${matches} occurrence(s) of:`, pattern);
-                    return matches;
+                    console.log(`✅ FOUND ${matches} complete mantra(s):`, pattern);
+                    return matches; // Return count of complete mantras
                 }
             }
         }
         
-        // STRATEGY 2: Fuzzy matching for common speech recognition errors
-        const fuzzyScore = this.fuzzyMatchMantra(text); // Pass original text to preserve "hare"
+        // STRATEGY 2: Fuzzy matching - STRICT: Only complete mantras
+        // CRITICAL: Only match if we have a COMPLETE mantra pattern (5+ words together)
+        const fuzzyScore = this.fuzzyMatchMantra(text);
         if (fuzzyScore > 0) {
-            console.log('✅ FUZZY MATCH found:', fuzzyScore, 'mantras');
+            console.log('✅ FUZZY MATCH found (Complete Mantra):', fuzzyScore, 'mantra(s)');
             return fuzzyScore;
         }
         
-        console.log('❌ No match found in:', text);
+        console.log('❌ No complete mantra found in:', text);
         return 0;
     }
 
@@ -1184,116 +1166,69 @@ class GuruMantraCounter {
             return phraseMatches;
         }
         
-        // ACCEPT if at least 4-5 key words are present (indicates mantra)
-        if (wordMatches >= 4) {
-            console.log(`✅ Fuzzy match: Found ${wordMatches} key words`);
-            return 1; // Count as one mantra
-        }
+        // CRITICAL: Only accept COMPLETE mantra patterns - require at least 5-6 key words together
+        // This prevents counting individual words like "om" or "rudra"
         
-        // ACCEPT if "rudra prachodayat" or "rudra prachodyat" is present (distinctive ending)
-        if (/\brudra\s+prachodayat\b/i.test(cleaned) || /\brudra\s+prachodayat\b/i.test(normalized) ||
-            /\brudra\s+prachodyat\b/i.test(cleaned) || /\brudra\s+prachodyat\b/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "rudra prachodayat/prachodyat"');
-            return 1;
-        }
-        
-        // ACCEPT if "mahadevaya dhimahi" or "mahesh dhimahi" is present (distinctive middle)
-        if (/\bmahadevaya\s+dhimahi\b/i.test(cleaned) || /\bmahadevaya\s+dhimahi\b/i.test(normalized) ||
-            /\bmahesh\s+dhimahi\b/i.test(cleaned) || /\bmahesh\s+dhimahi\b/i.test(normalized) ||
-            /\bwith\s+mahesh\s+dhimahi\b/i.test(cleaned) || /\bwith\s+mahesh\s+dhimahi\b/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "mahadevaya/mahesh dhimahi"');
-            return 1;
-        }
-        
-        // ACCEPT if "tatpurushon" + "mahesh" + "dhimahi" pattern (actual recognition)
+        // Check for complete mantra pattern variables
         const hasTatpurushon = /\btatpurushon\b/i.test(cleaned) || /\btatpurushon\b/i.test(normalized);
+        const hasTatpurushaya = /\btatpurushaya\b/i.test(cleaned) || /\btatpurushaya\b/i.test(normalized);
+        const hasWithMahesh = /\bwith\s+mahesh\b/i.test(cleaned) || /\bwith\s+mahesh\b/i.test(normalized);
         const hasMahesh = /\bmahesh\b/i.test(cleaned) || /\bmahesh\b/i.test(normalized);
+        const hasVidmahe = /\bvidmahe\b/i.test(cleaned) || /\bvidmahe\b/i.test(normalized);
+        const hasMahadevaya = /\bmahadevaya\b/i.test(cleaned) || /\bmahadevaya\b/i.test(normalized);
         const hasDhimahi = /\bdhimahi\b/i.test(cleaned) || /\bdhimahi\b/i.test(normalized);
-        if (hasTatpurushon && hasMahesh && hasDhimahi) {
-            console.log('✅ Fuzzy match: Found "tatpurushon mahesh dhimahi" pattern');
-            return 1;
+        const hasTanno = /\btanno\b/i.test(cleaned) || /\btanno\b/i.test(normalized);
+        const hasRudra = /\brudra\b/i.test(cleaned) || /\brudra\b/i.test(normalized);
+        const hasPrachodyat = /\bprachodyat\b/i.test(cleaned) || /\bprachodyat\b/i.test(normalized);
+        const hasPrachodayat = /\bprachodayat\b/i.test(cleaned) || /\bprachodayat\b/i.test(normalized);
+        
+        // PATTERN 1: Complete "tatpurushon with mahesh dhimahi tanno rudra prachodyat" (actual recognition)
+        if (hasTatpurushon && hasWithMahesh && hasDhimahi && hasTanno && hasRudra && hasPrachodyat) {
+            console.log('✅ Fuzzy match: Found COMPLETE "tatpurushon with mahesh..." pattern');
+            return 1; // One complete mantra
         }
         
-        // ACCEPT if "mohe mahadeva" variations are present (common pronunciation)
-        if (/\bmohe\s+mahadeva\b/i.test(cleaned) || /\bmohe\s+mahadeva\b/i.test(normalized) ||
-            /\bmahadeva\s+dhimahi\b/i.test(cleaned) || /\bmahadeva\s+dhimahi\b/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "mohe mahadeva" or "mahadeva dhimahi"');
-            // Check if other key words are present
-            const hasDhimahi = /\bdhimahi\b/i.test(cleaned) || /\bdhimahi\b/i.test(normalized);
-            const hasRudra = /\brudra\b/i.test(cleaned) || /\brudra\b/i.test(normalized);
-            const hasPrachod = /\bprachod/i.test(cleaned) || /\bprachod/i.test(normalized);
-            if (hasDhimahi || hasRudra || hasPrachod) {
-                return 1;
+        // PATTERN 2: Complete standard "tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat"
+        if (hasTatpurushaya && hasVidmahe && hasMahadevaya && hasDhimahi && hasTanno && hasRudra && hasPrachodayat) {
+            console.log('✅ Fuzzy match: Found COMPLETE standard mantra pattern');
+            return 1; // One complete mantra
+        }
+        
+        // PATTERN 3: Complete ending + middle section (distinctive complete pattern)
+        const hasRudraPrachod = (/\brudra\s+prachodayat\b/i.test(cleaned) || 
+                                 /\brudra\s+prachodayat\b/i.test(normalized) ||
+                                 /\brudra\s+prachodyat\b/i.test(cleaned) || 
+                                 /\brudra\s+prachodyat\b/i.test(normalized));
+        const hasCompleteMiddle = (/\bdhimahi\s+tanno\s+rudra\b/i.test(cleaned) || 
+                                   /\bdhimahi\s+tanno\s+rudra\b/i.test(normalized) ||
+                                   /\bmahadevaya\s+dhimahi\s+tanno\b/i.test(cleaned) || 
+                                   /\bmahadevaya\s+dhimahi\s+tanno\b/i.test(normalized) ||
+                                   /\bmahesh\s+dhimahi\s+tanno\b/i.test(cleaned) || 
+                                   /\bmahesh\s+dhimahi\s+tanno\b/i.test(normalized) ||
+                                   /\bwith\s+mahesh\s+dhimahi\s+tanno\b/i.test(cleaned) || 
+                                   /\bwith\s+mahesh\s+dhimahi\s+tanno\b/i.test(normalized));
+        
+        if (hasRudraPrachod && hasCompleteMiddle) {
+            console.log('✅ Fuzzy match: Found COMPLETE mantra with ending + middle section');
+            return 1; // One complete mantra
+        }
+        
+        // STRICT: Require at least 5-6 key words together AND they must form a complete mantra structure
+        // Must have: start word + middle section + ending
+        if (wordMatches >= 5) {
+            const hasStart = hasTatpurushon || hasTatpurushaya;
+            const hasMiddle = hasMahadevaya || hasMahesh || hasWithMahesh || hasVidmahe;
+            const hasEnd = hasRudra && (hasPrachodayat || hasPrachodyat);
+            
+            // Must have all three sections to count as complete mantra
+            if (hasStart && hasMiddle && hasEnd && hasDhimahi && hasTanno) {
+                console.log(`✅ Fuzzy match: Found ${wordMatches} key words in COMPLETE mantra pattern`);
+                return 1; // One complete mantra
             }
         }
         
-        // ACCEPT if "rudra prachod" is present (common shortened ending)
-        if (/\brudra\s+prachod/i.test(cleaned) || /\brudra\s+prachod/i.test(normalized)) {
-            console.log('✅ Fuzzy match: Found "rudra prachod"');
-            return 1;
-        }
-        
-        // ACCEPT if "mahiti" (vidmahe variation) + "mahadeva" + "prachod" are present
-        const hasMahiti = /\bmahiti\b/i.test(cleaned) || /\bmahiti\b/i.test(normalized);
-        const hasMahadeva = /\bmahadeva/i.test(cleaned) || /\bmahadeva/i.test(normalized);
-        const hasPrachod = /\bprachod/i.test(cleaned) || /\bprachod/i.test(normalized);
-        const hasYachi = /\byachi\b/i.test(cleaned) || /\byachi\b/i.test(normalized);
-        
-        // Pattern: "mohe mahadeva yachi mahiti prachod" (actual recognition)
-        if (hasMahadeva && hasMahiti && hasPrachod) {
-            console.log('✅ Fuzzy match: Found "mahadeva mahiti prachod" pattern');
-            return 1;
-        }
-        
-        // Pattern: "mohe mahadeva yachi mahiti" (with yachi)
-        if (hasMahadeva && hasYachi && hasMahiti) {
-            console.log('✅ Fuzzy match: Found "mahadeva yachi mahiti" pattern');
-            return 1;
-        }
-        
-        // Pattern: "mahadeva" + "prachod" (minimal but distinctive)
-        if (hasMahadeva && hasPrachod) {
-            console.log('✅ Fuzzy match: Found "mahadeva prachod" pattern');
-            return 1;
-        }
-        
-        // ACCEPT if at least 3 key words are present (more lenient for variations)
-        if (wordMatches >= 3) {
-            console.log(`✅ Fuzzy match: Found ${wordMatches} key words (lenient match)`);
-            return 1;
-        }
-        
-        // No match found
-        console.log('❌ Fuzzy match: Insufficient key words/phrases found');
-        return 0;
-        // - "ramkrishna" (no space)
-        
-        // Count occurrences - prioritize "jai jai" count if present (more accurate)
-        if (hasJaiJay) {
-            const jaiJayPattern = /\b(jai|jay)\s+(jai|jay)\b/gi;
-            const jaiJayMatches = cleaned.match(jaiJayPattern) || normalized.match(jaiJayPattern);
-            const jaiJayCount = jaiJayMatches ? jaiJayMatches.length : 0;
-            if (jaiJayCount > 0) {
-                console.log('✅ Using jai jai count:', jaiJayCount);
-                return jaiJayCount;
-            }
-        }
-        
-        // Count "ram krishna" occurrences (with or without space)
-        const ramKrishnaMatches = cleaned.match(ramKrishnaPattern) || cleaned.match(ramKrishnaNoSpace);
-        const coreMatches = ramKrishnaMatches ? ramKrishnaMatches.length : 0;
-        
-        if (coreMatches > 0) {
-            console.log('✅ Fuzzy match - "ram krishna" found:', coreMatches, 'time(s)');
-            return coreMatches;
-        }
-        
-        // If we have ram and krishna nearby, count as 1
-        if (hasRamKrishnaNearby) {
-            console.log('✅ Fuzzy match - "ram" and "krishna" found nearby, counting as 1');
-            return 1;
-        }
-        
+        // No match found - individual words don't count as mantras
+        console.log('❌ Fuzzy match: No COMPLETE mantra found - individual words ignored');
         return 0;
     }
 
@@ -1338,18 +1273,21 @@ class GuruMantraCounter {
     // ================================================================
 
     incrementCounterByCount(count) {
+        // CRITICAL: 1 mantra = 1 count (not 8 words)
+        // The mantra is counted as 1 unit, not multiplied by wordsPerPronunciation
         // DO NOT reset dates during increment - let checkForDateChange handle it
         // This prevents false resets during chanting
 
-        // Calculate total words and pronunciations for this recognition
-        const wordsToAdd = count * this.config.wordsPerPronunciation;
-        const pronunciationsToAdd = count;
+        // Each count represents 1 complete mantra pronunciation
+        // 1 mantra = 1 count = 1 pronunciation
+        const mantrasToAdd = count; // count is already the number of complete mantras
 
-        console.log('DEBUG: Before increment - currentMala:', this.state.currentMalaPronunciations, 'todayMalas:', this.state.todayMalas, 'count to add:', count, 'pronunciationsToAdd:', pronunciationsToAdd);
+        console.log('DEBUG: Before increment - currentMala:', this.state.currentMalaPronunciations, 'todayMalas:', this.state.todayMalas, 'mantras to add:', mantrasToAdd);
 
         // Check for mala completion BEFORE incrementing
         // This ensures we capture the completed mala properly
-        const willCompleteMala = (this.state.currentMalaPronunciations + pronunciationsToAdd) >= this.config.pronunciationsPerMala;
+        // 108 mantras = 1 mala
+        const willCompleteMala = (this.state.currentMalaPronunciations + mantrasToAdd) >= this.config.pronunciationsPerMala;
         
         if (willCompleteMala) {
             console.log('DEBUG: MALA WILL BE COMPLETED! Incrementing todayMalas from', this.state.todayMalas);
@@ -1357,30 +1295,31 @@ class GuruMantraCounter {
             this.state.todayMalas++;
             console.log('DEBUG: After mala completion - todayMalas:', this.state.todayMalas, 'totalMalas:', this.state.totalMalas);
             
-            // Calculate remaining pronunciations for current mala
+            // Calculate remaining mantras for current mala
             const remainingForCurrentMala = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
             this.state.currentMalaPronunciations = 0;
             
-            // Handle excess pronunciations for next mala
-            const excessPronunciations = pronunciationsToAdd - remainingForCurrentMala;
-            if (excessPronunciations > 0) {
-                this.state.currentMalaPronunciations = excessPronunciations;
+            // Handle excess mantras for next mala
+            const excessMantras = mantrasToAdd - remainingForCurrentMala;
+            if (excessMantras > 0) {
+                this.state.currentMalaPronunciations = excessMantras;
             }
             
             setTimeout(() => this.completeMala(), 100);
         } else {
             // Normal increment - no mala completion
-            this.state.currentMalaPronunciations += pronunciationsToAdd;
+            this.state.currentMalaPronunciations += mantrasToAdd;
         }
 
-        // CRITICAL FIX: Increment both total and today's counts
-        // These are the authoritative sources for count tracking
-        this.state.totalWords += wordsToAdd;
-        this.state.totalPronunciations += pronunciationsToAdd;
-        this.state.todayWords += wordsToAdd;
-        this.state.todayPronunciations += pronunciationsToAdd;
+        // CRITICAL FIX: Increment counts
+        // 1 mantra = 1 count (not multiplied by wordsPerPronunciation)
+        // totalWords and todayWords represent the mantra count (1 mantra = 1 word count)
+        this.state.totalWords += mantrasToAdd;
+        this.state.totalPronunciations += mantrasToAdd;
+        this.state.todayWords += mantrasToAdd;
+        this.state.todayPronunciations += mantrasToAdd;
 
-        // CRITICAL FIX: todaysCount should always equal todayWords
+        // CRITICAL FIX: todaysCount should always equal todayWords (mantra count)
         // Don't recalculate from mala progress - use the actual increment
         this.state.todaysCount = this.state.todayWords;
 
