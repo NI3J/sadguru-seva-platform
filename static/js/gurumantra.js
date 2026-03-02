@@ -1,308 +1,210 @@
 /**
  * =====================================================================
- * HARI JAP COUNTER APPLICATION - FINAL FIXED VERSION
+ * GURU MANTRA JAP COUNTER
  * =====================================================================
- * Voice-recognition based counter for chanting "जय जय राम कृष्णा हारी"
- * Features: Multi-repetition detection, instant feedback, milestone tracking
- * FIXED: Enhanced fuzzy matching for better speech recognition
+ * Mantra: ॐ तत्पुरुषाय विद्महे महादेवाय धीमहि तन्नो रुद्रः प्रचोदयात्
+ *         (Rudra Gayatri / Shiva Gayatri Mantra)
+ *
+ * Features:
+ *  - Voice recognition (hi-IN) with fuzzy Sanskrit matching
+ *  - Manual count fallback
+ *  - Mala tracking (108 per mala)
+ *  - Today / lifetime counters with server persistence
+ *  - IST-aware midnight reset
+ *  - Session timeout with continue/logout prompt
  * =====================================================================
  */
 
+// ======================================================================
+// SECTION 1 — APPLICATION CLASS
+// ======================================================================
+
 class GuruMantraCounter {
+
+    // ------------------------------------------------------------------
+    // 1.1  CONSTRUCTOR
+    // ------------------------------------------------------------------
+
     constructor() {
-        // ============================================================
-        // STATE MANAGEMENT
-        // ============================================================
-        this.state = {
-            // Counting state - Total (lifetime)
-            totalWords: 0,
-            totalPronunciations: 0,
-            totalMalas: 0,
-            
-            // Today's counting state
-            todayWords: 0,
-            todayPronunciations: 0,
-            todayMalas: 0,
-            todayDate: this.getTodayDateString(),
-            todaysCount: 0, // New field for persistent today's count
-            
-            // Current session state
-            currentMalaPronunciations: 0,
-            sessionStartTime: Date.now(),
+        this._initState();
+        this._initConfig();
+        this._initMetrics();
+        this._initServerTime();
+        this._initSessionTimeout();
 
-            // Application state
-            isInitialized: false,
-            isListening: false,
-            isSaving: false,
-            isFirstLoad: true, // CRITICAL: Flag to track first load from server
-
-            // User state
-            userName: '',
-            userId: null,
-
-            // Recognition state
-            lastRecognitionTime: 0,
-            lastRecognitionCount: 0, // Store last count for duplicate detection
-
-            // Mantra word tracking - Guru Mantra: ॐ तत्पुरुषाय विद्महे महादेवाय धीमहि तन्नो रुद्रः प्रचोदयात् ॥
-            mantraWords: ['ॐ', 'तत्पुरुषाय', 'विद्महे', 'महादेवाय', 'धीमहि', 'तन्नो', 'रुद्रः', 'प्रचोदयात्']
-        };
-
-        // ============================================================
-        // CONFIGURATION
-        // ============================================================
-        this.config = {
-            // Mantra configuration - Guru Mantra has 8 words
-            wordsPerPronunciation: 8,  // ॐ तत्पुरुषाय विद्महे महादेवाय धीमहि तन्नो रुद्रः प्रचोदयात्
-            pronunciationsPerMala: 108,
-
-            // Recognition settings - CRITICAL FIX
-            recognitionLang: 'en-IN', // Keep English (India) for better recognition
-            minTimeBetweenCounts: 300,
-
-            // Auto-save settings
-            autoSaveInterval: 10000,
-            syncInterval: 30000,
-
-            // COMPREHENSIVE target phrases - prioritize most common variations
-            // Based on actual pronunciation: "Om Tatpurushaya Vidmahe Mahadevaya Dhimahi Tanno Rudra Prachodayat"
-            // Rudra Gayatri Mantra recognition patterns
-            // ACTUAL RECOGNITION FROM AUDIO: "Om tatpurushon with Mahesh dhimahi tanno Rudra prachodyat"
-            targetPhrases: [
-                // PRIMARY: ACTUAL RECOGNITION FROM RECORDED AUDIO (HIGHEST PRIORITY)
-                'om tatpurushon with mahesh dhimahi tanno rudra prachodyat',
-                'om tatpurushon with mahesh dhimahi tanno rudra prachodayat',
-                'tatpurushon with mahesh dhimahi tanno rudra prachodyat',
-                'tatpurushon with mahesh dhimahi tanno rudra prachodayat',
-                
-                // Variations of "tatpurushon" (common mispronunciation)
-                'om tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodyat',
-                'tatpurushon vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                
-                // Variations with "with Mahesh" (actual recognition)
-                'om tatpurushaya with mahesh dhimahi tanno rudra prachodyat',
-                'tatpurushaya with mahesh dhimahi tanno rudra prachodyat',
-                'with mahesh dhimahi tanno rudra prachodyat',
-                'mahesh dhimahi tanno rudra prachodyat',
-                
-                // Complete mantra variations (standard)
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudrah prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayath',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayath',
-                
-                // Variations with different spellings and pronunciations
-                'om tatpurushay vidmahe mahadevay dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                
-                // Common speech recognition variations
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                
-                // Without "Om" prefix (common in continuous chanting)
-                'tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'tatpurushaya vidmahe mahadevaya dhimahi tanno rudrah prachodayat',
-                
-                // REMOVED: Partial patterns with less than 5 words
-                // Only complete mantra patterns (5+ words) are accepted to prevent false matches
-                // These were causing individual words like "om" to trigger counts
-                
-                // Speech recognition variations (no spaces, merged words)
-                'om tatpurushayavidmahe mahadevayadhimahi tannorudra prachodayat',
-                'tatpurushayavidmahe mahadevayadhimahi',
-                'mahadevayadhimahi tannorudra',
-                'tannorudra prachodayat',
-                
-                // Common mispronunciations/variations
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                'om tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat',
-                
-                // Hindi/Devanagari variations (if supported by speech recognition)
-                'ॐ तत्पुरुषाय विद्महे महादेवाय धीमहि तन्नो रुद्रः प्रचोदयात्',
-                'तत्पुरुषाय विद्महे महादेवाय धीमहि तन्नो रुद्रः प्रचोदयात्',
-                'तत्पुरुषाय विद्महे महादेवाय धीमहि',
-                'महादेवाय धीमहि तन्नो रुद्रः',
-                'तन्नो रुद्रः प्रचोदयात्',
-                'रुद्रः प्रचोदयात्',
-                
-                // Common mispronunciations and regional variations
-                'mohe mahadeva',  // Common variation of "mahadevaya"
-                'mohe mahadevaya',
-                'mohe mahadev',
-                'mahadeva dhimahi',
-                'mahadev dhimahi',
-                'mohe mahadeva dhimahi',
-                'mohe mahadevaya dhimahi',
-                
-                // Variations with "mahiti" (common mispronunciation of "vidmahe")
-                'tatpurushaya mahiti mahadevaya',
-                'mahiti mahadevaya dhimahi',
-                'mohe mahadeva mahiti',
-                
-                // Variations with "prachod" (shortened "prachodayat") - only complete patterns
-                'mahadevaya dhimahi tanno rudra prachod',
-                'mohe mahadeva dhimahi tanno rudra prachod',
-                
-                // Complete patterns with common variations (5+ words only)
-                'mohe mahadeva yachi mahiti prachod',
-                'mahadeva yachi mahiti prachodayat',
-                'mohe mahadeva yachi mahiti prachod',
-                
-                // Patterns matching the actual recognition: "Mohe Mahadeva yachi mahiti prachod"
-                'mohe mahadeva yachi mahiti prachod',
-                'mohe mahadevaya yachi mahiti prachodayat',
-                'mahadeva yachi mahiti prachodayat'
-                
-                // REMOVED: Individual key words - these cause false positives
-                // Only complete mantra patterns (5+ words) are accepted
-            ],
-
-            // Milestone celebrations
-            milestones: [10, 21, 51, 108, 1008]
-        };
-
-        // ============================================================
-        // PERFORMANCE METRICS
-        // ============================================================
-        this.metrics = {
-            recognitionSuccesses: 0,
-            recognitionAttempts: 0,
-            totalSessionTime: 0
-        };
-
-        // ============================================================
-        // DOM ELEMENTS CACHE
-        // ============================================================
-        this.elements = {};
-
-        // ============================================================
-        // SPEECH RECOGNITION
-        // ============================================================
+        this.elements   = {};
         this.recognition = null;
 
-        // ============================================================
-        // SERVER TIME MANAGEMENT
-        // ============================================================
-        this.serverDate = null;
-        this.serverTime = null;
-        this.serverHour = null;
-        this.serverMinute = null;
-        this.serverSecond = null;
-        this.serverTimeFetchedAt = null;
-        this.serverTimeLoading = false;
-
-        // ============================================================
-        // SESSION TIMEOUT MANAGEMENT
-        // ============================================================
-        this.sessionTimeout = {
-            duration: 5 * 60 * 1000, // 5 minutes in milliseconds
-            warningDuration: 30 * 1000, // 30 seconds warning
-            lastActivity: Date.now(),
-            timeoutId: null,
-            warningId: null,
-            isWarningShown: false
-        };
-
-        // Start initialization
         this.init();
     }
 
-    // ================================================================
-    // INITIALIZATION METHODS
-    // ================================================================
+    _initState() {
+        this.state = {
+            // ---- lifetime totals ----
+            totalWords:            0,
+            totalPronunciations:   0,
+            totalMalas:            0,
+
+            // ---- today's totals ----
+            todayWords:            0,
+            todayPronunciations:   0,
+            todayMalas:            0,
+            todayDate:             this._localDateString(),
+            todaysCount:           0,
+
+            // ---- current mala progress ----
+            currentMalaPronunciations: 0,
+
+            // ---- session ----
+            sessionStartTime:      Date.now(),
+            isInitialized:         false,
+            isListening:           false,
+            isSaving:              false,
+            isFirstLoad:           true,
+
+            // ---- user ----
+            userName: '',
+            userId:   null,
+
+            // ---- recognition ----
+            lastRecognitionTime:  0,
+        };
+    }
+
+    _initConfig() {
+        this.config = {
+            // Mantra: 8 words, 108 per mala
+            wordsPerPronunciation:  8,
+            pronunciationsPerMala: 108,
+
+            // hi-IN gives far better Sanskrit / Devanagari recognition than en-IN
+            recognitionLang: 'hi-IN',
+
+            // Debounce — ignore duplicates within 300 ms
+            minTimeBetweenCounts: 300,
+
+            // Server sync intervals (ms)
+            autoSaveInterval: 10_000,
+            syncInterval:     30_000,
+
+            // Milestone mala counts that trigger celebrations
+            milestones: [10, 21, 51, 108, 1008],
+        };
+    }
+
+    _initMetrics() {
+        this.metrics = {
+            recognitionSuccesses: 0,
+            recognitionAttempts:  0,
+        };
+    }
+
+    _initServerTime() {
+        this.serverDate          = null;
+        this.serverTime          = null;
+        this.serverHour          = null;
+        this.serverMinute        = null;
+        this.serverSecond        = null;
+        this.serverTimeFetchedAt = null;
+        this.serverTimeLoading   = false;
+    }
+
+    _initSessionTimeout() {
+        this.sessionTimeout = {
+            duration:        5 * 60 * 1000,   // 5 min inactivity → prompt
+            responseWindow:  30 * 1000,        // 30 s to respond before force-logout
+            lastActivity:    Date.now(),
+            timeoutId:       null,
+            warningId:       null,
+            isWarningShown:  false,
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // 1.2  BOOT SEQUENCE
+    // ------------------------------------------------------------------
 
     async init() {
         try {
-            console.log('🙏 Initializing Hari Jap Counter...');
+            console.log('🙏 Booting Guru Mantra Counter…');
 
-            await this.authenticateUser();
-            // CRITICAL: Load server time FIRST and wait for it to complete
-            // This ensures serverDate is set before loading state
-            const serverDate = await this.getServerTime();
-            console.log('🕐 Server date loaded:', serverDate);
-            
-            this.cacheElements();
-            this.initializeSpeechRecognition();
-            this.attachEventListeners();
-            await this.loadStateFromServer();
-            this.startAutoProcesses();
-            this.startSessionTimeout();
+            await this._authenticateUser();
+            const serverDate = await this._fetchServerTime();
+            console.log('🕐 Server date:', serverDate);
+
+            this._cacheElements();
+            this._initSpeechRecognition();
+            this._attachEventListeners();
+            await this._loadStateFromServer();
+            this._startAutoProcesses();
+            this._startSessionTimeout();
 
             this.state.isInitialized = true;
-            this.updateUI();
-            
-            // Verify button is clickable
-            this.verifyButtonSetup();
-            
-            this.showNotification('🙏 स्वागत आहे! जपाची तयारी झाली', 'success');
+            this._updateUI();
+            this._verifyButtons();
 
-            console.log('✅ Initialization complete');
-        } catch (error) {
-            console.error('❌ Initialization error:', error);
-            this.handleInitError(error);
+            this._showNotification('🙏 स्वागत आहे! जपाची तयारी झाली', 'success');
+            console.log('✅ Boot complete');
+        } catch (err) {
+            console.error('❌ Boot error:', err);
+            this._handleBootError(err);
         }
     }
 
-    async authenticateUser() {
-        try {
-            const response = await fetch('/guru-mantra/auth/check_session', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
+    async _authenticateUser() {
+        const res  = await fetch('/guru-mantra/auth/check_session', {
+            method: 'GET', credentials: 'same-origin',
+        });
+        const data = await res.json();
 
-            const authData = await response.json();
+        if (!data.authenticated) {
+            window.location.href = '/guru-mantra/auth';
+            throw new Error('Not authenticated');
+        }
 
-            if (!authData.authenticated) {
-                window.location.href = '/guru-mantra/auth';
-                throw new Error('Not authenticated');
-            }
+        this.state.userName = data.user_name || 'साधक';
+        this.state.userId   = data.user_id;
+        console.log('✅ Authenticated:', this.state.userName);
+    }
 
-            this.state.userName = authData.user_name || 'साधक';
-            this.state.userId = authData.user_id;
-
-            console.log('✅ Authenticated as: ' + this.state.userName);
-        } catch (error) {
-            console.error('❌ Authentication failed:', error);
-            throw error;
+    _handleBootError(err) {
+        this._showNotification('प्रारंभ करता आले नाही', 'error');
+        if (err.message === 'Not authenticated') {
+            setTimeout(() => { window.location.href = '/guru-mantra/auth'; }, 2000);
         }
     }
 
-    cacheElements() {
-        const elementIds = [
-            'countDisplay', 'malaStatus', 'totalMalas', 'startBtn', 'stopBtn',
-            'manualBtn', 'resetBtn', 'listeningStatus', 'recognitionText',
-            'progressFill', 'remainingCount', 'celebration', 'userName',
-            'logoutBtn', 'sessionTime', 'todayCount', 'accuracy', 'datetimeDisplay'
+    // ------------------------------------------------------------------
+    // 1.3  DOM CACHE
+    // ------------------------------------------------------------------
+
+    _cacheElements() {
+        const ids = [
+            'countDisplay', 'malaStatus', 'totalMalas',
+            'startBtn', 'stopBtn', 'manualBtn', 'resetBtn',
+            'listeningStatus', 'recognitionText',
+            'progressFill', 'remainingCount', 'celebration',
+            'userName', 'logoutBtn',
+            'sessionTime', 'todayCount', 'accuracy',
+            'datetimeDisplay', 'fullJapCount',
         ];
 
-        elementIds.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                this.elements[id] = element;
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                this.elements[id] = el;
             } else {
-                console.warn('⚠️ Element not found: ' + id);
+                console.warn('⚠️ Element not found:', id);
             }
         });
 
-        // Cache the new full jap element
-        const fullJapElement = document.getElementById('fullJapCount');
-        if (fullJapElement) {
-            this.elements.fullJapCount = fullJapElement;
-        } else {
-            console.warn('⚠️ Element not found: fullJapCount');
-        }
-        
-        // Cache datetimeDisplaySection and its child datetimeDisplay
-        const datetimeSection = document.getElementById('datetimeDisplaySection');
-        if (datetimeSection) {
-            this.elements.datetimeDisplaySection = datetimeSection;
-            const datetimeDisplay = datetimeSection.querySelector('#datetimeDisplay');
-            if (datetimeDisplay) {
-                this.elements.datetimeDisplay = datetimeDisplay;
+        // datetimeDisplay can also live inside datetimeDisplaySection
+        if (!this.elements.datetimeDisplay) {
+            const sec = document.getElementById('datetimeDisplaySection');
+            if (sec) {
+                this.elements.datetimeDisplaySection = sec;
+                const inner = sec.querySelector('#datetimeDisplay');
+                if (inner) this.elements.datetimeDisplay = inner;
             }
         }
 
@@ -310,2166 +212,1185 @@ class GuruMantraCounter {
             this.elements.userName.textContent = '🙏 ' + this.state.userName;
         }
 
-        console.log('✅ Cached ' + Object.keys(this.elements).length + ' DOM elements');
+        console.log('✅ Cached', Object.keys(this.elements).length, 'DOM elements');
     }
 
-    initializeSpeechRecognition() {
-        try {
-            const SpeechRecognition = window.SpeechRecognition ||
-                                     window.webkitSpeechRecognition ||
-                                     window.mozSpeechRecognition ||
-                                     window.msSpeechRecognition;
+    // ------------------------------------------------------------------
+    // 1.4  EVENT LISTENERS
+    // ------------------------------------------------------------------
 
-            if (!SpeechRecognition) {
-                throw new Error('Speech Recognition not supported');
-            }
+    _attachEventListeners() {
+        // Helper: attach both click + touchstart
+        const on = (id, fn) => {
+            const el = this.elements[id] || document.getElementById(id);
+            if (!el) { console.error('❌ Element missing:', id); return; }
+            if (!this.elements[id]) this.elements[id] = el;
 
-            this.recognition = new SpeechRecognition();
-            this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = true;  // Enable interim results for better continuous recognition
-            this.recognition.maxAlternatives = 5;
-            this.recognition.continuous = true;  // CRITICAL: Keep continuous mode ON for 100% accuracy
+            ['click', 'mousedown', 'touchstart'].forEach(evt => {
+                el.addEventListener(evt, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fn(e);
+                });
+            });
+        };
 
-            // Mobile optimization - but still try continuous mode
-            const isMobile = this.isMobileDevice();
-            if (isMobile) {
-                // Still use continuous mode but handle restarts more carefully
-                this.recognition.continuous = true;
-                console.log('📱 Mobile device detected - using continuous mode with careful restart');
-            }
-            
-            // CRITICAL: Log what we're listening for
-            console.log('✅ Recognition initialized');
-            console.log('📝 Listening for variations of: "Om Tatpurushaya Vidmahe Mahadevaya Dhimahi Tanno Rudra Prachodayat"');
-            console.log('🌐 Language:', this.config.recognitionLang);
-            console.log('📋 Accepted patterns:', this.config.targetPhrases.slice(0, 6));
+        on('startBtn',  () => { if (!this.state.isListening) this.startListening(); });
+        on('stopBtn',   () => { if (this.state.isListening)  this.stopListening(); });
+        on('manualBtn', () => this._addManualCount());
+        on('resetBtn',  () => this._confirmReset());
 
-            // Attach recognition event handlers
-            this.recognition.onresult = (e) => this.onRecognitionResult(e);
-            this.recognition.onend = () => this.onRecognitionEnd();
-            this.recognition.onerror = (e) => this.onRecognitionError(e);
-            this.recognition.onstart = () => {
-                console.log('🎤 Recognition started - Listening...');
-                this.state.isListening = true;
-                this.updateUI();
-            };
-
-            console.log('✅ Speech Recognition initialized');
-        } catch (error) {
-            console.error('❌ Speech Recognition initialization failed:', error);
-            this.showNotification('आवाज ओळख उपलब्ध नाही', 'error');
-            this.recognition = null;
+        if (this.elements.logoutBtn) {
+            this.elements.logoutBtn.addEventListener('click', () => this.logout());
         }
-    }
-
-    attachEventListeners() {
-        // Button listeners - use both click and mousedown for maximum compatibility
-        this.addListener('startBtn', 'click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🎤 Start button clicked');
-            this.startListening();
-        });
-        this.addListener('startBtn', 'mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🎤 Start button mousedown');
-            if (!this.state.isListening) {
-                this.startListening();
-            }
-        });
-        
-        this.addListener('stopBtn', 'click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.stopListening();
-        });
-        this.addListener('stopBtn', 'mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.state.isListening) {
-                this.stopListening();
-            }
-        });
-        
-        this.addListener('manualBtn', 'click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.addManualCount();
-        });
-        this.addListener('manualBtn', 'mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.addManualCount();
-        });
-        
-        this.addListener('resetBtn', 'click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.confirmReset();
-        });
-        this.addListener('resetBtn', 'mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.confirmReset();
-        });
-        
-        this.addListener('logoutBtn', 'click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.logout();
-        });
-        
-        // Touch event handlers for mobile devices
-        this.addListener('startBtn', 'touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🎤 Start button touched');
-            if (!this.state.isListening) {
-                this.startListening();
-            }
-        });
-        
-        this.addListener('stopBtn', 'touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.state.isListening) {
-                this.stopListening();
-            }
-        });
-        
-        this.addListener('manualBtn', 'touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.addManualCount();
-        });
-        
-        this.addListener('resetBtn', 'touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.confirmReset();
-        });
 
         // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            this.updateActivity();
-            
-            // Space key to start/stop listening
-            if (e.code === 'Space' && !e.target.matches('input, textarea, button')) {
+        document.addEventListener('keydown', e => {
+            this._updateActivity();
+            if (e.code === 'Space' && !e.target.matches('input,textarea,button')) {
                 e.preventDefault();
-                if (this.state.isListening) {
-                    this.stopListening();
-                } else {
-                    this.startListening();
-                }
+                this.state.isListening ? this.stopListening() : this.startListening();
             }
-            
-            // Escape key to stop listening
-            if (e.code === 'Escape' && this.state.isListening) {
-                e.preventDefault();
-                this.stopListening();
-            }
-            
-            // Ctrl+Enter for manual count
-            if (e.ctrlKey && e.code === 'Enter') {
-                e.preventDefault();
-                this.addManualCount();
-            }
+            if (e.code === 'Escape' && this.state.isListening)  { e.preventDefault(); this.stopListening(); }
+            if (e.ctrlKey && e.code === 'Enter')                { e.preventDefault(); this._addManualCount(); }
         });
 
-        // Add activity tracking for general user interactions
-        document.addEventListener('click', () => this.updateActivity());
-        document.addEventListener('mousemove', () => this.updateActivity());
+        document.addEventListener('click',     () => this._updateActivity());
+        document.addEventListener('mousemove', () => this._updateActivity());
 
-        // Page visibility and unload
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && this.state.isListening) {
-                this.stopListening();
-            }
+            if (document.hidden && this.state.isListening) this.stopListening();
         });
 
-        window.addEventListener('beforeunload', () => {
-            this.saveToServer(true);
-        });
+        window.addEventListener('beforeunload', () => this._saveToServer(true));
 
         console.log('✅ Event listeners attached');
     }
 
-    addListener(elementId, event, handler) {
-        // First try to get from cached elements
-        let element = this.elements[elementId];
-        
-        // If not found in cache, try to find it directly in DOM
-        if (!element) {
-            element = document.getElementById(elementId);
-            if (element) {
-                console.warn('⚠️ Element ' + elementId + ' not in cache, found directly in DOM');
-                this.elements[elementId] = element; // Cache it for future use
-            }
-        }
-        
-        if (element) {
-            element.addEventListener(event, handler);
-            console.log('✅ Event listener attached to ' + elementId);
-        } else {
-            console.error('❌ Element not found: ' + elementId + ' - event listener not attached');
-        }
-    }
-
-    verifyButtonSetup() {
-        // Verify all buttons are properly set up
-        const buttons = ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'];
-        
-        buttons.forEach(btnId => {
-            const btn = this.elements[btnId] || document.getElementById(btnId);
-            if (btn) {
-                const computedStyle = window.getComputedStyle(btn);
-                console.log(`✅ ${btnId} found:`, {
-                    id: btn.id,
-                    disabled: btn.disabled,
-                    pointerEvents: computedStyle.pointerEvents,
-                    zIndex: computedStyle.zIndex,
-                    position: computedStyle.position,
-                    display: computedStyle.display,
-                    visibility: computedStyle.visibility
-                });
-                
-                // Ensure button is clickable
-                btn.style.pointerEvents = 'auto';
-                btn.style.cursor = 'pointer';
-                btn.style.position = 'relative';
-                btn.style.zIndex = '100';
-                
-                // Check if button is covered by another element
-                const rect = btn.getBoundingClientRect();
-                const elementAtPoint = document.elementFromPoint(
-                    rect.left + rect.width / 2,
-                    rect.top + rect.height / 2
-                );
-                
-                if (elementAtPoint !== btn && !btn.contains(elementAtPoint)) {
-                    console.warn(`⚠️ ${btnId} might be covered by:`, elementAtPoint);
-                }
-            } else {
-                console.error(`❌ ${btnId} not found in DOM!`);
-            }
+    _verifyButtons() {
+        ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'].forEach(id => {
+            const btn = this.elements[id] || document.getElementById(id);
+            if (!btn) { console.error('❌ Button missing:', id); return; }
+            btn.style.cssText += ';pointer-events:auto;cursor:pointer;position:relative;z-index:100;';
+            if (id === 'startBtn' && btn.disabled && !this.state.isListening) btn.disabled = false;
         });
-        
-        // Specifically check start button
-        const startBtn = this.elements.startBtn || document.getElementById('startBtn');
-        if (startBtn) {
-            // Ensure button is not disabled initially
-            if (startBtn.disabled && !this.state.isListening) {
-                console.warn('⚠️ Start button is disabled but should be enabled');
-                startBtn.disabled = false;
-            }
-            
-            // Add a test click handler to verify it works
-            const testHandler = (e) => {
-                console.log('🔍 Test click detected on start button', e);
-            };
-            startBtn.addEventListener('click', testHandler, { once: true });
-        }
     }
 
-    startAutoProcesses() {
-        // Auto-save
-        setInterval(() => {
-            if (!this.state.isSaving) {
-                this.saveToServer();
-            }
-        }, this.config.autoSaveInterval);
+    // ------------------------------------------------------------------
+    // 1.5  AUTO PROCESSES
+    // ------------------------------------------------------------------
 
-        // Server time sync and date check (every 5 minutes) - CRITICAL for IST midnight reset
+    _startAutoProcesses() {
+        // Auto-save every 10 s
+        setInterval(() => { if (!this.state.isSaving) this._saveToServer(); }, this.config.autoSaveInterval);
+
+        // Server-time sync + date-change check every 5 min
         setInterval(async () => {
-            await this.getServerTime();
-            this.checkForDateChange();
-            this.updateDateTimeDisplay();
+            await this._fetchServerTime();
+            this._checkDateChange();
+            this._updateDateTimeDisplay();
         }, 5 * 60 * 1000);
 
-        // Check for date change (every minute) - CRITICAL for IST midnight reset
-        setInterval(() => {
-            this.checkForDateChange();
-        }, 60 * 1000);
-        
-        // Update date/time display every second
-        setInterval(() => {
-            this.updateDateTimeDisplay();
-        }, 1000);
+        // Date-change check every minute
+        setInterval(() => this._checkDateChange(), 60_000);
 
-        console.log('✅ Auto-save, sync, and time sync started');
+        // Clock tick every second
+        setInterval(() => this._updateDateTimeDisplay(), 1_000);
+
+        console.log('✅ Auto-processes started');
     }
+}
 
-    handleInitError(error) {
-        this.showNotification('प्रारंभ करता आले नाही', 'error');
-        if (error.message === 'Not authenticated') {
-            setTimeout(() => {
-                window.location.href = '/guru-mantra/auth';
-            }, 2000);
+
+// ======================================================================
+// SECTION 2 — SPEECH RECOGNITION
+// ======================================================================
+
+Object.assign(GuruMantraCounter.prototype, {
+
+    // ------------------------------------------------------------------
+    // 2.1  SETUP
+    // ------------------------------------------------------------------
+
+    _initSpeechRecognition() {
+        try {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) throw new Error('SpeechRecognition API not available');
+
+            this.recognition = new SR();
+            this.recognition.lang             = this.config.recognitionLang; // hi-IN
+            this.recognition.interimResults   = true;
+            this.recognition.maxAlternatives  = 5;
+            this.recognition.continuous       = true;
+
+            this.recognition.onstart  = ()  => { this.state.isListening = true;  this._updateUI(); };
+            this.recognition.onresult = (e) => this._onResult(e);
+            this.recognition.onend    = ()  => this._onEnd();
+            this.recognition.onerror  = (e) => this._onError(e);
+
+            console.log('✅ Speech recognition ready (lang:', this.config.recognitionLang + ')');
+        } catch (err) {
+            console.error('❌ SpeechRecognition init failed:', err);
+            this._showNotification('आवाज ओळख उपलब्ध नाही', 'error');
+            this.recognition = null;
         }
-    }
+    },
 
-    // ================================================================
-    // SPEECH RECOGNITION HANDLERS
-    // ================================================================
+    // ------------------------------------------------------------------
+    // 2.2  START / STOP
+    // ------------------------------------------------------------------
 
     async startListening() {
         if (!this.recognition) {
-            this.showNotification('आवाज ओळख उपलब्ध नाही', 'error');
+            this._showNotification('आवाज ओळख उपलब्ध नाही', 'error');
             return;
         }
-
-        // Request microphone permission explicitly
+        // Request microphone permission
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop()); // Stop immediately after getting permission
-        } catch (permError) {
-            console.error('❌ Microphone permission denied:', permError);
-            this.showNotification('मायक्रोफोन ची परवानगी नाही', 'error');
+            stream.getTracks().forEach(t => t.stop());
+        } catch {
+            this._showNotification('मायक्रोफोन ची परवानगी नाही', 'error');
             return;
         }
-
         if (!this.state.isListening) {
             try {
                 this.recognition.start();
                 this.state.isListening = true;
-                this.updateUI();
-                this.updateActivity(); // Reset session timeout
+                this._updateUI();
+                this._updateActivity();
                 console.log('🎤 Listening started');
-            } catch (error) {
-                console.error('❌ Start listening error:', error);
-                if (error.message && error.message.includes('already started')) {
+            } catch (err) {
+                if (err.message?.includes('already started')) {
                     this.state.isListening = true;
-                    this.updateUI();
+                    this._updateUI();
                 } else {
-                    this.showNotification('सुरुवात करता आली नाही', 'error');
+                    this._showNotification('सुरुवात करता आली नाही', 'error');
                 }
             }
         }
-    }
+    },
 
     stopListening() {
         if (this.state.isListening && this.recognition) {
-            try {
-                this.recognition.stop();
-                this.state.isListening = false;
-                this.updateUI();
-                this.updateActivity(); // Reset session timeout
-                console.log('⏸️ Listening stopped');
-            } catch (error) {
-                console.error('❌ Stop listening error:', error);
-                this.state.isListening = false;
-                this.updateUI();
-            }
+            try   { this.recognition.stop(); }
+            catch (err) { console.error('❌ stopListening:', err); }
+            this.state.isListening = false;
+            this._updateUI();
+            this._updateActivity();
+            console.log('⏸️ Listening stopped');
         }
-    }
+    },
 
-    onRecognitionResult(event) {
-        const now = Date.now();
-        const results = event.results;
-        
-        // CRITICAL FIX: Process ALL results for continuous recognition
-        // Check both interim and final results, but only count on final results
-        let matchCount = 0;
-        let bestTranscript = '';
-        let hasFinalResult = false;
+    // ------------------------------------------------------------------
+    // 2.3  RECOGNITION EVENTS
+    // ------------------------------------------------------------------
 
-        // Process all results in the event
-        for (let resultIndex = 0; resultIndex < results.length; resultIndex++) {
-            const result = results[resultIndex];
-            
-            // Track if we have any final results
-            if (result.isFinal) {
-                hasFinalResult = true;
-            }
-            
-            // Check all alternatives in each result
-            for (let i = 0; i < result.length; i++) {
-                const transcript = result[i].transcript;
-                const confidence = result[i].confidence;
+    _onResult(event) {
+        const results     = event.results;
+        let hasFinal      = false;
+        let bestText      = '';
+        let matchCount    = 0;
 
-                if (i === 0 && resultIndex === results.length - 1) {
-                    bestTranscript = transcript;
-                }
+        for (let ri = 0; ri < results.length; ri++) {
+            const result = results[ri];
+            if (result.isFinal) hasFinal = true;
 
-                // Only count matches from FINAL results to prevent false positives
+            for (let ai = 0; ai < result.length; ai++) {
+                const transcript = result[ai].transcript;
+                const confidence = result[ai].confidence;
+
+                // Track best transcript for display
+                if (ai === 0 && ri === results.length - 1) bestText = transcript;
+
                 if (result.isFinal) {
-                    console.log('🎤 Final Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
-                    
-                    const count = this.countMantraRepetitions(transcript);
-                    if (count > 0) {
-                        matchCount = Math.max(matchCount, count);
-                        bestTranscript = transcript;
-                        console.log('✅ MATCH: ' + count + ' repetitions in final alt ' + (i + 1));
-                    }
+                    console.log(`🎤 Final [${ai + 1}]: "${transcript}" (${(confidence * 100).toFixed(1)}%)`);
+                    const c = this._countRepetitions(transcript);
+                    if (c > 0) { matchCount = Math.max(matchCount, c); bestText = transcript; }
                 } else {
-                    // Show interim results for feedback but don't count
-                    console.log('🎤 Interim: "' + transcript + '"');
+                    console.log(`🎤 Interim: "${transcript}"`);
                 }
             }
         }
 
-        // Only process if we have final results
-        if (!hasFinalResult) {
-            // Show interim transcript for user feedback
-            if (bestTranscript) {
-                this.displayRecognizedText(bestTranscript + '...');
-            }
+        // Show interim feedback
+        if (!hasFinal) {
+            if (bestText) this._displayText(bestText + '…');
             return;
         }
 
-        // Display the best transcript
-        this.displayRecognizedText(bestTranscript);
+        this._displayText(bestText);
         this.metrics.recognitionAttempts++;
 
         if (matchCount > 0) {
-            console.log('✅ Found ' + matchCount + ' mantra(s) in recognition');
-            this.handleSuccessfulRecognition(matchCount, now);
-        } else if (bestTranscript.trim().length > 0) {
-            console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
-            this.handleInvalidSpeech();
+            console.log('✅ Mantras detected:', matchCount);
+            this._handleMatch(matchCount, Date.now());
+        } else if (bestText.trim()) {
+            console.log('⚠️ No mantra in:', bestText);
+            this._handleMismatch();
         }
-    }
+    },
 
-    onRecognitionEnd() {
-        console.log('🔚 Recognition ended - State:', {
-            isListening: this.state.isListening,
-            isInitialized: this.state.isInitialized,
-            documentHidden: document.hidden,
-            recognitionExists: !!this.recognition
-        });
-
-        // CRITICAL FIX: Always keep listening state true if user wants to listen
-        // Only auto-restart if user is still in listening mode
+    _onEnd() {
+        // Auto-restart when user still wants to listen
         if (this.state.isListening && this.state.isInitialized && !document.hidden && this.recognition) {
-            // IMMEDIATE restart for continuous recognition (0ms delay for 100% accuracy)
-            // Use requestAnimationFrame for smoother restart
-            requestAnimationFrame(() => {
-                if (this.state.isListening && this.recognition) {
-                    try {
-                        // Check if recognition is already running
-                        // If continuous mode is working, it might not have actually stopped
-                        this.recognition.start();
-                        console.log('🔄 Auto-restarting recognition (immediate)');
-                        // Ensure listening state stays true
-                        this.state.isListening = true;
-                        this.updateUI();
-                    } catch (error) {
-                        console.error('❌ Auto-restart failed:', error);
-                        // CRITICAL FIX: Don't stop listening if recognition is already started
-                        // This is a common error and doesn't mean recognition failed
-                        if (error.message && error.message.includes('already started')) {
-                            console.log('ℹ️ Recognition already running, continuing...');
-                            // Keep listening state as true - DO NOT TURN OFF
-                            this.state.isListening = true;
-                            this.updateUI();
-                        } else {
-                            // Try again immediately (no delay for 100% accuracy)
-                            requestAnimationFrame(() => {
-                                if (this.state.isListening && this.recognition) {
-                                    try {
-                                        this.recognition.start();
-                                        console.log('🔄 Retry restart successful');
-                                        this.state.isListening = true;
-                                        this.updateUI();
-                                    } catch (retryError) {
-                                        console.error('❌ Retry failed:', retryError);
-                                        // Only stop if it's a critical error (not "already started")
-                                        if (!retryError.message || !retryError.message.includes('already started')) {
-                                            // Last resort: try one more time after minimal delay
-                                            setTimeout(() => {
-                                                if (this.state.isListening && this.recognition) {
-                                                    try {
-                                                        this.recognition.start();
-                                                        this.state.isListening = true;
-                                                        this.updateUI();
-                                                        console.log('🔄 Final retry successful');
-                                                    } catch (finalError) {
-                                                        console.error('❌ Final retry failed:', finalError);
-                                                        // Only stop if it's truly critical
-                                                        if (finalError.message && !finalError.message.includes('already started')) {
-                                                            this.state.isListening = false;
-                                                            this.updateUI();
-                                                            this.showNotification('ओळखणे थांबले', 'error');
-                                                        }
-                                                    }
-                                                }
-                                            }, 100);
-                                        } else {
-                                            // "Already started" means it's working - keep going
-                                            this.state.isListening = true;
-                                            this.updateUI();
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            });
+            this._safeRestart();
         } else {
-            // Only stop if user explicitly stopped or page is hidden
-            if (!this.state.isListening) {
-                // User stopped it, don't restart
-                this.updateUI();
-            } else {
-                // Page might be hidden, but keep state
-                this.updateUI();
-            }
+            this._updateUI();
         }
-    }
+    },
 
-    onRecognitionError(event) {
+    _onError(event) {
         console.error('❌ Recognition error:', event.error);
-        
-        const errorMessages = {
-            'no-speech': 'कोणी बोलत नाही असे वाटते',
-            'audio-capture': 'मायक्रोफोन उपलब्ध नाही आहे',
-            'not-allowed': 'मायक्रोफोन ची परवानगी नाही',
-            'network': 'नेटवर्क समस्या'
-        };
 
-        // CRITICAL FIX: Don't stop listening on 'no-speech' errors
-        // These are common and recognition should continue
-        // Only stop on critical errors
-        const criticalErrors = ['not-allowed', 'audio-capture', 'network'];
-        
-        if (criticalErrors.includes(event.error)) {
-            // Only stop if it's truly critical
-            if (event.error === 'not-allowed' || event.error === 'audio-capture') {
-                this.state.isListening = false;
-                if (errorMessages[event.error]) {
-                    this.showNotification(errorMessages[event.error], 'error');
-                }
-            } else {
-                // For network errors, try to continue
-                console.log('⚠️ Network error, attempting to continue...');
-                this.state.isListening = true; // Keep listening state
-            }
+        const fatal = ['not-allowed', 'audio-capture'];
+
+        if (fatal.includes(event.error)) {
+            this.state.isListening = false;
+            const msgs = {
+                'not-allowed':    'मायक्रोफोन ची परवानगी नाही',
+                'audio-capture':  'मायक्रोफोन उपलब्ध नाही आहे',
+            };
+            if (msgs[event.error]) this._showNotification(msgs[event.error], 'error');
         } else if (event.error === 'no-speech') {
-            // 'no-speech' is normal - just continue listening
-            console.log('ℹ️ No speech detected, continuing to listen...');
-            // CRITICAL: Keep listening state true - DO NOT TURN OFF
-            this.state.isListening = true;
+            // Normal — keep listening
+            console.log('ℹ️ No speech, continuing…');
         } else if (event.error !== 'aborted') {
-            // For other errors, try to continue
-            console.log('⚠️ Recognition error, attempting to continue:', event.error);
-            // CRITICAL: Keep listening state true - DO NOT TURN OFF
-            this.state.isListening = true;
+            console.log('⚠️ Non-fatal error, continuing:', event.error);
         }
 
-        this.updateUI();
-        
-        // Auto-restart if still in listening mode and not a critical error
-        if (this.state.isListening && !criticalErrors.includes(event.error) && event.error !== 'aborted') {
-            // Use requestAnimationFrame for immediate restart (0ms delay for 100% accuracy)
-            requestAnimationFrame(() => {
-                if (this.state.isListening && this.recognition) {
-                    try {
-                        this.recognition.start();
-                        console.log('🔄 Auto-restarting after error (immediate)');
-                        // Ensure listening state stays true
-                        this.state.isListening = true;
-                        this.updateUI();
-                    } catch (error) {
-                        console.error('❌ Auto-restart after error failed:', error);
-                        // Only stop if it's a critical restart failure
-                        if (error.message && !error.message.includes('already started')) {
-                            // Try one more time immediately
-                            requestAnimationFrame(() => {
-                                if (this.state.isListening && this.recognition) {
-                                    try {
-                                        this.recognition.start();
-                                        this.state.isListening = true;
-                                        this.updateUI();
-                                    } catch (retryError) {
-                                        console.error('❌ Retry after error failed:', retryError);
-                                        // Only stop if it's truly critical
-                                        if (!retryError.message || !retryError.message.includes('already started')) {
-                                            // Last resort: try one more time
-                                            setTimeout(() => {
-                                                if (this.state.isListening && this.recognition) {
-                                                    try {
-                                                        this.recognition.start();
-                                                        this.state.isListening = true;
-                                                        this.updateUI();
-                                                        console.log('🔄 Final retry after error successful');
-                                                    } catch (finalError) {
-                                                        console.error('❌ Final retry failed:', finalError);
-                                                        if (finalError.message && !finalError.message.includes('already started')) {
-                                                            this.state.isListening = false;
-                                                            this.updateUI();
-                                                            this.showNotification('ओळखणे थांबले', 'error');
-                                                        }
-                                                    }
-                                                }
-                                            }, 100);
-                                        } else {
-                                            // "Already started" means it's working - keep going
-                                            this.state.isListening = true;
-                                            this.updateUI();
-                                        }
-                                    }
-                                }
-                            });
-                        } else {
-                            // Already started is fine - keep listening
-                            this.state.isListening = true;
-                            this.updateUI();
-                        }
-                    }
+        this._updateUI();
+
+        if (this.state.isListening && !fatal.includes(event.error) && event.error !== 'aborted') {
+            this._safeRestart();
+        }
+    },
+
+    // ------------------------------------------------------------------
+    // 2.4  SAFE RESTART HELPER
+    // ------------------------------------------------------------------
+
+    _safeRestart(attempt = 0) {
+        if (!this.state.isListening || !this.recognition) return;
+
+        requestAnimationFrame(() => {
+            try {
+                this.recognition.start();
+                console.log('🔄 Recognition restarted');
+                this.state.isListening = true;
+                this._updateUI();
+            } catch (err) {
+                if (err.message?.includes('already started')) {
+                    // Already running — fine
+                    this.state.isListening = true;
+                    this._updateUI();
+                } else if (attempt < 3) {
+                    // Retry up to 3 times with brief back-off
+                    setTimeout(() => this._safeRestart(attempt + 1), 100 * (attempt + 1));
+                } else {
+                    console.error('❌ Could not restart recognition after 3 attempts');
+                    this.state.isListening = false;
+                    this._updateUI();
+                    this._showNotification('ओळखणे थांबले', 'error');
                 }
-            }, 100); // Reduced delay to 100ms for faster recovery after errors
-        }
-    }
+            }
+        });
+    },
 
-    handleSuccessfulRecognition(count, timestamp) {
-        // CRITICAL FIX: Prevent too-rapid duplicates to avoid automatic counting
-        // Only process if enough time has passed since last recognition
+    // ------------------------------------------------------------------
+    // 2.5  MATCH HANDLERS
+    // ------------------------------------------------------------------
+
+    _handleMatch(count, timestamp) {
         if (timestamp - this.state.lastRecognitionTime < this.config.minTimeBetweenCounts) {
-            console.log('⏭️ Too rapid - skipping to prevent automatic counting');
+            console.log('⏭️ Debounced duplicate');
             return;
         }
-
         this.metrics.recognitionSuccesses++;
         this.state.lastRecognitionTime = timestamp;
-        this.updateActivity(); // Reset session timeout on successful recognition
+        this._updateActivity();
+        this._disappearMantraWords();
+        this._incrementByCount(count);
 
-        // Handle complete mantra disappearing animation ONCE (not per count)
-        this.disappearCompleteMantra();
+        const words = count * this.config.wordsPerPronunciation;
+        const msg   = count === 1
+            ? `✅ ${this.config.wordsPerPronunciation} शब्द गणना झाले!`
+            : `✅ ${count} वेळा (${words} शब्द) गणना झाले!`;
+        this._showNotification(msg, 'success', 800);
+        this._feedbackSuccess();
+    },
 
-        // Calculate total words added (each complete sequence = 5 words)
-        // CRITICAL: Each mantra = 5 words, rosary count increases by 1 per mantra
-        // Example: 1 mantra = 5 words + 1 rosary, 2 mantras = 10 words + 2 rosary
-        const totalWordsAdded = count * this.config.wordsPerPronunciation;
+    _handleMismatch() {
+        this._showNotification('⚠️ कृपया मंत्राव्यतिरिक्त दुसरे काही म्हणू नका', 'error', 2000);
+        this._feedbackWarning();
+    },
+});
 
-        // Increment counter - count mantras = count * 5 words, count rosary increments
-        // The incrementCounterByCount function handles: words = count * 5, rosary = count
-        this.incrementCounterByCount(count);
 
-        // Show appropriate notification with word count
-        if (count === 1) {
-            this.showNotification('✅ ' + this.config.wordsPerPronunciation + ' शब्द गणना झाले! (1 माला)', 'success', 800);
-        } else {
-            this.showNotification('✅ ' + count + ' वेळा (' + totalWordsAdded + ' शब्द) गणना झाले! (' + count + ' माला)', 'success', 1000);
-        }
+// ======================================================================
+// SECTION 3 — MANTRA DETECTION
+// ======================================================================
 
-        this.triggerSuccessFeedback();
-    }
+Object.assign(GuruMantraCounter.prototype, {
 
-    handleInvalidSpeech() {
-        this.showNotification('⚠️ कृपया मंत्राव्यतिरिक्त दुसरे काही म्हणू नका', 'error', 2000);
-        this.triggerWarningFeedback();
-    }
+    // ------------------------------------------------------------------
+    // 3.1  ENTRY POINT
+    // ------------------------------------------------------------------
 
-    // ================================================================
-    // MANTRA DETECTION LOGIC - FINAL FIXED VERSION
-    // ================================================================
+    _countRepetitions(rawText) {
+        const norm    = this._normalizeText(rawText);
+        const cleaned = this._cleanText(norm);
 
-    countMantraRepetitions(text) {
-        const normalized = this.normalizeText(text);
-        const cleaned = this.cleanMantraText(normalized);
-        
-        console.log('🔍 Original text:', text);
-        console.log('🔍 Normalized text:', normalized);
-        console.log('🔍 Cleaned text:', cleaned);
-        
-        // STRATEGY 0: Quick check for ACTUAL RECOGNITION PATTERN (HIGHEST PRIORITY)
-        // This matches the actual audio recognition: "Om tatpurushon with Mahesh dhimahi tanno Rudra prachodyat"
-        const actualRecognitionPattern = /om\s+tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat/i;
-        if (actualRecognitionPattern.test(normalized)) {
-            const matches = normalized.match(new RegExp(actualRecognitionPattern.source, 'gi'));
-            const count = matches ? matches.length : 1;
-            console.log('✅ EXACT MATCH (Actual Audio Recognition):', count);
-            return count;
-        }
-        
-        // Also check without "om" prefix
-        const actualRecognitionNoOmPattern = /tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat/i;
-        if (actualRecognitionNoOmPattern.test(normalized)) {
-            const matches = normalized.match(new RegExp(actualRecognitionNoOmPattern.source, 'gi'));
-            const count = matches ? matches.length : 1;
-            console.log('✅ EXACT MATCH (Actual Audio Recognition without Om):', count);
-            return count;
-        }
-        
-        // Check for standard Guru Mantra pattern
-        const exactMantraPattern = /om\s+tatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i;
-        if (exactMantraPattern.test(normalized)) {
-            const matches = normalized.match(new RegExp(exactMantraPattern.source, 'gi'));
-            const count = matches ? matches.length : 1;
-            console.log('✅ EXACT MATCH (Guru Mantra):', count);
-            return count;
-        }
-        
-        // Also check without "om" prefix
-        const exactMantraNoOmPattern = /tatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i;
-        if (exactMantraNoOmPattern.test(normalized)) {
-            const matches = normalized.match(new RegExp(exactMantraNoOmPattern.source, 'gi'));
-            const count = matches ? matches.length : 1;
-            console.log('✅ EXACT MATCH (Guru Mantra without Om):', count);
-            return count;
-        }
-        
-        // STRATEGY 1: Exact phrase matching - ONLY COMPLETE MANTRA PATTERNS
-        // CRITICAL: Only match COMPLETE mantras, not individual words
-        // Filter to only complete mantra patterns (at least 5-6 words)
-        const completeMantraPatterns = this.config.targetPhrases.filter(pattern => {
-            const wordCount = pattern.split(/\s+/).length;
-            // Only accept patterns with at least 5 words (complete mantra)
-            return wordCount >= 5;
-        });
-        
-        for (let pattern of completeMantraPatterns) {
-            const patternLower = pattern.toLowerCase();
-            
-            // Exact match - must be complete mantra
-            if (normalized === patternLower || cleaned === patternLower) {
-                console.log('✅ EXACT MATCH (Complete Mantra):', pattern);
-                return 1; // Always return 1 for complete mantra
-            }
-            
-            // Contains match - but verify it's a complete mantra match
-            if (normalized.includes(patternLower) || cleaned.includes(patternLower)) {
-                const textToUse = normalized.includes(patternLower) ? normalized : cleaned;
-                // Use word boundary matching to ensure complete mantra
-                const regexPattern = new RegExp('\\b' + patternLower.replace(/\s+/g, '\\s+') + '\\b', 'gi');
-                const matches = (textToUse.match(regexPattern) || []).length;
-                if (matches > 0) {
-                    console.log(`✅ FOUND ${matches} complete mantra(s):`, pattern);
-                    return matches; // Return count of complete mantras
-                }
-            }
-        }
-        
-        // STRATEGY 2: Fuzzy matching - STRICT: Only complete mantras
-        // CRITICAL: Only match if we have a COMPLETE mantra pattern (5+ words together)
-        const fuzzyScore = this.fuzzyMatchMantra(text);
-        if (fuzzyScore > 0) {
-            console.log('✅ FUZZY MATCH found (Complete Mantra):', fuzzyScore, 'mantra(s)');
-            return fuzzyScore;
-        }
-        
-        console.log('❌ No complete mantra found in:', text);
+        console.log('🔍 Raw:', rawText);
+        console.log('🔍 Norm:', norm);
+        console.log('🔍 Cleaned:', cleaned);
+
+        // Pass 1 — exact regex (fast path)
+        const exactCount = this._exactMatch(norm, cleaned);
+        if (exactCount > 0) return exactCount;
+
+        // Pass 2 — fuzzy keyword scoring
+        const fuzzyCount = this._fuzzyMatch(rawText, norm, cleaned);
+        if (fuzzyCount > 0) return fuzzyCount;
+
+        console.log('❌ No mantra detected');
         return 0;
-    }
+    },
 
-    // Helper: Count non-overlapping occurrences
-    countOccurrences(text, pattern) {
-        let count = 0;
-        let pos = 0;
-        
-        while (true) {
-            const index = text.indexOf(pattern, pos);
-            if (index === -1) break;
-            
-            // Verify word boundaries
-            const beforeOk = index === 0 || /\s/.test(text[index - 1]);
-            const afterOk = index + pattern.length >= text.length || 
-                           /\s/.test(text[index + pattern.length]);
-            
-            if (beforeOk && afterOk) {
-                count++;
-                pos = index + pattern.length;
-            } else {
-                pos = index + 1;
-            }
-        }
-        
-        return count;
-    }
+    // ------------------------------------------------------------------
+    // 3.2  EXACT MATCH PATTERNS
+    // ------------------------------------------------------------------
 
-    // NEW: Enhanced fuzzy matching for Guru Mantra variations
-    // Handles "Om Tatpurushaya Vidmahe Mahadevaya Dhimahi Tanno Rudra Prachodayat" and all variations
-    fuzzyMatchMantra(originalText) {
-        // Normalize the text first
-        const normalized = this.normalizeText(originalText);
-        const cleaned = this.cleanMantraText(normalized);
-        
-        // Check for key Guru Mantra words/phrases
-        // Core phrases that indicate the mantra
-        const keyPhrases = [
-            // ACTUAL RECOGNITION PATTERNS (HIGHEST PRIORITY)
-            /\btatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
-            /\bwith\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
-            /\bmahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
-            /\bdhimahi\s+tanno\s+rudra\s+prachodyat\b/i,
-            /\btanno\s+rudra\s+prachodyat\b/i,
-            // Standard patterns
-            /\btatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\b/i,
-            /\bvidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\b/i,
-            /\bmahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat\b/i,
-            /\bdhimahi\s+tanno\s+rudra\s+prachodayat\b/i,
-            /\btanno\s+rudra\s+prachodayat\b/i,
-            // Common variations
-            /\bmohe\s+mahadeva\s+dhimahi\b/i,
-            /\bmahadeva\s+dhimahi\s+tanno\s+rudra\b/i,
-            /\bmohe\s+mahadeva\s+yachi\s+mahiti\b/i,
-            /\bmahadeva\s+yachi\s+mahiti\s+prachod/i,
-            /\bmohe\s+mahadeva\s+yachi\s+mahiti\s+prachod/i,
-            /\bmahadeva\s+mahiti\s+prachod/i
+    _exactMatch(norm, cleaned) {
+        // Ordered from most-specific to most-lenient
+        const patterns = [
+            // Standard full mantra
+            /om\s+tatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i,
+            // Without Om
+            /tatpurushaya\s+vidmahe\s+mahadevaya\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i,
+            // Common en-IN misrecognition ("tatpurushon with mahesh")
+            /tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodyat/i,
+            /tatpurushon\s+with\s+mahesh\s+dhimahi\s+tanno\s+rudra\s+prachodayat/i,
+            // Distinctive ending alone (highly unique to this mantra)
+            /dhimahi\s+tanno\s+rudra[h]?\s+prachodayat/i,
+            /dhimahi\s+tanno\s+rudra\s+prachodyat/i,
         ];
-        
-        // Check for individual key words (at least 3-4 should be present)
-        // Include common variations and mispronunciations
-        const keyWords = [
-            /\btatpurushaya\b/i,
-            /\btatpurushon\b/i,  // Actual recognition variation
-            /\bvidmahe\b/i,
-            /\bmahiti\b/i,  // Common mispronunciation of "vidmahe"
-            /\bmahadevaya\b/i,
-            /\bmahadeva\b/i,  // Without "ya" ending
-            /\bmahesh\b/i,  // Actual recognition variation
-            /\bwith\s+mahesh\b/i,  // Actual recognition pattern
-            /\bmohe\s+mahadeva\b/i,  // Common variation
-            /\bmohe\s+mahadevaya\b/i,
-            /\bdhimahi\b/i,
-            /\btanno\b/i,
-            /\brudra\b/i,
-            /\bprachodayat\b/i,
-            /\bprachodyat\b/i,  // Actual recognition variation
-            /\bprachod\b/i  // Shortened version
-        ];
-        
-        // Check for key phrases first (more reliable)
-        let phraseMatches = 0;
-        for (const phrase of keyPhrases) {
-            if (phrase.test(cleaned) || phrase.test(normalized)) {
-                phraseMatches++;
+
+        for (const pat of patterns) {
+            const src = pat.test(norm) ? norm : (pat.test(cleaned) ? cleaned : null);
+            if (src) {
+                const hits = (src.match(new RegExp(pat.source, 'gi')) || []).length;
+                console.log('✅ Exact match:', pat.source, '— count:', hits);
+                return hits;
             }
         }
-        
-        // Count key words present
-        let wordMatches = 0;
-        for (const word of keyWords) {
-            if (word.test(cleaned) || word.test(normalized)) {
-                wordMatches++;
-            }
-        }
-        
-        // Optional: Check for "om" prefix
-        const hasOm = /\bom\b/i.test(cleaned) || /\bom\b/i.test(normalized);
-        
-        // Log what was found
-        console.log('🔍 Fuzzy match components:', {
-            phraseMatches,
-            wordMatches,
-            hasOm,
-            originalText: originalText,
-            normalizedText: normalized,
-            cleanedText: cleaned
-        });
-        
-        // ACCEPT if key phrases are found (most reliable)
-        if (phraseMatches > 0) {
-            console.log(`✅ Fuzzy match: Found ${phraseMatches} key phrase(s)`);
-            return phraseMatches;
-        }
-        
-        // CRITICAL: Only accept COMPLETE mantra patterns - require at least 5-6 key words together
-        // This prevents counting individual words like "om" or "rudra"
-        
-        // Check for complete mantra pattern variables
-        const hasTatpurushon = /\btatpurushon\b/i.test(cleaned) || /\btatpurushon\b/i.test(normalized);
-        const hasTatpurushaya = /\btatpurushaya\b/i.test(cleaned) || /\btatpurushaya\b/i.test(normalized);
-        const hasWithMahesh = /\bwith\s+mahesh\b/i.test(cleaned) || /\bwith\s+mahesh\b/i.test(normalized);
-        const hasMahesh = /\bmahesh\b/i.test(cleaned) || /\bmahesh\b/i.test(normalized);
-        const hasVidmahe = /\bvidmahe\b/i.test(cleaned) || /\bvidmahe\b/i.test(normalized);
-        const hasMahadevaya = /\bmahadevaya\b/i.test(cleaned) || /\bmahadevaya\b/i.test(normalized);
-        const hasDhimahi = /\bdhimahi\b/i.test(cleaned) || /\bdhimahi\b/i.test(normalized);
-        const hasTanno = /\btanno\b/i.test(cleaned) || /\btanno\b/i.test(normalized);
-        const hasRudra = /\brudra\b/i.test(cleaned) || /\brudra\b/i.test(normalized);
-        const hasPrachodyat = /\bprachodyat\b/i.test(cleaned) || /\bprachodyat\b/i.test(normalized);
-        const hasPrachodayat = /\bprachodayat\b/i.test(cleaned) || /\bprachodayat\b/i.test(normalized);
-        
-        // PATTERN 1: Complete "tatpurushon with mahesh dhimahi tanno rudra prachodyat" (actual recognition)
-        if (hasTatpurushon && hasWithMahesh && hasDhimahi && hasTanno && hasRudra && hasPrachodyat) {
-            console.log('✅ Fuzzy match: Found COMPLETE "tatpurushon with mahesh..." pattern');
-            return 1; // One complete mantra
-        }
-        
-        // PATTERN 2: Complete standard "tatpurushaya vidmahe mahadevaya dhimahi tanno rudra prachodayat"
-        if (hasTatpurushaya && hasVidmahe && hasMahadevaya && hasDhimahi && hasTanno && hasRudra && hasPrachodayat) {
-            console.log('✅ Fuzzy match: Found COMPLETE standard mantra pattern');
-            return 1; // One complete mantra
-        }
-        
-        // PATTERN 3: Complete ending + middle section (distinctive complete pattern)
-        const hasRudraPrachod = (/\brudra\s+prachodayat\b/i.test(cleaned) || 
-                                 /\brudra\s+prachodayat\b/i.test(normalized) ||
-                                 /\brudra\s+prachodyat\b/i.test(cleaned) || 
-                                 /\brudra\s+prachodyat\b/i.test(normalized));
-        const hasCompleteMiddle = (/\bdhimahi\s+tanno\s+rudra\b/i.test(cleaned) || 
-                                   /\bdhimahi\s+tanno\s+rudra\b/i.test(normalized) ||
-                                   /\bmahadevaya\s+dhimahi\s+tanno\b/i.test(cleaned) || 
-                                   /\bmahadevaya\s+dhimahi\s+tanno\b/i.test(normalized) ||
-                                   /\bmahesh\s+dhimahi\s+tanno\b/i.test(cleaned) || 
-                                   /\bmahesh\s+dhimahi\s+tanno\b/i.test(normalized) ||
-                                   /\bwith\s+mahesh\s+dhimahi\s+tanno\b/i.test(cleaned) || 
-                                   /\bwith\s+mahesh\s+dhimahi\s+tanno\b/i.test(normalized));
-        
-        if (hasRudraPrachod && hasCompleteMiddle) {
-            console.log('✅ Fuzzy match: Found COMPLETE mantra with ending + middle section');
-            return 1; // One complete mantra
-        }
-        
-        // STRICT: Require at least 5-6 key words together AND they must form a complete mantra structure
-        // Must have: start word + middle section + ending
-        if (wordMatches >= 5) {
-            const hasStart = hasTatpurushon || hasTatpurushaya;
-            const hasMiddle = hasMahadevaya || hasMahesh || hasWithMahesh || hasVidmahe;
-            const hasEnd = hasRudra && (hasPrachodayat || hasPrachodyat);
-            
-            // Must have all three sections to count as complete mantra
-            if (hasStart && hasMiddle && hasEnd && hasDhimahi && hasTanno) {
-                console.log(`✅ Fuzzy match: Found ${wordMatches} key words in COMPLETE mantra pattern`);
-                return 1; // One complete mantra
-            }
-        }
-        
-        // No match found - individual words don't count as mantras
-        console.log('❌ Fuzzy match: No COMPLETE mantra found - individual words ignored');
         return 0;
-    }
+    },
 
-    normalizeText(text) {
+    // ------------------------------------------------------------------
+    // 3.3  FUZZY MATCH (keyword scoring)
+    // ------------------------------------------------------------------
+
+    _fuzzyMatch(rawText, norm, cleaned) {
+        // Each entry: [regex, label]
+        const keywords = [
+            [/\b(om|ॐ)\b/i,                                 'om'],
+            [/\btatpurusha(ya|n|on)?\b/i,                   'tatpurushaya'],
+            [/\b(vidmahe?|mahiti)\b/i,                      'vidmahe'],
+            [/\b(mahadeva(ya)?|mahesh)\b/i,                 'mahadevaya'],
+            [/\bdhimahi\b/i,                                'dhimahi'],
+            [/\btanno\b/i,                                  'tanno'],
+            [/\brudr[aah]?\b/i,                             'rudra'],
+            [/\bprachod[aiy]*t?\b/i,                        'prachodayat'],
+        ];
+
+        // Also try Devanagari directly in the raw text
+        const devanagariKw = [
+            /तत्पुरुषाय/, /विद्महे/, /महादेवाय/,
+            /धीमहि/, /तन्नो/, /रुद्र/, /प्रचोदयात्/,
+        ];
+
+        const matched = [];
+        const sources = [norm, cleaned];
+
+        for (const [pat, label] of keywords) {
+            if (sources.some(s => pat.test(s))) matched.push(label);
+        }
+
+        let devanagariHits = 0;
+        for (const pat of devanagariKw) {
+            if (pat.test(rawText)) devanagariHits++;
+        }
+
+        console.log(`🔍 Fuzzy: ${matched.length}/8 Latin keywords: [${matched.join(', ')}]`);
+        console.log(`🔍 Fuzzy: ${devanagariHits}/7 Devanagari keywords`);
+
+        // Accept on Devanagari match (hi-IN returns script directly)
+        if (devanagariHits >= 3) {
+            console.log('✅ Fuzzy: Devanagari match');
+            return 1;
+        }
+
+        // Accept on 4+ Latin keywords
+        if (matched.length >= 4) {
+            console.log('✅ Fuzzy: Latin keyword match');
+            return 1;
+        }
+
+        // Distinctive ending shortcut — "tanno rudra prachodayat" is highly unique
+        const hasEnding = /\btanno\b/i.test(cleaned) &&
+                          /\brudr/i.test(cleaned) &&
+                          /\bprachod/i.test(cleaned);
+        if (hasEnding) {
+            console.log('✅ Fuzzy: Distinctive ending detected');
+            return 1;
+        }
+
+        return 0;
+    },
+
+    // ------------------------------------------------------------------
+    // 3.4  TEXT NORMALISATION
+    // ------------------------------------------------------------------
+
+    _normalizeText(text) {
         return text
             .toLowerCase()
-            .replace(/[।,\.!\?;:"']/g, ' ')  // Replace punctuation with space
-            .replace(/\s+/g, ' ')             // Normalize multiple spaces
-            .trim();
-    }
-
-    cleanMantraText(text) {
-        // Normalize common word variations for better matching
-        // IMPORTANT: This normalization helps with matching but we also check
-        // the original normalized text in fuzzyMatchMantra for "hare" specifically
-        return text
-            // Normalize hari/hare/haare variations (all are acceptable)
-            // Keep "hare" recognizable - convert to "hari" for consistency
-            .replace(/\b(haare|hare|harry|her|hair)\b/gi, 'hari')  // Normalize all variations → hari
-            .replace(/\bहारी\b/g, 'hari')                  // Hindi हारी → hari
-            .replace(/\bहरी\b/g, 'hari')                   // Hindi हरी → hari
-            .replace(/\bहरि\b/g, 'hari')                    // Hindi हरि → hari
-            // Normalize krishna variations
-            .replace(/\bkrishn\b/gi, 'krishna')            // Normalize krishn → krishna
-            .replace(/\bकृष्ण\b/g, 'krishna')              // Hindi कृष्ण → krishna
-            .replace(/\bकृष्णा\b/g, 'krishna')             // Hindi कृष्णा → krishna
-            // Normalize jay/jai variations
-            .replace(/\bjay\b/gi, 'jai')                   // Normalize jay → jai
-            .replace(/\bजय\b/g, 'jai')                     // Hindi जय → jai
-            // Normalize ram (handle common mispronunciations)
-            .replace(/\bराम\b/g, 'ram')                   // Hindi राम → ram
-            // Handle "ramkrishna" as one word - add space for better matching
-            .replace(/\bramkrishna\b/gi, 'ram krishna')
-            .replace(/\bramkrishn\b/gi, 'ram krishna')
-            // Clean up extra spaces
+            .replace(/[।,\.!\?;:"']/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
-    }
+    },
 
-    // ================================================================
-    // COUNTING LOGIC
-    // ================================================================
+    _cleanText(norm) {
+        return norm
+            // Devanagari → Latin transliteration
+            .replace(/ॐ/g,          'om')
+            .replace(/तत्पुरुषाय/g, 'tatpurushaya')
+            .replace(/विद्महे/g,    'vidmahe')
+            .replace(/महादेवाय/g,   'mahadevaya')
+            .replace(/धीमहि/g,      'dhimahi')
+            .replace(/तन्नो/g,      'tanno')
+            .replace(/रुद्रः/g,     'rudra')
+            .replace(/प्रचोदयात्/g, 'prachodayat')
 
-    incrementCounterByCount(count) {
-        // CRITICAL: 1 mantra = 1 count (not 8 words)
-        // The mantra is counted as 1 unit, not multiplied by wordsPerPronunciation
-        // DO NOT reset dates during increment - let checkForDateChange handle it
-        // This prevents false resets during chanting
+            // Common speech-engine mis-spellings
+            .replace(/\btatpurush[ao]n\b/gi,   'tatpurushaya')
+            .replace(/\bvidmahe?\b/gi,          'vidmahe')
+            .replace(/\bmahadeva(ya)?\b/gi,     'mahadevaya')
+            .replace(/\brudr[aah]+\b/gi,        'rudra')
+            .replace(/\bprachod[ay]+t?\b/gi,    'prachodayat')
 
-        // Each count represents 1 complete mantra pronunciation
-        // 1 mantra = 1 count = 1 pronunciation
-        const mantrasToAdd = count; // count is already the number of complete mantras
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+});
 
-        console.log('DEBUG: Before increment - currentMala:', this.state.currentMalaPronunciations, 'todayMalas:', this.state.todayMalas, 'mantras to add:', mantrasToAdd);
 
-        // Check for mala completion BEFORE incrementing
-        // This ensures we capture the completed mala properly
-        // 108 mantras = 1 mala
-        const willCompleteMala = (this.state.currentMalaPronunciations + mantrasToAdd) >= this.config.pronunciationsPerMala;
-        
-        if (willCompleteMala) {
-            console.log('DEBUG: MALA WILL BE COMPLETED! Incrementing todayMalas from', this.state.todayMalas);
+// ======================================================================
+// SECTION 4 — COUNTING & MALA LOGIC
+// ======================================================================
+
+Object.assign(GuruMantraCounter.prototype, {
+
+    _incrementByCount(count) {
+        // 1 recognition hit = `count` complete mantras
+        const now = count;
+
+        const willFinishMala =
+            (this.state.currentMalaPronunciations + now) >= this.config.pronunciationsPerMala;
+
+        if (willFinishMala) {
+            const remaining = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
+            const excess    = now - remaining;
+
             this.state.totalMalas++;
             this.state.todayMalas++;
-            console.log('DEBUG: After mala completion - todayMalas:', this.state.todayMalas, 'totalMalas:', this.state.totalMalas);
-            
-            // Calculate remaining mantras for current mala
-            const remainingForCurrentMala = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
-            this.state.currentMalaPronunciations = 0;
-            
-            // Handle excess mantras for next mala
-            const excessMantras = mantrasToAdd - remainingForCurrentMala;
-            if (excessMantras > 0) {
-                this.state.currentMalaPronunciations = excessMantras;
-            }
-            
-            setTimeout(() => this.completeMala(), 100);
+            this.state.currentMalaPronunciations = excess > 0 ? excess : 0;
+
+            setTimeout(() => this._onMalaComplete(), 100);
         } else {
-            // Normal increment - no mala completion
-            this.state.currentMalaPronunciations += mantrasToAdd;
+            this.state.currentMalaPronunciations += now;
         }
 
-        // CRITICAL FIX: Increment counts
-        // 1 mantra = 1 count (not multiplied by wordsPerPronunciation)
-        // totalWords and todayWords represent the mantra count (1 mantra = 1 word count)
-        this.state.totalWords += mantrasToAdd;
-        this.state.totalPronunciations += mantrasToAdd;
-        this.state.todayWords += mantrasToAdd;
-        this.state.todayPronunciations += mantrasToAdd;
+        this.state.totalWords          += now;
+        this.state.totalPronunciations += now;
+        this.state.todayWords          += now;
+        this.state.todayPronunciations += now;
+        this.state.todaysCount          = this.state.todayWords;
 
-        // CRITICAL FIX: todaysCount should always equal todayWords (mantra count)
-        // Don't recalculate from mala progress - use the actual increment
-        this.state.todaysCount = this.state.todayWords;
-
-        console.log('📊 Count Update:', {
-            totalWords: this.state.totalWords,
-            todayWords: this.state.todayWords, 
-            todayPronunciations: this.state.todayPronunciations,
-            currentMalaPronunciations: this.state.currentMalaPronunciations,
-            todayMalas: this.state.todayMalas,
-            todaysCount: this.state.todaysCount
+        console.log('📊 Count:', {
+            total: this.state.totalWords,
+            today: this.state.todayWords,
+            malaProgress: this.state.currentMalaPronunciations,
+            totalMalas: this.state.totalMalas,
         });
 
-        this.updateUI();
-        this.saveToServer();
-    }
+        this._updateUI();
+        this._saveToServer();
+    },
 
-    incrementCounter() {
-        // Legacy method - now calls incrementCounterByCount with count 1
-        this.incrementCounterByCount(1);
-    }
+    _onMalaComplete() {
+        console.log('🎉 Mala complete! Total:', this.state.totalMalas, '| Today:', this.state.todayMalas);
+        this._celebrateMala();
+        this._checkMilestones();
+        this._updateUI();
+    },
 
-    completeMala() {
-        console.log('🎉 Mala completed! Total: ' + this.state.totalMalas + ', Today: ' + this.state.todayMalas);
-
-        this.triggerMalaCelebration();
-        this.checkMilestones();
-        this.updateUI();
-    }
-
-    checkMilestones() {
+    _checkMilestones() {
         if (this.config.milestones.includes(this.state.totalMalas)) {
-            this.triggerMilestoneCelebration(this.state.totalMalas);
+            this._celebrateMilestone(this.state.totalMalas);
         }
-    }
+    },
 
-    addManualCount() {
-        // Trigger complete mantra disappearing for manual count
-        this.disappearCompleteMantra();
-        this.updateActivity(); // Reset session timeout
-        
-        // Increment counter by 1 (single mantra)
-        this.incrementCounterByCount(1);
-        
-        this.showNotification('➕ व्यक्तिशः काउंट जोडले गेले', 'success', 1000);
-        this.triggerSuccessFeedback();
-    }
+    _addManualCount() {
+        this._disappearMantraWords();
+        this._updateActivity();
+        this._incrementByCount(1);
+        this._showNotification('➕ व्यक्तिशः काउंट जोडले गेले', 'success', 1000);
+        this._feedbackSuccess();
+    },
 
-    confirmReset() {
+    _confirmReset() {
         if (confirm('खात्री आहे काय? आज के जप रिसेट होईल (कुल जप सुरक्षित रहेगा)')) {
-            this.resetCounter();
-            this.updateActivity(); // Reset session timeout
+            this._resetTodayCount();
+            this._updateActivity();
         }
-    }
+    },
 
-    resetCounter() {
-        // Only reset today's counts, preserve total counts
-        this.state.todayWords = 0;
-        this.state.todayPronunciations = 0;
-        this.state.todayMalas = 0;
+    _resetTodayCount() {
+        this.state.todayWords              = 0;
+        this.state.todayPronunciations     = 0;
+        this.state.todayMalas              = 0;
         this.state.currentMalaPronunciations = 0;
-        this.state.todaysCount = 0; // Reset persistent today's count
+        this.state.todaysCount             = 0;
+        this._resetMantraDisplay();
+        this._updateUI();
+        this._saveToServer(true);
+        this._showNotification('आज के जप रिसेट झाले (कुल जप सुरक्षित)', 'info');
+        console.log('🔄 Today\'s counter reset');
+    },
+});
 
-        // Reset mantra display
-        this.resetMantraDisplay();
 
-        this.updateUI();
-        this.saveToServer(true);
-        this.showNotification('आज के जप रिसेट झाले (कुल जप सुरक्षित)', 'info');
+// ======================================================================
+// SECTION 5 — SERVER PERSISTENCE
+// ======================================================================
 
-        console.log('🔄 Today\'s counter reset (total preserved)');
-    }
+Object.assign(GuruMantraCounter.prototype, {
 
-    // ================================================================
-    // DATA PERSISTENCE
-    // ================================================================
-
-    async loadStateFromServer() {
+    async _loadStateFromServer() {
         try {
-            console.log('📥 Loading state from server...');
+            console.log('📥 Loading state from server…');
+            const res  = await fetch('/guru-mantra/api/state', { method: 'GET', credentials: 'same-origin' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
 
-            const response = await fetch('/guru-mantra/api/state', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
+            if (!data.success) return;
 
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
+            // Lifetime totals — take the higher value to prevent data loss
+            this.state.totalWords          = Math.max(this.state.totalWords,          data.count                  || 0);
+            this.state.totalMalas          = Math.max(this.state.totalMalas,          data.total_malas            || 0);
+            this.state.totalPronunciations = Math.max(this.state.totalPronunciations, data.total_pronunciations   || 0);
+            this.state.currentMalaPronunciations = data.current_mala_pronunciations   || 0;
 
-            const data = await response.json();
+            // Date comparison (IST)
+            const storedDate  = data.today_date       || this.serverDate || this._localDateString();
+            const currentDate = this.serverDate        || this._localDateString();
+            const sameDay     = storedDate === currentDate || (!this.serverDate && storedDate);
 
-            if (data.success) {
-                // CRITICAL FIX: Only update from server if loading from initial state
-                // or if the server values are higher (preserve data integrity)
-                const serverCount = data.count || 0;
-                const serverTotalMalas = data.total_malas || 0;
-                const serverTotalPronunciations = data.total_pronunciations || 0;
-                
-                // Use the greater value to prevent data loss
-                this.state.totalWords = Math.max(this.state.totalWords, serverCount);
-                this.state.totalMalas = Math.max(this.state.totalMalas, serverTotalMalas);
-                this.state.totalPronunciations = Math.max(this.state.totalPronunciations, serverTotalPronunciations);
-                
-                // Load session-specific data (can be different from client)
-                this.state.currentMalaPronunciations = data.current_mala_pronunciations || 0;
-                
-                // CRITICAL FIX: Load today's data and check if date matches
-                // Use server date from response, and compare with serverDate (IST) from getServerTime
-                const serverTodayDate = data.today_date || this.serverDate || this.getTodayDateString();
-                const currentServerDate = this.serverDate || this.getTodayDateString();
-                
-                console.log('📅 Date comparison - Server stored date:', serverTodayDate, 'Current server date:', currentServerDate, 'isFirstLoad:', this.state.isFirstLoad);
-                console.log('📅 Full server response:', {
-                    today_date: data.today_date,
-                    today_words: data.today_words,
-                    todays_count: data.todays_count,
-                    today_malas: data.today_malas
-                });
-                
-                // CRITICAL FIX: Always load today's data from server if server date matches current server date
-                // This ensures today's count persists after logout/login
-                // Only skip loading if the date has actually changed (IST midnight passed)
-                // Also handle case where serverDate might not be loaded yet - use server's today_date as fallback
-                const datesMatch = serverTodayDate === currentServerDate || 
-                                  (!this.serverDate && serverTodayDate); // If serverDate not loaded, trust server's today_date
-                
-                if (datesMatch) {
-                    // Server date matches current date - load today's data from server
-                    // CRITICAL: Use todays_count if available, otherwise use today_words
-                    const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
-                    
-                    const serverTodayWords = data.today_words || 0;
-                    const serverTodayPronunciations = data.today_pronunciations || 0;
-                    const serverTodayMalas = data.today_malas || 0;
-                    
-                    // CRITICAL FIX: On first load, directly assign server values
-                    // On subsequent syncs, use Math.max to prevent overwriting local increments
-                    if (this.state.isFirstLoad) {
-                        // First load - directly assign from server
-                        // This is critical for preserving count after logout/login
-                        this.state.todayWords = serverTodayWords;
-                        this.state.todayPronunciations = serverTodayPronunciations;
-                        this.state.todayMalas = serverTodayMalas;
-                        this.state.todaysCount = serverTodaysCount;
-                        this.state.todayDate = serverTodayDate;
-                        this.state.isFirstLoad = false;  // Mark that first load is complete
-                        
-                        console.log('✅ FIRST LOAD - directly loaded today\'s data from server:', {
-                            todayWords: this.state.todayWords,
-                            todaysCount: this.state.todaysCount,
-                            todayDate: this.state.todayDate,
-                            serverTodayDate: serverTodayDate,
-                            currentServerDate: currentServerDate,
-                            serverTodayWords: serverTodayWords,
-                            serverTodaysCount: serverTodaysCount
-                        });
-                        
-                        // CRITICAL: Update UI immediately after first load
-                        this.updateUI();
-                    } else {
-                        // Subsequent sync - use Math.max to prevent overwriting local increments
-                        this.state.todayWords = Math.max(this.state.todayWords, serverTodayWords);
-                        this.state.todayPronunciations = Math.max(this.state.todayPronunciations, serverTodayPronunciations);
-                        this.state.todayMalas = Math.max(this.state.todayMalas, serverTodayMalas);
-                        this.state.todaysCount = Math.max(this.state.todaysCount, serverTodaysCount);
-                        this.state.todayDate = serverTodayDate;
-                        
-                        // Ensure todaysCount reflects todayWords if it's higher
-                        if (this.state.todayWords > this.state.todaysCount) {
-                            this.state.todaysCount = this.state.todayWords;
-                        }
-                        
-                        console.log('✅ Sync - loaded today\'s data from server (using Math.max):', {
-                            todayWords: this.state.todayWords,
-                            todaysCount: this.state.todaysCount,
-                            todayDate: this.state.todayDate
-                        });
-                    }
+            if (sameDay) {
+                const serverTodaysCount = data.todays_count !== undefined ? data.todays_count : (data.today_words || 0);
+
+                if (this.state.isFirstLoad) {
+                    // First boot — load server values directly
+                    this.state.todayWords          = data.today_words          || 0;
+                    this.state.todayPronunciations = data.today_pronunciations || 0;
+                    this.state.todayMalas          = data.today_malas          || 0;
+                    this.state.todaysCount         = serverTodaysCount;
+                    this.state.todayDate           = storedDate;
+                    this.state.isFirstLoad         = false;
+                    console.log('✅ First load — server values applied:', { todayWords: this.state.todayWords });
+                    this._updateUI();
                 } else {
-                    // Date changed - server date is different from current date
-                    // This means IST midnight passed - reset will be handled by checkForDateChange
-                    console.log('📅 Date changed detected. Server stored:', serverTodayDate, 'Current:', currentServerDate);
-                    
-                    // CRITICAL FIX: On first load, if dates don't match but server has data,
-                    // it might be a timezone/format issue. Only reset if we're sure it's a new day.
-                    // If it's first load and server has non-zero count, be more cautious about resetting
-                    if (this.state.isFirstLoad && (serverTodayWords > 0 || serverTodaysCount > 0)) {
-                        console.warn('⚠️ First load: Dates don\'t match but server has count data. Loading anyway to preserve data.');
-                        // Load the data anyway - might be a date format issue
-                        this.state.todayWords = serverTodayWords;
-                        this.state.todayPronunciations = serverTodayPronunciations;
-                        this.state.todayMalas = serverTodayMalas;
-                        this.state.todaysCount = serverTodaysCount;
-                        this.state.todayDate = serverTodayDate || currentServerDate;
-                        this.state.isFirstLoad = false;
-                        this.updateUI();
-                    } else {
-                        // Set todayDate to current server date to prevent false resets
-                        this.state.todayDate = currentServerDate;
-                        // Initialize today's counters to 0 for new day
-                        this.state.todayWords = 0;
-                        this.state.todayPronunciations = 0;
-                        this.state.todayMalas = 0;
-                        this.state.todaysCount = 0;
-                        this.state.currentMalaPronunciations = 0;
+                    // Sync — keep the higher value
+                    this.state.todayWords          = Math.max(this.state.todayWords,          data.today_words          || 0);
+                    this.state.todayPronunciations = Math.max(this.state.todayPronunciations, data.today_pronunciations || 0);
+                    this.state.todayMalas          = Math.max(this.state.todayMalas,          data.today_malas          || 0);
+                    this.state.todaysCount         = Math.max(this.state.todaysCount,         serverTodaysCount);
+                    if (this.state.todayWords > this.state.todaysCount) {
+                        this.state.todaysCount = this.state.todayWords;
                     }
+                    console.log('✅ Sync — merged values');
                 }
-
-                console.log('DEBUG LOAD: todayMalas=' + this.state.todayMalas + ', todaysCount=' + this.state.todaysCount + ', currentMalaPron=' + this.state.currentMalaPronunciations);
-                console.log('✅ State loaded:', {
-                    totalWords: this.state.totalWords,
-                    totalPronunciations: this.state.totalPronunciations,
-                    currentMalaPronunciations: this.state.currentMalaPronunciations,
-                    totalMalas: this.state.totalMalas,
-                    todayWords: this.state.todayWords,
-                    todayPronunciations: this.state.todayPronunciations,
-                    todayMalas: this.state.todayMalas,
-                    todaysCount: this.state.todaysCount
-                });
+            } else {
+                // Date changed — new day
+                console.log('📅 New day detected. Stored:', storedDate, '| Current:', currentDate);
+                if (this.state.isFirstLoad && (data.today_words > 0 || data.todays_count > 0)) {
+                    // Possible timezone mismatch on first load — be cautious
+                    console.warn('⚠️ Date mismatch on first load but server has data — loading anyway');
+                    this.state.todayWords          = data.today_words          || 0;
+                    this.state.todayPronunciations = data.today_pronunciations || 0;
+                    this.state.todayMalas          = data.today_malas          || 0;
+                    this.state.todaysCount         = data.todays_count         || 0;
+                    this.state.todayDate           = storedDate || currentDate;
+                    this.state.isFirstLoad         = false;
+                    this._updateUI();
+                } else {
+                    this.state.todayDate           = currentDate;
+                    this.state.todayWords          = 0;
+                    this.state.todayPronunciations = 0;
+                    this.state.todayMalas          = 0;
+                    this.state.currentMalaPronunciations = 0;
+                    this.state.todaysCount         = 0;
+                }
             }
-        } catch (error) {
-            console.error('❌ Error loading from server:', error);
-            this.showNotification('डेटा लोड करता आला नाही', 'error');
-        }
-    }
 
-    async saveToServer(immediate = false) {
-        if (this.state.isSaving && !immediate) {
-            console.log('⏭️ Save in progress, skipping...');
-            return;
+            console.log('✅ State loaded:', {
+                totalWords:    this.state.totalWords,
+                todayWords:    this.state.todayWords,
+                totalMalas:    this.state.totalMalas,
+                todaysCount:   this.state.todaysCount,
+            });
+        } catch (err) {
+            console.error('❌ Load error:', err);
+            this._showNotification('डेटा लोड करता आला नाही', 'error');
         }
+    },
 
+    async _saveToServer(immediate = false) {
+        if (this.state.isSaving && !immediate) return;
         this.state.isSaving = true;
 
+        const payload = {
+            count:                     this.state.totalWords,
+            totalMalas:                this.state.totalMalas,
+            currentMalaPronunciations: this.state.currentMalaPronunciations,
+            totalPronunciations:       this.state.totalPronunciations,
+            todayWords:                this.state.todayWords,
+            todayPronunciations:       this.state.todayPronunciations,
+            todayMalas:                this.state.todayMalas,
+            todayDate:                 this.state.todayDate,
+            todaysCount:               this._calcTodayTotal(),
+        };
+
+        console.log('💾 Saving:', payload);
+
         try {
-            // Calculate actual todays count for persistence
-            const actualTodaysCount = this.calculateTodayTotalWords();
-            
-            const payload = {
-                count: this.state.totalWords,
-                totalMalas: this.state.totalMalas,
-                currentMalaPronunciations: this.state.currentMalaPronunciations,
-                totalPronunciations: this.state.totalPronunciations,
-                todayWords: this.state.todayWords,
-                todayPronunciations: this.state.todayPronunciations,
-                todayMalas: this.state.todayMalas,
-                todayDate: this.state.todayDate,
-                todaysCount: actualTodaysCount // Save the calculated value
-            };
-
-            console.log('💾 Saving to server:', payload);
-            console.log('DEBUG SAVE: todayMalas=' + payload.todayMalas + ', todaysCount=' + payload.todaysCount + ', currentMalaPron=' + payload.currentMalaPronunciations);
-
-            const response = await fetch('/guru-mantra/api/save', {
+            const res = await fetch('/guru-mantra/api/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
-
-            if (response.ok) {
-                console.log('✅ Saved successfully');
+            if (res.ok) {
+                console.log('✅ Saved');
             } else {
-                console.error('❌ Save failed:', response.status);
-                if (!immediate) {
-                    this.showNotification('सेव्ह करता आले नाही', 'error');
-                }
+                console.error('❌ Save failed:', res.status);
+                if (!immediate) this._showNotification('सेव्ह करता आले नाही', 'error');
             }
-        } catch (error) {
-            console.error('❌ Save error:', error);
-            if (!immediate) {
-                this.showNotification('सर्वर शी कनेक्ट करता आले नाही', 'error');
-            }
+        } catch (err) {
+            console.error('❌ Save error:', err);
+            if (!immediate) this._showNotification('सर्वर शी कनेक्ट करता आले नाही', 'error');
         } finally {
             this.state.isSaving = false;
         }
-    }
+    },
+});
 
-    // ================================================================
-    // UI UPDATE METHODS
-    // ================================================================
 
-    updateUI() {
-        this.updateCountDisplay();
-        this.updateMalaStatus();
-        this.updateProgress();
-        this.updateListeningStatus();
-        this.updateButtons();
-        this.updateSessionStats();
-        this.updateFullJapDisplay();
-        this.updateMantraDisplay();
-        this.updateDateTimeDisplay();
-    }
+// ======================================================================
+// SECTION 6 — UI UPDATES
+// ======================================================================
 
-    updateCountDisplay() {
-        if (this.elements.countDisplay) {
-            const todayTotalWords = this.calculateTodayTotalWords();
-            
-            const current = parseInt(this.elements.countDisplay.textContent) || 0;
-            if (current !== todayTotalWords) {
-                this.elements.countDisplay.classList.add('pulse');
-                this.elements.countDisplay.textContent = todayTotalWords;
-                setTimeout(() => {
-                    this.elements.countDisplay.classList.remove('pulse');
-                }, 500);
-            }
+Object.assign(GuruMantraCounter.prototype, {
+
+    _updateUI() {
+        this._updateCountDisplay();
+        this._updateMalaStatus();
+        this._updateProgress();
+        this._updateListeningStatus();
+        this._updateButtons();
+        this._updateSessionStats();
+        this._updateFullJap();
+        this._updateMantraDisplay();
+        this._updateDateTimeDisplay();
+    },
+
+    _updateCountDisplay() {
+        const el = this.elements.countDisplay;
+        if (!el) return;
+        const val = this._calcTodayTotal();
+        if (parseInt(el.textContent) !== val) {
+            el.classList.add('pulse');
+            el.textContent = val;
+            setTimeout(() => el.classList.remove('pulse'), 500);
         }
-    }
+    },
 
-    updateMalaStatus() {
+    _updateMalaStatus() {
         if (this.elements.totalMalas) {
-            this.elements.totalMalas.textContent = 'कुल माला: ' + this.state.totalMalas + ' | आज: ' + this.state.todayMalas;
+            this.elements.totalMalas.textContent =
+                'कुल माला: ' + this.state.totalMalas + ' | आज: ' + this.state.todayMalas;
         }
-
         if (this.elements.malaStatus) {
             this.elements.malaStatus.textContent =
                 'वर्तमान माला: ' + this.state.currentMalaPronunciations + ' / ' + this.config.pronunciationsPerMala;
         }
-
         if (this.elements.remainingCount) {
-            const remaining = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
-            this.elements.remainingCount.textContent = 'शेष: ' + remaining + ' वार';
+            const rem = this.config.pronunciationsPerMala - this.state.currentMalaPronunciations;
+            this.elements.remainingCount.textContent = 'शेष: ' + rem + ' वार';
         }
-    }
+    },
 
-    updateProgress() {
+    _updateProgress() {
         if (this.elements.progressFill) {
-            const progress = (this.state.currentMalaPronunciations / this.config.pronunciationsPerMala) * 100;
-            this.elements.progressFill.style.width = Math.min(progress, 100) + '%';
+            const pct = (this.state.currentMalaPronunciations / this.config.pronunciationsPerMala) * 100;
+            this.elements.progressFill.style.width = Math.min(pct, 100) + '%';
         }
-    }
+    },
 
-    updateListeningStatus() {
-        if (this.elements.listeningStatus) {
-            if (this.state.isListening) {
-                this.elements.listeningStatus.textContent = '🎤 ऐकत आहे...';
-                this.elements.listeningStatus.classList.add('listening');
-            } else {
-                this.elements.listeningStatus.textContent = '⏸️ थांबलेले आहे';
-                this.elements.listeningStatus.classList.remove('listening');
-            }
+    _updateListeningStatus() {
+        const el = this.elements.listeningStatus;
+        if (!el) return;
+        if (this.state.isListening) {
+            el.textContent = '🎤 ऐकत आहे...';
+            el.classList.add('listening');
+        } else {
+            el.textContent = '⏸️ थांबलेले आहे';
+            el.classList.remove('listening');
         }
-    }
+    },
 
-    updateButtons() {
+    _updateButtons() {
         if (this.elements.startBtn && this.elements.stopBtn) {
             this.elements.startBtn.disabled = this.state.isListening;
-            this.elements.stopBtn.disabled = !this.state.isListening;
-
-            if (this.state.isListening) {
-                this.elements.startBtn.classList.add('active');
-            } else {
-                this.elements.startBtn.classList.remove('active');
-            }
+            this.elements.stopBtn.disabled  = !this.state.isListening;
+            this.elements.startBtn.classList.toggle('active', this.state.isListening);
         }
-    }
+    },
 
-    updateSessionStats() {
+    _updateSessionStats() {
         if (this.elements.sessionTime) {
-            const minutes = Math.floor((Date.now() - this.state.sessionStartTime) / 60000);
-            this.elements.sessionTime.textContent = minutes + ' मिनट';
+            const mins = Math.floor((Date.now() - this.state.sessionStartTime) / 60_000);
+            this.elements.sessionTime.textContent = mins + ' मिनट';
         }
-
         if (this.elements.todayCount) {
-            const todayTotalWords = this.calculateTodayTotalWords();
-            this.elements.todayCount.textContent = todayTotalWords;
+            this.elements.todayCount.textContent = this._calcTodayTotal();
         }
-
         if (this.elements.accuracy && this.metrics.recognitionAttempts > 0) {
-            const accuracy = Math.round(
-                (this.metrics.recognitionSuccesses / this.metrics.recognitionAttempts) * 100
-            );
-            this.elements.accuracy.textContent = accuracy + '%';
+            const pct = Math.round((this.metrics.recognitionSuccesses / this.metrics.recognitionAttempts) * 100);
+            this.elements.accuracy.textContent = pct + '%';
         }
-    }
+    },
 
-    updateDateTimeDisplay() {
-        // Update both the datetimeDisplay in user-info and datetimeDisplaySection in counter-section
-        const displayElement = this.elements.datetimeDisplay || 
-                              (this.elements.datetimeDisplaySection ? 
-                               this.elements.datetimeDisplaySection.querySelector('#datetimeDisplay') : null);
-        
-        if (displayElement) {
-            // Use server time if available, otherwise use client time
-            let now;
-            
-            // Check if we have server time data (from getServerTime response)
-            if (this.serverHour !== null && this.serverMinute !== null && this.serverSecond !== null) {
-                // Use server-provided hour, minute, second directly (already in IST)
-                // Create a date object for today using server date
-                const serverDateParts = this.serverDate.split('-');
-                const year = parseInt(serverDateParts[0]);
-                const month = parseInt(serverDateParts[1]) - 1; // JavaScript months are 0-indexed
-                const day = parseInt(serverDateParts[2]);
-                
-                // Create date in IST (UTC+5:30)
-                // We'll create it in UTC and then adjust
-                now = new Date(Date.UTC(year, month, day, this.serverHour, this.serverMinute, this.serverSecond));
-                // Adjust for IST offset (subtract 5:30 from UTC to get IST)
-                const istOffset = 5.5 * 60 * 60 * 1000;
-                now = new Date(now.getTime() - istOffset);
-            } else if (this.serverTime) {
-                // Fallback: Parse server datetime string if available
-                try {
-                    // Server time is already in IST, so parse it directly
-                    now = new Date(this.serverTime);
-                    if (isNaN(now.getTime())) {
-                        throw new Error('Invalid date');
-                    }
-                } catch (e) {
-                    console.error('Error parsing server time:', e, 'Server time:', this.serverTime);
-                    // Fallback to current time in IST
-                    now = this.getClientISTTime();
-                }
-            } else {
-                // Fallback to client time with IST adjustment
-                now = this.getClientISTTime();
-            }
-            
-            // Format date and time
-            // Format: "17 जानेवारी 2026, 18:10:04 IST"
-            const dateStr = now.toLocaleDateString('mr-IN', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric'
-            });
-            
-            // Format time manually to ensure correct display (use server time directly)
-            let hours, minutes, seconds;
-            if (this.serverHour !== null && this.serverMinute !== null && this.serverSecond !== null) {
-                // Use server time directly and add elapsed seconds for live clock
-                let currentSecond = this.serverSecond;
-                if (this.serverTimeFetchedAt) {
-                    const elapsedSeconds = Math.floor((Date.now() - this.serverTimeFetchedAt) / 1000);
-                    currentSecond = (this.serverSecond + elapsedSeconds) % 60;
-                    const additionalMinutes = Math.floor((this.serverSecond + elapsedSeconds) / 60);
-                    if (additionalMinutes > 0) {
-                        const currentMinute = (this.serverMinute + additionalMinutes) % 60;
-                        const additionalHours = Math.floor((this.serverMinute + additionalMinutes) / 60);
-                        minutes = String(currentMinute).padStart(2, '0');
-                        hours = String((this.serverHour + additionalHours) % 24).padStart(2, '0');
-                    } else {
-                        hours = String(this.serverHour).padStart(2, '0');
-                        minutes = String(this.serverMinute).padStart(2, '0');
-                    }
-                } else {
-                    hours = String(this.serverHour).padStart(2, '0');
-                    minutes = String(this.serverMinute).padStart(2, '0');
-                }
-                seconds = String(currentSecond).padStart(2, '0');
-            } else {
-                // Fallback: format from date object
-                hours = String(now.getHours()).padStart(2, '0');
-                minutes = String(now.getMinutes()).padStart(2, '0');
-                seconds = String(now.getSeconds()).padStart(2, '0');
-            }
-            const timeStr = `${hours}:${minutes}:${seconds}`;
-            
-            displayElement.textContent = `${dateStr}, ${timeStr} IST`;
+    _updateFullJap() {
+        const el = this.elements.fullJapCount;
+        if (!el) return;
+        if (parseInt(el.textContent) !== this.state.totalWords) {
+            el.classList.add('pulse');
+            el.textContent = this.state.totalWords;
+            setTimeout(() => el.classList.remove('pulse'), 500);
         }
-    }
-    
-    getClientISTTime() {
-        // Get current time and convert to IST
-        const now = new Date();
-        // Convert to IST (UTC+5:30)
-        const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
-        const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
-        return new Date(utcTime + istOffset);
-    }
+    },
 
-    displayRecognizedText(text) {
-        if (this.elements.recognitionText) {
-            this.elements.recognitionText.textContent = text;
+    _updateDateTimeDisplay() {
+        const el = this.elements.datetimeDisplay;
+        if (!el) return;
+
+        let hours, minutes, seconds, dateStr;
+
+        if (this.serverHour !== null && this.serverTimeFetchedAt) {
+            const elapsed  = Math.floor((Date.now() - this.serverTimeFetchedAt) / 1000);
+            const totalSec = this.serverHour * 3600 + this.serverMinute * 60 + this.serverSecond + elapsed;
+            hours   = String(Math.floor(totalSec / 3600) % 24).padStart(2, '0');
+            minutes = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+            seconds = String(totalSec % 60).padStart(2, '0');
+
+            const [y, m, d] = (this.serverDate || this._localDateString()).split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            dateStr  = dt.toLocaleDateString('mr-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+        } else {
+            const ist = this._getISTTime();
+            hours    = String(ist.getHours()).padStart(2, '0');
+            minutes  = String(ist.getMinutes()).padStart(2, '0');
+            seconds  = String(ist.getSeconds()).padStart(2, '0');
+            dateStr  = ist.toLocaleDateString('mr-IN', { year: 'numeric', month: 'long', day: 'numeric' });
         }
-    }
 
-    updateFullJapDisplay() {
-        if (this.elements.fullJapCount) {
-            // Show total lifetime count, not today's count
-            const current = parseInt(this.elements.fullJapCount.textContent) || 0;
-            if (current !== this.state.totalWords) {
-                this.elements.fullJapCount.classList.add('pulse');
-                this.elements.fullJapCount.textContent = this.state.totalWords;
-                setTimeout(() => {
-                    this.elements.fullJapCount.classList.remove('pulse');
-                }, 500);
-            }
-        }
-    }
+        el.textContent = `${dateStr}, ${hours}:${minutes}:${seconds} IST`;
+    },
 
-    // ================================================================
-    // MANTRA WORD DISAPPEARING METHODS
-    // ================================================================
+    _displayText(text) {
+        if (this.elements.recognitionText) this.elements.recognitionText.textContent = text;
+    },
+});
 
-    updateMantraDisplay() {
-        const mantraWords = document.querySelectorAll('.mantra-word');
-        mantraWords.forEach(word => {
-            word.classList.remove('current', 'completed', 'disappearing');
-        });
-    }
 
-    disappearCompleteMantra() {
-        console.log('🎉 Complete mantra recognized! All words disappearing...');
-        
-        // Make all words disappear simultaneously
-        const mantraWords = document.querySelectorAll('.mantra-word');
-        mantraWords.forEach(word => {
-            word.classList.add('disappearing');
-        });
-        
-        setTimeout(() => {
-            // After animation, reset all words (no counter increment here)
-            mantraWords.forEach(word => {
-                word.classList.remove('disappearing');
-            });
-        }, 800);
-    }
+// ======================================================================
+// SECTION 7 — MANTRA WORD ANIMATION
+// ======================================================================
 
-    resetMantraDisplay() {
-        const mantraWords = document.querySelectorAll('.mantra-word');
-        mantraWords.forEach(word => {
-            word.classList.remove('completed', 'current', 'disappearing');
-        });
-        this.updateMantraDisplay();
-    }
+Object.assign(GuruMantraCounter.prototype, {
 
-    // ================================================================
-    // VISUAL FEEDBACK & CELEBRATIONS
-    // ================================================================
+    _disappearMantraWords() {
+        const words = document.querySelectorAll('.mantra-word');
+        words.forEach(w => w.classList.add('disappearing'));
+        setTimeout(() => words.forEach(w => w.classList.remove('disappearing')), 800);
+    },
 
-    triggerSuccessFeedback() {
-        this.flashBackground('rgba(76, 175, 80, 0.1)', 200);
-    }
+    _resetMantraDisplay() {
+        document.querySelectorAll('.mantra-word')
+            .forEach(w => w.classList.remove('completed', 'current', 'disappearing'));
+    },
 
-    triggerWarningFeedback() {
-        this.flashBackground('rgba(255, 152, 0, 0.1)', 200);
-    }
+    _updateMantraDisplay() {
+        document.querySelectorAll('.mantra-word')
+            .forEach(w => w.classList.remove('current', 'completed', 'disappearing'));
+    },
+});
 
-    flashBackground(color, duration) {
-        document.body.style.background = 'radial-gradient(ellipse at center, ' + color + ', transparent)';
-        setTimeout(() => {
-            document.body.style.background = '';
-        }, duration);
-    }
 
-    triggerMalaCelebration() {
-        this.showCelebration('🎉 एक माला पूर्ण झाली! 🎉', 'हरी बोला! आणखी एक मिळवली!');
-        // Reduced confetti for less eye irritation
-        this.createConfetti();
-    }
+// ======================================================================
+// SECTION 8 — CELEBRATIONS & NOTIFICATIONS
+// ======================================================================
 
-    triggerMilestoneCelebration(malas) {
-        const messages = {
-            10: ['🎊 10 माला पूर्ण झाल्या! 🎊', 'उत्तम प्रगती!'],
-            21: ['✨ 21 माला पूर्ण झाल्या! ✨', 'अप्रतिम कार्य!'],
-            51: ['🌟 51 माला पूर्ण झाल्या! 🌟', 'तुमची लगबग अविश्वसनीय!'],
-            108: ['💫 108 माला पूर्ण झाल्या! 💫', 'शंभर आठ साधलेत!'],
-            1008: ['🏆 1008 माला पूर्ण झाल्या! 🏆', 'हजार आठ साधलेत! अलौकिक!']
+Object.assign(GuruMantraCounter.prototype, {
+
+    _feedbackSuccess() {
+        this._flash('rgba(76,175,80,0.1)');
+    },
+
+    _feedbackWarning() {
+        this._flash('rgba(255,152,0,0.1)');
+    },
+
+    _flash(color) {
+        document.body.style.background = `radial-gradient(ellipse at center, ${color}, transparent)`;
+        setTimeout(() => { document.body.style.background = ''; }, 200);
+    },
+
+    _celebrateMala() {
+        this._showCelebration('🎉 एक माला पूर्ण झाली! 🎉', 'हरी बोला! आणखी एक मिळवली!');
+        this._createConfetti();
+    },
+
+    _celebrateMilestone(malas) {
+        const msgs = {
+            10:   ['🎊 10 माला पूर्ण झाल्या! 🎊',   'उत्तम प्रगती!'],
+            21:   ['✨ 21 माला पूर्ण झाल्या! ✨',   'अप्रतिम कार्य!'],
+            51:   ['🌟 51 माला पूर्ण झाल्या! 🌟',   'तुमची लगबग अविश्वसनीय!'],
+            108:  ['💫 108 माला पूर्ण झाल्या! 💫',  'शंभर आठ साधलेत!'],
+            1008: ['🏆 1008 माला पूर्ण झाल्या! 🏆', 'हजार आठ साधलेत! अलौकिक!'],
         };
+        const [msg, sub] = msgs[malas] || [];
+        if (msg) { this._showCelebration(msg, sub, 5000); this._createConfetti(); }
+    },
 
-        const [message, subMessage] = messages[malas] || ['', ''];
-        if (message) {
-            this.showCelebration(message, subMessage, 5000);
-            this.createConfetti();
-        }
-    }
-
-    showCelebration(message, subMessage = '', duration = 3000) {
-        if (!this.elements.celebration) return;
-
-        this.elements.celebration.innerHTML = 
-            '<div class="celebration-text">' + message + '</div>' +
-            (subMessage ? '<div class="celebration-subtext">' + subMessage + '</div>' : '');
-
-        this.elements.celebration.style.display = 'block';
-        this.elements.celebration.classList.add('show');
-
+    _showCelebration(msg, sub = '', duration = 3000) {
+        const el = this.elements.celebration;
+        if (!el) return;
+        el.innerHTML  = `<div class="celebration-text">${msg}</div>${sub ? `<div class="celebration-subtext">${sub}</div>` : ''}`;
+        el.style.display = 'block';
+        el.classList.add('show');
         setTimeout(() => {
-            this.elements.celebration.classList.remove('show');
-            setTimeout(() => {
-                this.elements.celebration.style.display = 'none';
-            }, 500);
+            el.classList.remove('show');
+            setTimeout(() => { el.style.display = 'none'; }, 500);
         }, duration);
-    }
+    },
 
-    createConfetti() {
+    _createConfetti() {
         const colors = ['#ff6b35', '#ffd700', '#4caf50', '#2196f3', '#9c27b0'];
-        const confettiCount = 20; // Reduced from 50 to 20
-
-        for (let i = 0; i < confettiCount; i++) {
-            const confetti = document.createElement('div');
-            confetti.style.cssText = 
-                'position: fixed;' +
-                'width: 8px;' +
-                'height: 8px;' +
-                'background: ' + colors[Math.floor(Math.random() * colors.length)] + ';' +
-                'left: ' + (Math.random() * 100) + '%;' +
-                'top: -10px;' +
-                'border-radius: 50%;' +
-                'pointer-events: none;' +
-                'z-index: 9999;' +
-                'opacity: 0.7;' +
-                'animation: confetti-fall ' + (1.5 + Math.random() * 1) + 's ease-out;';
-            document.body.appendChild(confetti);
-            setTimeout(() => confetti.remove(), 3000);
+        for (let i = 0; i < 20; i++) {
+            const el = document.createElement('div');
+            el.style.cssText = [
+                'position:fixed', 'width:8px', 'height:8px', 'border-radius:50%',
+                `background:${colors[Math.floor(Math.random() * colors.length)]}`,
+                `left:${Math.random() * 100}%`, 'top:-10px',
+                'pointer-events:none', 'z-index:9999', 'opacity:0.7',
+                `animation:confetti-fall ${1.5 + Math.random()}s ease-out`,
+            ].join(';');
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
         }
-    }
+    },
 
-    showNotification(message, type = 'info', duration = 3000) {
-        const notification = document.createElement('div');
-
-        const bgColors = {
-            success: 'linear-gradient(135deg, #4caf50, #66bb6a)',
-            error: 'linear-gradient(135deg, #f44336, #ef5350)',
-            info: 'linear-gradient(135deg, #2196f3, #42a5f5)'
+    _showNotification(msg, type = 'info', duration = 3000) {
+        const bg = {
+            success: 'linear-gradient(135deg,#4caf50,#66bb6a)',
+            error:   'linear-gradient(135deg,#f44336,#ef5350)',
+            info:    'linear-gradient(135deg,#2196f3,#42a5f5)',
         };
-
-        notification.style.cssText = 
-            'position: fixed;' +
-            'top: 20px;' +
-            'right: 20px;' +
-            'padding: 12px 16px;' +
-            'background: ' + (bgColors[type] || bgColors.info) + ';' +
-            'color: white;' +
-            'border-radius: 8px;' +
-            'box-shadow: 0 4px 20px rgba(0,0,0,0.3);' +
-            'z-index: 10000;' +
-            'animation: slide-in 0.3s ease-out;' +
-            'font-size: 0.9rem;' +
-            'max-width: 300px;' +
-            'word-wrap: break-word;';
-        notification.textContent = message;
-        document.body.appendChild(notification);
-
+        const el = document.createElement('div');
+        el.style.cssText = [
+            'position:fixed', 'top:20px', 'right:20px',
+            'padding:12px 16px', `background:${bg[type] || bg.info}`,
+            'color:white', 'border-radius:8px',
+            'box-shadow:0 4px 20px rgba(0,0,0,0.3)',
+            'z-index:10000', 'animation:slide-in 0.3s ease-out',
+            'font-size:0.9rem', 'max-width:300px', 'word-wrap:break-word',
+        ].join(';');
+        el.textContent = msg;
+        document.body.appendChild(el);
         setTimeout(() => {
-            notification.style.animation = 'slide-out 0.3s ease-out';
-            setTimeout(() => notification.remove(), 300);
+            el.style.animation = 'slide-out 0.3s ease-out';
+            setTimeout(() => el.remove(), 300);
         }, duration);
-    }
+    },
+});
 
-    // ================================================================
-    // SESSION TIMEOUT METHODS
-    // ================================================================
 
-    startSessionTimeout() {
-        this.resetSessionTimeout();
-        console.log('⏰ Session timeout started (5 minutes)');
-    }
+// ======================================================================
+// SECTION 9 — SESSION TIMEOUT
+// ======================================================================
 
-    resetSessionTimeout() {
-        // Clear existing timeouts
-        if (this.sessionTimeout.timeoutId) {
-            clearTimeout(this.sessionTimeout.timeoutId);
-        }
-        if (this.sessionTimeout.warningId) {
-            clearTimeout(this.sessionTimeout.warningId);
-        }
+Object.assign(GuruMantraCounter.prototype, {
 
-        // Update last activity
-        this.sessionTimeout.lastActivity = Date.now();
-        this.sessionTimeout.isWarningShown = false;
+    _startSessionTimeout() {
+        this._resetSessionTimeout();
+        console.log('⏰ Session timeout active (5 min)');
+    },
 
-        // CRITICAL FIX: Show prompt at exactly 5 minutes of inactivity
-        // If user clicks "Yes", continue; if "No", logout immediately
-        // Don't show warning at 4.5 minutes - show prompt at 5 minutes
+    _resetSessionTimeout() {
+        clearTimeout(this.sessionTimeout.timeoutId);
+        clearTimeout(this.sessionTimeout.warningId);
+        this.sessionTimeout.lastActivity    = Date.now();
+        this.sessionTimeout.isWarningShown  = false;
+
         this.sessionTimeout.timeoutId = setTimeout(() => {
-            this.showSessionWarning();
-            // If user doesn't respond within 30 seconds, logout
+            this._showSessionWarning();
             this.sessionTimeout.warningId = setTimeout(() => {
-                if (this.sessionTimeout.isWarningShown) {
-                    this.forceLogout();
-                }
-            }, 30000); // 30 seconds to respond
+                if (this.sessionTimeout.isWarningShown) this._forceLogout();
+            }, this.sessionTimeout.responseWindow);
         }, this.sessionTimeout.duration);
-    }
+    },
 
-    showSessionWarning() {
-        if (this.sessionTimeout.isWarningShown) {
-            return;
-        }
-
+    _showSessionWarning() {
+        if (this.sessionTimeout.isWarningShown) return;
         this.sessionTimeout.isWarningShown = true;
-        
-        // CRITICAL FIX: Show prompt asking "Do you want to continue chanting?"
-        // If Yes, continue session; If No, logout
-        const warningDialog = document.createElement('div');
-        warningDialog.id = 'sessionWarningDialog';
-        warningDialog.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Noto Sans Devanagari', sans-serif;
-        `;
 
-        warningDialog.innerHTML = `
-            <div style="
-                background: white;
-                padding: 30px;
-                border-radius: 15px;
-                text-align: center;
-                max-width: 400px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            ">
-                <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
-                <h3 style="color: #f44336; margin-bottom: 15px;">जप जारी रखना चाहते हैं?</h3>
-                <p style="margin-bottom: 20px; color: #666;">
+        const overlay = document.createElement('div');
+        overlay.id = 'sessionWarningDialog';
+        overlay.style.cssText = [
+            'position:fixed', 'inset:0',
+            'background:rgba(0,0,0,0.8)',
+            'display:flex', 'justify-content:center', 'align-items:center',
+            'z-index:10000', "font-family:'Noto Sans Devanagari',sans-serif",
+        ].join(';');
+
+        overlay.innerHTML = `
+            <div style="background:white;padding:30px;border-radius:15px;
+                        text-align:center;max-width:400px;
+                        box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                <div style="font-size:24px;margin-bottom:15px;">⚠️</div>
+                <h3 style="color:#f44336;margin-bottom:15px;">जप जारी रखना चाहते हैं?</h3>
+                <p style="margin-bottom:20px;color:#666;">
                     आपने 5 मिनट से जप नहीं किया है।<br>
                     क्या आप जप जारी रखना चाहते हैं?
                 </p>
-                <button id="continueSessionBtn" style="
-                    background: #4caf50;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    cursor: pointer;
-                    margin-right: 10px;
-                ">हाँ, जारी रखें</button>
-                <button id="logoutNowBtn" style="
-                    background: #f44336;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    cursor: pointer;
-                ">नहीं, लॉगआउट</button>
-            </div>
-        `;
+                <button id="continueSessionBtn"
+                    style="background:#4caf50;color:white;border:none;
+                           padding:12px 24px;border-radius:8px;font-size:16px;
+                           cursor:pointer;margin-right:10px;">
+                    हाँ, जारी रखें
+                </button>
+                <button id="logoutNowBtn"
+                    style="background:#f44336;color:white;border:none;
+                           padding:12px 24px;border-radius:8px;font-size:16px;
+                           cursor:pointer;">
+                    नहीं, लॉगआउट
+                </button>
+            </div>`;
 
-        document.body.appendChild(warningDialog);
+        document.body.appendChild(overlay);
+        document.getElementById('continueSessionBtn').addEventListener('click', () => this._continueSession());
+        document.getElementById('logoutNowBtn').addEventListener('click', () => this.logout());
+    },
 
-        // Add event listeners
-        document.getElementById('continueSessionBtn').addEventListener('click', () => {
-            this.continueSession();
-        });
+    _continueSession() {
+        document.getElementById('sessionWarningDialog')?.remove();
+        clearTimeout(this.sessionTimeout.warningId);
+        this._resetSessionTimeout();
+        this._showNotification('सत्र जारी रखा गया', 'success', 2000);
+    },
 
-        document.getElementById('logoutNowBtn').addEventListener('click', () => {
-            this.logout();
-        });
+    _forceLogout() {
+        console.log('🚪 Force-logout: inactivity');
+        document.getElementById('sessionWarningDialog')?.remove();
+        this._showNotification('सत्र समाप्त हो गया', 'error', 2000);
+        setTimeout(() => this.logout(), 1000);
+    },
 
-        console.log('⚠️ Session warning shown - asking user to continue chanting');
-    }
-
-    continueSession() {
-        // Remove warning dialog
-        const dialog = document.getElementById('sessionWarningDialog');
-        if (dialog) {
-            dialog.remove();
-        }
-
-        // Clear the warning timeout if it exists
-        if (this.sessionTimeout.warningId) {
-            clearTimeout(this.sessionTimeout.warningId);
-        }
-
-        // Reset session timeout
-        this.resetSessionTimeout();
-        this.showNotification('सत्र जारी रखा गया', 'success', 2000);
-        console.log('✅ Session continued by user');
-    }
-
-    forceLogout() {
-        console.log('🚪 Force logout due to inactivity');
-        this.showNotification('सत्र समाप्त हो गया', 'error', 2000);
-        
-        // Remove warning dialog if still present
-        const dialog = document.getElementById('sessionWarningDialog');
-        if (dialog) {
-            dialog.remove();
-        }
-
-        // Logout after a short delay
-        setTimeout(() => {
-            this.logout();
-        }, 1000);
-    }
-
-    updateActivity() {
-        // This method should be called whenever user performs an activity
-        this.resetSessionTimeout();
-    }
-
-    // ================================================================
-    // UTILITY METHODS
-    // ================================================================
-
-    calculateTodayTotalWords() {
-        // CRITICAL FIX: Calculate today's total words based on actual today words
-        // This ensures that todaysCount reflects the actual count that happened today
-        // Use today_words directly from state as it's the authoritative source
-        // Only if it's 0, calculate from mala progress
-        if (this.state.todayWords > 0) {
-            return this.state.todayWords;
-        }
-        
-        // Fallback: calculate based on current mala progress and completed malas
-        // This handles the case when todayWords hasn't been set yet
-        const currentMalaWords = this.state.currentMalaPronunciations * this.config.wordsPerPronunciation;
-        const completedMalasWords = this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation;
-        const calculatedTotal = currentMalaWords + completedMalasWords;
-        
-        return calculatedTotal;
-    }
-
-    getTodayDateString() {
-        // CRITICAL FIX: Always use server date for consistency with timezone
-        // This ensures date comparisons are done with server timezone (IST)
-        if (this.serverDate) {
-            return this.serverDate;
-        }
-        
-        // If server date not loaded yet, return local date as fallback
-        // This prevents infinite recursion - server date will be loaded asynchronously
-        const today = new Date();
-        const fallbackDate = today.getFullYear() + '-' + 
-               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-               String(today.getDate()).padStart(2, '0');
-        
-        // Try to load server time asynchronously (don't wait for it)
-        if (!this.serverTimeLoading) {
-            this.serverTimeLoading = true;
-            this.getServerTime().then(() => {
-                this.serverTimeLoading = false;
-                // Once server time is loaded, check for date change
-                if (this.state.isInitialized) {
-                    this.checkForDateChange();
-                }
-            }).catch(() => {
-                this.serverTimeLoading = false;
-            });
-        }
-        
-        return fallbackDate;
-    }
-
-    async getServerTime() {
-        try {
-            const response = await fetch('/guru-mantra/api/server_time', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    this.serverDate = data.date;
-                    this.serverTime = data.datetime;
-                    // Store hour, minute, second separately for accurate time display
-                    this.serverHour = data.hour !== undefined ? parseInt(data.hour) : null;
-                    this.serverMinute = data.minute !== undefined ? parseInt(data.minute) : null;
-                    this.serverSecond = data.second !== undefined ? parseInt(data.second) : null;
-                    this.serverTimeFetchedAt = Date.now(); // Store when we fetched the time for live clock
-                    console.log('🕐 Server time loaded:', data.date, 'at', this.serverHour + ':' + this.serverMinute + ':' + this.serverSecond, 'Server datetime:', data.datetime);
-                    
-                    // Update date/time display when server time is loaded
-                    this.updateDateTimeDisplay();
-                    
-                    // If server time was loaded, trigger date check
-                    if (this.state.isInitialized) {
-                        this.checkForDateChange();
-                    }
-                    
-                    return data.date;
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error getting server time:', error);
-        }
-        
-        // Fallback: return today's date in ISO format (will be corrected on next server sync)
-        const today = new Date();
-        return today.getFullYear() + '-' + 
-               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-               String(today.getDate()).padStart(2, '0');
-    }
-
-    checkForDateChange() {
-        // CRITICAL FIX: Only check for date change if we have server time
-        // This ensures we're using IST timezone for accurate midnight detection
-        if (!this.serverDate) {
-            // Server time not loaded yet, skip check
-            return;
-        }
-        
-        const currentDate = this.serverDate; // Use server date (IST) for comparison
-        
-        // Only reset if the date actually changed (e.g., midnight passed)
-        // Do NOT reset if dates are the same (prevent false positives)
-        if (this.state.todayDate && this.state.todayDate !== currentDate) {
-            console.log('📅 Date change detected! Resetting today\'s count. Old date:', this.state.todayDate, 'New date:', currentDate);
-            
-            // CRITICAL FIX: Save current day's progress BEFORE resetting
-            this.saveToServer(true);
-            
-            // Now reset today's counters for the new day
-            // CRITICAL: Only reset today's fields, NEVER reset total count
-            this.state.todayWords = 0;
-            this.state.todayPronunciations = 0;
-            this.state.todayMalas = 0;
-            this.state.currentMalaPronunciations = 0; // Reset current mala for new day
-            this.state.todayDate = currentDate;
-            this.state.todaysCount = 0; // Reset persistent today's count
-            
-            // Show notification about new day
-            this.showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
-            
-            // Update UI and save
-            this.updateUI();
-            this.saveToServer(true);
-        } else if (!this.state.todayDate) {
-            // If todayDate is not set, set it without resetting
-            this.state.todayDate = currentDate;
-            this.saveToServer();
-        }
-    }
-
-    isMobileDevice() {
-        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    }
-
-    // ================================================================
-    // USER ACTIONS
-    // ================================================================
-
-    async logout() {
-        try {
-            console.log('👋 Logging out...');
-            
-            // CRITICAL FIX: Save all state to server before logging out
-            // This ensures count persists after logout/login
-            await this.saveToServer(true);
-            console.log('✅ State saved before logout');
-
-            // Stop listening if active
-            if (this.state.isListening) {
-                this.stopListening();
-            }
-
-            // Clear session timeout
-            if (this.sessionTimeout.timeoutId) {
-                clearTimeout(this.sessionTimeout.timeoutId);
-            }
-            if (this.sessionTimeout.warningId) {
-                clearTimeout(this.sessionTimeout.warningId);
-            }
-
-            await fetch('/guru-mantra/auth/logout', {
-                method: 'POST',
-                credentials: 'same-origin'
-            });
-
-            window.location.href = '/guru-mantra/auth';
-        } catch (error) {
-            console.error('❌ Logout error:', error);
-            // Even if logout fails, redirect to login
-            window.location.href = '/guru-mantra/auth';
-        }
-    }
-}
-
-// ====================================================================
-// GLOBAL STYLES
-// ====================================================================
-
-const style = document.createElement('style');
-style.textContent = `
-    /* Animations */
-    @keyframes slide-in {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    @keyframes slide-out {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-
-    @keyframes confetti-fall {
-        to {
-            transform: translateY(100vh) rotate(360deg);
-            opacity: 0;
-        }
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.1);
-        }
-    }
-
-    /* Utility classes */
-    .pulse {
-        animation: pulse 0.5s ease-in-out;
-    }
-
-    /* Responsive design */
-    @media (max-width: 768px) {
-        body {
-            font-size: 14px;
-        }
-    }
-`;
-document.head.appendChild(style);
-
-// ====================================================================
-// APPLICATION INITIALIZATION
-// ====================================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🙏 Initializing Hari Jap Counter Application');
-    window.guruMantraCounter = new GuruMantraCounter();
-    
-    // Fallback: Direct event listeners if initialization failed
-    setTimeout(() => {
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const manualBtn = document.getElementById('manualBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        
-        if (startBtn && !startBtn.onclick) {
-            console.log('⚠️ Adding fallback click handler for startBtn');
-            startBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🔍 Fallback click handler triggered for startBtn');
-                if (window.guruMantraCounter && typeof window.guruMantraCounter.startListening === 'function') {
-                    window.guruMantraCounter.startListening();
-                } else {
-                    console.error('❌ hariJapCounter not initialized or startListening not available');
-                }
-            }, { capture: true });
-        }
-        
-        if (stopBtn && !stopBtn.onclick) {
-            stopBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.guruMantraCounter && typeof window.guruMantraCounter.stopListening === 'function') {
-                    window.guruMantraCounter.stopListening();
-                }
-            }, { capture: true });
-        }
-        
-        if (manualBtn && !manualBtn.onclick) {
-            manualBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.guruMantraCounter && typeof window.guruMantraCounter.addManualCount === 'function') {
-                    window.guruMantraCounter.addManualCount();
-                }
-            }, { capture: true });
-        }
-        
-        if (resetBtn && !resetBtn.onclick) {
-            resetBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.guruMantraCounter && typeof window.guruMantraCounter.confirmReset === 'function') {
-                    window.guruMantraCounter.confirmReset();
-                }
-            }, { capture: true });
-        }
-    }, 1000);
+    _updateActivity() {
+        this._resetSessionTimeout();
+    },
 });
 
-// ====================================================================
-// DEBUG HELPER FUNCTION
-// ====================================================================
 
-window.debugHariJapButtons = function() {
-    console.log('🔍 Debugging Hari Jap Buttons...');
-    const buttons = ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'];
-    
-    buttons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            const rect = btn.getBoundingClientRect();
-            const elementAtPoint = document.elementFromPoint(
-                rect.left + rect.width / 2,
-                rect.top + rect.height / 2
-            );
-            
-            console.log(`${btnId}:`, {
-                found: true,
-                disabled: btn.disabled,
-                visible: rect.width > 0 && rect.height > 0,
-                position: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
-                elementAtCenter: elementAtPoint?.tagName + (elementAtPoint?.id ? `#${elementAtPoint.id}` : ''),
-                isCovered: elementAtPoint !== btn && !btn.contains(elementAtPoint),
-                computedStyle: {
-                    pointerEvents: window.getComputedStyle(btn).pointerEvents,
-                    zIndex: window.getComputedStyle(btn).zIndex,
-                    position: window.getComputedStyle(btn).position,
-                    display: window.getComputedStyle(btn).display
-                },
-                eventListeners: {
-                    click: btn.onclick !== null,
-                    hasListeners: btn.getEventListeners ? btn.getEventListeners() : 'unknown'
-                }
-            });
-            
-            // Test click programmatically
-            try {
-                btn.click();
-                console.log(`✅ Programmatic click on ${btnId} succeeded`);
-            } catch (e) {
-                console.error(`❌ Programmatic click on ${btnId} failed:`, e);
+// ======================================================================
+// SECTION 10 — UTILITIES
+// ======================================================================
+
+Object.assign(GuruMantraCounter.prototype, {
+
+    _calcTodayTotal() {
+        if (this.state.todayWords > 0) return this.state.todayWords;
+        // Fallback when todayWords not yet populated
+        return (this.state.currentMalaPronunciations * this.config.wordsPerPronunciation) +
+               (this.state.todayMalas * this.config.pronunciationsPerMala * this.config.wordsPerPronunciation);
+    },
+
+    _localDateString() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    },
+
+    _getISTTime() {
+        const now     = new Date();
+        const utcMs   = now.getTime() + now.getTimezoneOffset() * 60_000;
+        const istMs   = utcMs + 5.5 * 3600_000;
+        return new Date(istMs);
+    },
+
+    async _fetchServerTime() {
+        try {
+            const res  = await fetch('/guru-mantra/api/server_time', { method: 'GET', credentials: 'same-origin' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+
+            if (data.success) {
+                this.serverDate          = data.date;
+                this.serverTime          = data.datetime;
+                this.serverHour          = data.hour   != null ? parseInt(data.hour)   : null;
+                this.serverMinute        = data.minute != null ? parseInt(data.minute) : null;
+                this.serverSecond        = data.second != null ? parseInt(data.second) : null;
+                this.serverTimeFetchedAt = Date.now();
+                console.log('🕐 Server time:', data.date, `${this.serverHour}:${this.serverMinute}:${this.serverSecond}`);
+                this._updateDateTimeDisplay();
+                if (this.state.isInitialized) this._checkDateChange();
+                return data.date;
             }
-        } else {
-            console.error(`❌ ${btnId} not found in DOM`);
+        } catch (err) {
+            console.error('❌ Server time error:', err);
         }
+        return this._localDateString();
+    },
+
+    _checkDateChange() {
+        if (!this.serverDate) return;                          // Server date not loaded yet
+        const current = this.serverDate;
+        if (!this.state.todayDate) { this.state.todayDate = current; return; }
+        if (this.state.todayDate === current) return;          // Same day — nothing to do
+
+        console.log('📅 Date changed:', this.state.todayDate, '→', current);
+        this._saveToServer(true);
+
+        this.state.todayWords              = 0;
+        this.state.todayPronunciations     = 0;
+        this.state.todayMalas              = 0;
+        this.state.currentMalaPronunciations = 0;
+        this.state.todayDate               = current;
+        this.state.todaysCount             = 0;
+
+        this._showNotification('🌅 नया दिन! आज के जप शुरू करें', 'info', 3000);
+        this._updateUI();
+        this._saveToServer(true);
+    },
+
+    // ------------------------------------------------------------------
+    // 10.1  LOGOUT
+    // ------------------------------------------------------------------
+
+    async logout() {
+        console.log('👋 Logging out…');
+        await this._saveToServer(true);
+
+        if (this.state.isListening) this.stopListening();
+        clearTimeout(this.sessionTimeout.timeoutId);
+        clearTimeout(this.sessionTimeout.warningId);
+
+        try {
+            await fetch('/guru-mantra/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch { /* ignore */ }
+
+        window.location.href = '/guru-mantra/auth';
+    },
+});
+
+
+// ======================================================================
+// SECTION 11 — GLOBAL STYLES
+// ======================================================================
+
+(function injectStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+        @keyframes slide-out {
+            from { transform: translateX(0);    opacity: 1; }
+            to   { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes confetti-fall {
+            to { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1);   }
+            50%       { transform: scale(1.1); }
+        }
+        .pulse    { animation: pulse 0.5s ease-in-out; }
+        .listening { color: #4caf50; }
+        @media (max-width: 768px) { body { font-size: 14px; } }
+    `;
+    document.head.appendChild(style);
+})();
+
+
+// ======================================================================
+// SECTION 12 — BOOT
+// ======================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🙏 Starting Guru Mantra Counter…');
+    window.guruMantraCounter = new GuruMantraCounter();
+});
+
+
+// ======================================================================
+// SECTION 13 — DEBUG HELPERS  (open console → debugGMC())
+// ======================================================================
+
+window.debugGMC = function () {
+    const app = window.guruMantraCounter;
+    if (!app) { console.error('❌ guruMantraCounter not found'); return; }
+
+    console.group('🔍 Guru Mantra Counter — Debug');
+    console.log('State:',   app.state);
+    console.log('Config:',  app.config);
+    console.log('Metrics:', app.metrics);
+
+    ['startBtn', 'stopBtn', 'manualBtn', 'resetBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) { console.error('❌ Button missing:', id); return; }
+        const r   = btn.getBoundingClientRect();
+        const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        console.log(id, {
+            disabled:     btn.disabled,
+            visible:      r.width > 0,
+            covered:      mid !== btn && !btn.contains(mid),
+            coveredBy:    mid?.tagName + (mid?.id ? '#' + mid.id : ''),
+            pointerEvents: getComputedStyle(btn).pointerEvents,
+        });
     });
-    
-    if (window.guruMantraCounter) {
-        console.log('✅ HariJapCounter instance exists');
-        console.log('State:', window.guruMantraCounter.state);
-    } else {
-        console.error('❌ HariJapCounter instance not found');
-    }
+    console.groupEnd();
 };
 
-// ====================================================================
-// EXPORT FOR TESTING (optional)
-// ====================================================================
+
+// ======================================================================
+// CommonJS export (tests only)
+// ======================================================================
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = HariJapCounter;
+    module.exports = GuruMantraCounter;
 }
