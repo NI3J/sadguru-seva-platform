@@ -210,6 +210,16 @@ def katha():
         print(f"❌ Error loading katha page: {e}")
         return f"Error loading katha page: {str(e)}"
 
+
+# 🔥 Route: Rudra Gayatri Mahayajna Landing Page
+@programs_bp.route('/Rudra_gayatri')
+def rudra_gayatri():
+    """
+    🔥 रुद्र गायत्री महायज्ञ विशेष पृष्ठ
+    Linked from the 📅 दैनिक कार्यक्रम dropdown in the main navigation.
+    """
+    return render_template('Rudra_gayatri.html')
+
 # 🔧 Debug route (temporary - remove in production)
 @programs_bp.route('/debug')
 def debug_info():
