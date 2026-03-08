@@ -474,6 +474,58 @@
     }
   });
 
+  /* ─────────────────────────────────────────────────────────
+     AUDIO PLAYER — AUTO-SCROLL TO MANTRA SECTION
+  ───────────────────────────────────────────────────────── */
+  const rudraAudio = document.getElementById('rudraAudio');
+  const mantraSection = document.getElementById('mantra-section');
+
+  if (rudraAudio && mantraSection) {
+    // When audio starts playing, scroll to mantra section
+    rudraAudio.addEventListener('play', () => {
+      setTimeout(() => {
+        mantraSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Add highlight effect
+        mantraSection.classList.add('audio-playing');
+      }, 300);
+    });
+
+    // Remove highlight when audio pauses or ends
+    rudraAudio.addEventListener('pause', () => {
+      mantraSection.classList.remove('audio-playing');
+    });
+
+    rudraAudio.addEventListener('ended', () => {
+      mantraSection.classList.remove('audio-playing');
+    });
+
+    // Optional: Highlight mantra lines as audio plays
+    const mantraLines = document.querySelectorAll('.mantra-line');
+    if (mantraLines.length > 0) {
+      rudraAudio.addEventListener('timeupdate', () => {
+        const currentTime = rudraAudio.currentTime;
+        const duration = rudraAudio.duration;
+        
+        if (duration > 0) {
+          const progress = currentTime / duration;
+          const activeIndex = Math.floor(progress * mantraLines.length);
+          
+          mantraLines.forEach((line, index) => {
+            if (index <= activeIndex) {
+              line.classList.add('active');
+            } else {
+              line.classList.remove('active');
+            }
+          });
+        }
+      });
+    }
+  }
+
   console.log('🕉️  रुद्र गायत्री महायज्ञ — JS Initialized  ✦  हर हर महादेव');
 
 })();

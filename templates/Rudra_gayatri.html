@@ -34,6 +34,10 @@
 
       <div class="header-content">
         <div class="om-badge reveal-up">ॐ</div>
+        <!-- Babaji Photo Logo -->
+        <a href="/" class="rudra-logo reveal-up" aria-label="मुख्य पृष्ठ">
+          <img src="{{ url_for('static', filename='images/Babajiphoto.jpeg') }}" alt="श्री संत कल्याणबाबा" class="rudra-logo-image">
+        </a>
         <h1 class="site-title reveal-up">
           <span class="title-line-1">रुद्र गायत्री</span>
           <span class="title-line-2">महायज्ञ</span>
@@ -319,9 +323,24 @@
       <div class="om-divider"><span>✦ ॐ ✦</span></div>
 
       <!-- Mantra Scroll Section -->
-      <section class="section mantra-section">
+      <section class="section mantra-section" id="mantra-section">
         <div class="section-label reveal-fade">रुद्र गायत्री मंत्र</div>
         <h2 class="section-heading reveal-up">पवित्र मंत्रोच्चार</h2>
+        
+        <!-- Audio Player -->
+        <div class="audio-player-container reveal-up">
+          <div class="audio-player-card">
+            <div class="audio-icon">🎵</div>
+            <div class="audio-controls">
+              <audio id="rudraAudio" controls preload="metadata">
+                <source src="{{ url_for('static', filename='audio/Rudra_Gayatri_MahaYadhna.mp3') }}" type="audio/mpeg">
+                आपला ब्राउझर ऑडिओ प्लेयर समर्थन करत नाही.
+              </audio>
+            </div>
+            <div class="audio-label">रुद्र गायत्री महायज्ञ - ऑडिओ श्रवण</div>
+          </div>
+        </div>
+        
         <div class="mantra-card reveal-up">
           <div class="mantra-deco-top">॥ श्री रुद्राय नमः ॥</div>
           <div class="mantra-lines">
