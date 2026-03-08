@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>रुद्र गायत्री महायज्ञ — श्री संत कल्याणबाबा</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../static/css/Rudra_gayatri.css" />
+</head>
+<body>
+
+  <!-- Sacred Particle Field -->
+  <canvas id="sacredCanvas"></canvas>
+
+  <!-- Flame Cursor Trail -->
+  <div id="cursorTrail"></div>
+
+  <!-- OM Symbol Preloader -->
+  <div id="preloader">
+    <div class="om-symbol">ॐ</div>
+    <div class="preloader-text">लोड होत आहे...</div>
+  </div>
+
+  <!-- Page Wrapper -->
+  <div class="page-wrapper" id="pageWrapper">
+
+    <!-- ===== HEADER ===== -->
+    <header class="site-header">
+      <div class="header-glow-ring"></div>
+      <div class="mandala-left"></div>
+      <div class="mandala-right"></div>
+
+      <div class="header-content">
+        <div class="om-badge reveal-up">ॐ</div>
+        <h1 class="site-title reveal-up">
+          <span class="title-line-1">रुद्र गायत्री</span>
+          <span class="title-line-2">महायज्ञ</span>
+        </h1>
+        <p class="site-subtitle reveal-up">
+          श्री संत कल्याणबाबा मंदिर कलशारोहण महोत्सव
+        </p>
+        <div class="header-mantra reveal-up">
+          <span class="mantra-text">ॐ नमः शिवाय • हर हर महादेव • ॐ नमो नारायणाय</span>
+        </div>
+        <div class="event-badge reveal-up">
+          <span class="badge-icon">🔥</span>
+          <span>२० मार्च – २७ मार्च २०२६</span>
+          <span class="badge-sep">|</span>
+          <span>मौजे बोपला, लातूर</span>
+        </div>
+      </div>
+
+      <div class="header-wave">
+        <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="var(--bg-deep)"/>
+        </svg>
+      </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+
+      <!-- About Section -->
+      <section class="section about-section">
+        <div class="section-inner">
+          <div class="section-label reveal-fade">महोत्सव परिचय</div>
+          <h2 class="section-heading reveal-up">भव्य आध्यात्मिक सोहळा</h2>
+          <div class="about-grid">
+            <div class="about-card reveal-left" data-delay="0">
+              <div class="card-icon">🕉️</div>
+              <h3>रुद्र गायत्री पुनःश्चरण</h3>
+              <p>जप साधना महा-अनुष्ठान — सप्तदिवसीय रुद्र गायत्री जप व अनुष्ठान सोहळा</p>
+            </div>
+            <div class="about-card reveal-up" data-delay="100">
+              <div class="card-icon">🔱</div>
+              <h3>शिवसहस्त्र नामार्चण</h3>
+              <p>लक्ष बिल्वार्चण व रुद्र गायत्री महायज्ञ — शिवाची हजारो नावांनी पूजा</p>
+            </div>
+            <div class="about-card reveal-right" data-delay="200">
+              <div class="card-icon">📖</div>
+              <h3>शिव महापुराण कथा</h3>
+              <p>परम पूज्य श्री विद्यानंद बाबा यांच्या अमृतमय वाणीतून — दररोज दुपारी १ ते ४</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="om-divider"><span>✦ ॐ ✦</span></div>
+
+      <!-- Schedule Section -->
+      <section class="section schedule-section" id="schedule">
+        <div class="section-inner">
+          <div class="section-label reveal-fade">कार्यक्रम वेळापत्रक</div>
+          <h2 class="section-heading reveal-up">आठ दिवसांचा दिव्य सोहळा</h2>
+
+          <!-- Day Tabs -->
+          <div class="tabs-wrapper reveal-up">
+            <div class="tabs-nav" id="tabsNav">
+              <button class="tab-btn active" data-day="0">पूर्वसंध्या<br/><small>१९ मार्च</small></button>
+              <button class="tab-btn" data-day="1">पहिला दिवस<br/><small>२० मार्च</small></button>
+              <button class="tab-btn" data-day="2">दुसरा दिवस<br/><small>२१ मार्च</small></button>
+              <button class="tab-btn" data-day="3">तिसरा दिवस<br/><small>२२ मार्च</small></button>
+              <button class="tab-btn" data-day="4">चौथा दिवस<br/><small>२३ मार्च</small></button>
+              <button class="tab-btn" data-day="5">पाचवा दिवस<br/><small>२४ मार्च</small></button>
+              <button class="tab-btn" data-day="6">सहावा दिवस<br/><small>२५ मार्च</small></button>
+              <button class="tab-btn" data-day="7">सातवा दिवस<br/><small>२६ मार्च</small></button>
+              <button class="tab-btn highlight-tab" data-day="8">समारोप<br/><small>२७ मार्च</small></button>
+            </div>
+
+            <!-- Tab Panels -->
+            <div class="tab-panels" id="tabPanels">
+
+              <!-- Day 0 -->
+              <div class="tab-panel active" data-panel="0">
+                <div class="panel-header">
+                  <div class="panel-day-label">पूर्वसंध्या — गुरुवार, दिनांक १९ मार्च २०२६</div>
+                  <div class="panel-occasion">🪔 गुढीपाडवा निमित्त</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item">
+                    <div class="time-badge">रात्री ८ ते १०</div>
+                    <div class="activity">
+                      <div class="activity-name">कीर्तनसेवा</div>
+                      <div class="activity-by">परम पूज्य १००८ महामंडलेश्वर स्वामी त्रिवेंद्रानंदजी महाराज</div>
+                      <div class="activity-place">इंदुवासिनी संस्थान, पिंपळवाडी, बीड</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Day 1 -->
+              <div class="tab-panel" data-panel="1">
+                <div class="panel-header">
+                  <div class="panel-day-label">पहिला दिवस — शुक्रवार, दिनांक २० मार्च २०२६</div>
+                  <div class="panel-occasion">🚩 महायज्ञ प्रारंभ</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item">
+                    <div class="time-badge">सकाळी ९ ते ११</div>
+                    <div class="activity">
+                      <div class="activity-name">भव्य शोभायात्रा व ग्रंथ मिरवणूक</div>
+                    </div>
+                  </div>
+                  <div class="schedule-item">
+                    <div class="time-badge">दुपारी १२</div>
+                    <div class="activity">
+                      <div class="activity-name">ध्वजारोहण, मंडप प्रवेश, संकल्प, गणेश पूजन</div>
+                    </div>
+                  </div>
+                  <div class="schedule-item highlight-item">
+                    <div class="time-badge">दुपारी १ ते ४</div>
+                    <div class="activity">
+                      <div class="activity-name">श्री शिव-महापुराण कथा प्रारंभ</div>
+                      <div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div>
+                    </div>
+                  </div>
+                  <div class="schedule-item">
+                    <div class="time-badge">दुपारी २ ते ४</div>
+                    <div class="activity">
+                      <div class="activity-name">रुद्र गायत्री महायज्ञ — स्थापित देवता</div>
+                    </div>
+                  </div>
+                  <div class="schedule-item">
+                    <div class="time-badge">सायंकाळी ५ ते ७</div>
+                    <div class="activity"><div class="activity-name">हरिपाठ</div></div>
+                  </div>
+                  <div class="schedule-item">
+                    <div class="time-badge">रात्री ८ ते १०</div>
+                    <div class="activity">
+                      <div class="activity-name">कीर्तनसेवा</div>
+                      <div class="activity-by">परम पूज्य १०८ महंत स्वामी आत्मानंदजी महाराज</div>
+                      <div class="activity-place">आंबेड</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Day 2 -->
+              <div class="tab-panel" data-panel="2">
+                <div class="panel-header">
+                  <div class="panel-day-label">दुसरा दिवस — शनिवार, दिनांक २१ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते ११</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">श्री शिव-महापुराण कथा महोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">दुपारी २ ते ५</div><div class="activity"><div class="activity-name">रुद्र गायत्री महायज्ञ — पूजा व महाआरती</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महंत स्वामी नित्यानंदगिरीजी महाराज</div><div class="activity-place">सिद्धाश्रम पिंपळवाडी, शिर्डी</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 3 -->
+              <div class="tab-panel" data-panel="3">
+                <div class="panel-header">
+                  <div class="panel-day-label">तिसरा दिवस — रविवार, दिनांक २२ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते ११</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">श्री शिव-महापुराण कथा महोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महामंडलेश्वर रसानंदपुरीजी महाराज</div><div class="activity-place">मानवत</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 4 -->
+              <div class="tab-panel" data-panel="4">
+                <div class="panel-header">
+                  <div class="panel-day-label">चौथा दिवस — सोमवार, दिनांक २३ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते ११</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">श्री शिव-महापुराण कथा महोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महामंडलेश्वर श्री कृष्णचैतन्यजी महाराज</div><div class="activity-place">नीलकंठेश्वर आश्रम, मंठा</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 5 -->
+              <div class="tab-panel" data-panel="5">
+                <div class="panel-header">
+                  <div class="panel-day-label">पाचवा दिवस — मंगळवार, दिनांक २४ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते ११</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">श्री शिव-महापुराण कथा महोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महामंडलेश्वर श्री हरिचैतन्यानंदजी महाराज</div><div class="activity-place">पळसखेडा</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 6 -->
+              <div class="tab-panel" data-panel="6">
+                <div class="panel-header">
+                  <div class="panel-day-label">सहावा दिवस — बुधवार, दिनांक २५ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते ११</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">श्री शिव-महापुराण कथा महोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महंत स्वामी विशुद्धानंदजी महाराज</div><div class="activity-place">गायत्री आश्रम, वाघाळा</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 7 -->
+              <div class="tab-panel" data-panel="7">
+                <div class="panel-header">
+                  <div class="panel-day-label">सातवा दिवस — गुरुवार, दिनांक २६ मार्च २०२६</div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item"><div class="time-badge">सकाळी ७ ते १२</div><div class="activity"><div class="activity-name">शांतिपाठ संकल्प</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">दुपारी १ ते ४</div><div class="activity"><div class="activity-name">शिव-महापुराण कथेची सांगता</div><div class="activity-by">परम पूज्य श्री विद्यानंद बाबा</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">दुपारी २ ते ५</div><div class="activity"><div class="activity-name">रुद्र गायत्री महायज्ञ — पूजा व महाआरती</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">सायंकाळी ५ ते ७</div><div class="activity"><div class="activity-name">भक्तिमय हरिपाठ</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">रात्री ८ ते १०</div><div class="activity"><div class="activity-name">कीर्तनसेवा</div><div class="activity-by">परम पूज्य १०८ महंत स्वामी भरतगिरीजी महाराज</div><div class="activity-place">धारेश्वर प्रतिष्ठान, धामणगाव, जि. छत्रपती संभाजीनगर</div></div></div>
+                </div>
+              </div>
+
+              <!-- Day 8 — Grand Finale -->
+              <div class="tab-panel finale-panel" data-panel="8">
+                <div class="panel-header finale-header">
+                  <div class="panel-day-label">आठवा दिवस (समारोप) — शुक्रवार, दिनांक २७ मार्च २०२६</div>
+                  <div class="panel-occasion">✨ कलशारोहण सोहळा ✨</div>
+                </div>
+                <div class="finale-highlight-box">
+                  <div class="finale-icon">🏛️</div>
+                  <div class="finale-text">
+                    <strong>श्री संत कल्याणबाबा मंदिर कलशारोहण सोहळा</strong>
+                    <p>परम पूज्य श्री विद्यानंदजी महाराज व उपस्थित संत-महंत यांच्या शुभहस्ते</p>
+                  </div>
+                </div>
+                <div class="schedule-list">
+                  <div class="schedule-item highlight-item"><div class="time-badge">सकाळी ९</div><div class="activity"><div class="activity-name">कलशारोहण सोहळा</div><div class="activity-by">परम पूज्य श्री विद्यानंदजी महाराज यांच्या शुभहस्ते</div></div></div>
+                  <div class="schedule-item highlight-item"><div class="time-badge">सकाळी १० ते १२</div><div class="activity"><div class="activity-name">काल्याचे कीर्तन — श्रीराम जन्मोत्सव</div><div class="activity-by">परम पूज्य श्री विद्यानंदजी महाराज — अमृतवाणी</div></div></div>
+                  <div class="schedule-item"><div class="time-badge">दुपारी १२</div><div class="activity"><div class="activity-name">महाआरती — सर्व भाविकांसाठी</div></div></div>
+                </div>
+              </div>
+
+            </div><!-- /tab-panels -->
+          </div><!-- /tabs-wrapper -->
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="om-divider"><span>✦ ॐ ✦</span></div>
+
+      <!-- Countdown Section -->
+      <section class="section countdown-section">
+        <div class="section-inner">
+          <div class="section-label reveal-fade">महोत्सवास उरलेला वेळ</div>
+          <h2 class="section-heading reveal-up">काउंटडाउन</h2>
+          <div class="countdown-grid reveal-up" id="countdown">
+            <div class="countdown-box">
+              <div class="countdown-num" id="cd-days">--</div>
+              <div class="countdown-label">दिवस</div>
+            </div>
+            <div class="countdown-sep">:</div>
+            <div class="countdown-box">
+              <div class="countdown-num" id="cd-hours">--</div>
+              <div class="countdown-label">तास</div>
+            </div>
+            <div class="countdown-sep">:</div>
+            <div class="countdown-box">
+              <div class="countdown-num" id="cd-minutes">--</div>
+              <div class="countdown-label">मिनिटे</div>
+            </div>
+            <div class="countdown-sep">:</div>
+            <div class="countdown-box">
+              <div class="countdown-num" id="cd-seconds">--</div>
+              <div class="countdown-label">सेकंद</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="om-divider"><span>✦ ॐ ✦</span></div>
+
+      <!-- Mantra Scroll Section -->
+      <section class="section mantra-section">
+        <div class="section-label reveal-fade">रुद्र गायत्री मंत्र</div>
+        <h2 class="section-heading reveal-up">पवित्र मंत्रोच्चार</h2>
+        <div class="mantra-card reveal-up">
+          <div class="mantra-deco-top">॥ श्री रुद्राय नमः ॥</div>
+          <div class="mantra-lines">
+            <div class="mantra-line">ॐ तत्पुरुषाय विद्महे</div>
+            <div class="mantra-line">महादेवाय धीमहि</div>
+            <div class="mantra-line accent-line">तन्नो रुद्रः प्रचोदयात् ॥</div>
+          </div>
+          <div class="mantra-meaning">
+            <p>आम्ही त्या परम पुरुषाचे ध्यान करतो, महादेवाचे चिंतन करतो,<br/>
+            तो रुद्र आमच्या बुद्धीला प्रेरणा देवो.</p>
+          </div>
+          <div class="mantra-deco-bottom">॥ हर हर महादेव ॥</div>
+        </div>
+      </section>
+
+      <!-- Divider -->
+      <div class="om-divider"><span>✦ ॐ ✦</span></div>
+
+      <!-- Location Section -->
+      <section class="section location-section">
+        <div class="section-inner">
+          <div class="section-label reveal-fade">स्थान माहिती</div>
+          <h2 class="section-heading reveal-up">कार्यक्रम स्थळ</h2>
+          <div class="location-card reveal-up">
+            <div class="location-icon">📍</div>
+            <div class="location-details">
+              <div class="location-name">श्री संत कल्याणबाबा मंदिर</div>
+              <div class="location-addr">मौजे बोपला, तालुका व जिल्हा लातूर, महाराष्ट्र</div>
+              <div class="location-dates">📅 दिनांक : २० मार्च २०२६ ते २७ मार्च २०२६</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="site-footer">
+      <div class="footer-mantra">
+        <span>ॐ नमः शिवाय</span>
+        <span class="sep">✦</span>
+        <span>हर हर महादेव</span>
+        <span class="sep">✦</span>
+        <span>ॐ नमो नारायणाय</span>
+      </div>
+      <p class="footer-text">श्रीमण नारायण नारायण हरी हरी</p>
+      <p class="footer-copy">© २०२६ श्री संत कल्याणबाबा मंदिर, बोपला, लातूर</p>
+    </footer>
+
+  </div><!-- /page-wrapper -->
+
+  <script src="../static/js/Rudra_gayatri.js"></script>
+</body>
+</html>

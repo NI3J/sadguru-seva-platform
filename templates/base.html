@@ -14,8 +14,8 @@
   <!-- 🎨 Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Updated font imports for Krishna Lila support -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Updated font imports for Krishna Lila & Rudra Gayatri support -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Serif+Devanagari:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Font Awesome for icons -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   
@@ -25,6 +25,11 @@
   <!-- Krishna Lila specific CSS -->
   {% if request.endpoint and 'krishna_lila' in request.endpoint %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/lila.css') }}">
+  {% endif %}
+  
+  <!-- Rudra Gayatri Mahayajna specific CSS -->
+  {% if request.endpoint and 'rudra_gayatri' in request.endpoint %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/Rudra_gayatri.css') }}">
   {% endif %}
   
   {% block head_styles %}{% endblock %}
@@ -209,6 +214,11 @@
   <!-- AOS Animation Library for Krishna Lila -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
   <script src="{{ url_for('static', filename='js/lila.js') }}"></script>
+  {% endif %}
+
+  <!-- Rudra Gayatri Mahayajna JavaScript -->
+  {% if request.endpoint and 'rudra_gayatri' in request.endpoint %}
+  <script src="{{ url_for('static', filename='js/Rudra_gayatri.js') }}"></script>
   {% endif %}
 
   <!-- Common Utility Scripts -->
