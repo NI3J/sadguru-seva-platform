@@ -281,6 +281,28 @@ body::before {
     margin: 40px 0;
 }
 
+.babaji-logo-wrapper {
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(255, 215, 0, 0.8);
+    border: 3px solid rgba(255, 215, 0, 0.9);
+}
+
+.babaji-logo {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
 .today-label {
     font-size: 1.2rem;
     color: #ffd700;
