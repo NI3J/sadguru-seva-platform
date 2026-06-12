@@ -33,6 +33,7 @@ class HariJapCounter {
             // Application state
             isInitialized: false,
             isListening: false,
+            userWantsListening: false,
             isSaving: false,
             isFirstLoad: true, // CRITICAL: Flag to track first load from server
 
@@ -43,6 +44,10 @@ class HariJapCounter {
             // Recognition state
             lastRecognitionTime: 0,
             lastRecognitionCount: 0, // Store last count for duplicate detection
+            lastResultTime: 0,
+            lastCountedTranscript: '',
+            lastCountedTranscriptTime: 0,
+            recognitionRestartPending: false,
 
             // Mantra word tracking
             mantraWords: ['जय', 'जय', 'राम', 'कृष्णा', 'हारी']
@@ -56,9 +61,13 @@ class HariJapCounter {
             wordsPerPronunciation: 5,
             pronunciationsPerMala: 108,
 
-            // Recognition settings - CRITICAL FIX
-            recognitionLang: 'en-IN', // Keep English (India) for better recognition
-            minTimeBetweenCounts: 300,
+            // Recognition settings
+            recognitionLang: 'en-IN',
+            minTimeBetweenCounts: 200,
+            recognitionKeepaliveMs: 5000,   // proactive restart when idle (uses network)
+            recognitionWatchdogInterval: 1500,
+            recognitionRestartDelayMs: 150, // delay between stop/start for browser API
+            recognitionZombieTimeoutMs: 10000, // force restart if no results this long
 
             // Auto-save settings
             autoSaveInterval: 10000,
@@ -67,6 +76,12 @@ class HariJapCounter {
             // SIMPLIFIED target phrases - prioritize most common variations
             // Based on actual pronunciation: "Jai Jai Ram Krishna Hare"
             targetPhrases: [
+                // With Marathi "mi" (मी) prefix — common when chanting aloud
+                'mi jai jai ram krishna hare',
+                'mi jai jai ram krishna hari',
+                'mi jay jay ram krishna hare',
+                'mi jay jay ram krishna hari',
+
                 // PRIMARY: Exact match for "Jai Jai Ram Krishna Hare" (most common)
                 'jai jai ram krishna hare',
                 'jay jay ram krishna hare',
@@ -131,6 +146,7 @@ class HariJapCounter {
         // SPEECH RECOGNITION
         // ============================================================
         this.recognition = null;
+        this.recognitionWatchdogId = null;
 
         // ============================================================
         // SERVER TIME MANAGEMENT
@@ -274,16 +290,9 @@ class HariJapCounter {
 
             this.recognition = new SpeechRecognition();
             this.recognition.lang = this.config.recognitionLang;
-            this.recognition.interimResults = false;
+            this.recognition.interimResults = true;
             this.recognition.maxAlternatives = 5;
             this.recognition.continuous = true;
-
-            // Mobile optimization
-            const isMobile = this.isMobileDevice();
-            if (isMobile) {
-                this.recognition.continuous = false;
-                console.log('📱 Mobile device detected - optimized recognition');
-            }
             
             // CRITICAL: Log what we're listening for
             console.log('✅ Recognition initialized');
@@ -428,10 +437,15 @@ class HariJapCounter {
         document.addEventListener('click', () => this.updateActivity());
         document.addEventListener('mousemove', () => this.updateActivity());
 
-        // Page visibility and unload
+        // Page visibility — pause mic while hidden, resume when user returns
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && this.state.isListening) {
-                this.stopListening();
+                this.stopRecognitionWatchdog();
+                try { this.recognition.stop(); } catch (e) { /* ignore */ }
+                this.state.isListening = false;
+                this.updateUI();
+            } else if (!document.hidden && this.state.userWantsListening && this.recognition) {
+                this.startListening();
             }
         });
 
@@ -576,32 +590,48 @@ class HariJapCounter {
             return;
         }
 
-        if (!this.state.isListening) {
-            try {
-                this.recognition.start();
+        this.state.userWantsListening = true;
+        this.state.lastCountedTranscript = '';
+        this.state.lastCountedTranscriptTime = 0;
+
+        if (this.state.isListening) {
+            this.state.lastResultTime = Date.now();
+            this.startRecognitionWatchdog();
+            this.updateUI();
+            this.updateActivity();
+            return;
+        }
+
+        try {
+            this.recognition.start();
+            this.state.isListening = true;
+            this.state.lastResultTime = Date.now();
+            this.startRecognitionWatchdog();
+            this.updateUI();
+            this.updateActivity();
+            console.log('🎤 Listening started');
+        } catch (error) {
+            console.error('❌ Start listening error:', error);
+            if (error.message && error.message.includes('already started')) {
                 this.state.isListening = true;
+                this.state.lastResultTime = Date.now();
+                this.startRecognitionWatchdog();
                 this.updateUI();
-                this.updateActivity(); // Reset session timeout
-                console.log('🎤 Listening started');
-            } catch (error) {
-                console.error('❌ Start listening error:', error);
-                if (error.message && error.message.includes('already started')) {
-                    this.state.isListening = true;
-                    this.updateUI();
-                } else {
-                    this.showNotification('सुरुवात करता आली नाही', 'error');
-                }
+            } else {
+                this.safeRestartRecognition();
             }
         }
     }
 
     stopListening() {
+        this.stopRecognitionWatchdog();
+        this.state.userWantsListening = false;
         if (this.state.isListening && this.recognition) {
             try {
                 this.recognition.stop();
                 this.state.isListening = false;
                 this.updateUI();
-                this.updateActivity(); // Reset session timeout
+                this.updateActivity();
                 console.log('⏸️ Listening stopped');
             } catch (error) {
                 console.error('❌ Stop listening error:', error);
@@ -611,36 +641,156 @@ class HariJapCounter {
         }
     }
 
-    onRecognitionResult(event) {
-        const now = Date.now();
-        const results = event.results;
-        const lastResult = results[results.length - 1];
+    startRecognitionWatchdog() {
+        this.stopRecognitionWatchdog();
+        this.recognitionWatchdogId = setInterval(() => {
+            if (!this.state.userWantsListening || !this.recognition) return;
 
-        // CRITICAL FIX: Only process FINAL results to prevent automatic counting
-        // This ensures count only increases when user actually says the mantra
-        if (!lastResult.isFinal) {
-            return; // Don't process interim results - prevents automatic counting
+            if (this.state.recognitionRestartPending) return;
+
+            const idleMs = Date.now() - this.state.lastResultTime;
+
+            if (!this.state.isListening) {
+                console.log('🔄 Watchdog: recognition off but user wants listening — restarting');
+                this.safeRestartRecognition();
+                return;
+            }
+
+            if (idleMs > this.config.recognitionZombieTimeoutMs) {
+                console.log('🧟 Watchdog: no results for ' + idleMs + 'ms — forcing recognition restart');
+                this.proactiveRecognitionRestart();
+                return;
+            }
+
+            if (idleMs > this.config.recognitionKeepaliveMs) {
+                console.log('⏰ Recognition idle for ' + idleMs + 'ms — proactive network restart');
+                this.proactiveRecognitionRestart();
+            }
+        }, this.config.recognitionWatchdogInterval);
+    }
+
+    stopRecognitionWatchdog() {
+        if (this.recognitionWatchdogId) {
+            clearInterval(this.recognitionWatchdogId);
+            this.recognitionWatchdogId = null;
+        }
+    }
+
+    proactiveRecognitionRestart() {
+        if (!this.state.userWantsListening || !this.recognition || this.state.recognitionRestartPending) return;
+
+        this.state.recognitionRestartPending = true;
+        this.state.isListening = false;
+        this.updateUI();
+
+        try {
+            this.recognition.stop();
+        } catch (error) {
+            console.warn('⚠️ Proactive stop failed, using safe restart:', error);
+            this.state.recognitionRestartPending = false;
+            this.safeRestartRecognition();
+            return;
         }
 
-        let matchCount = 0;
-        let bestTranscript = '';
-
-        // Check all alternatives in the final result
-        for (let i = 0; i < lastResult.length; i++) {
-            const transcript = lastResult[i].transcript;
-            const confidence = lastResult[i].confidence;
-
-            if (i === 0) bestTranscript = transcript;
-
-            console.log('🎤 Alt ' + (i + 1) + ': "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
-
-            const count = this.countMantraRepetitions(transcript);
-            if (count > 0) {
-                matchCount = count;
-                bestTranscript = transcript;
-                console.log('✅ MATCH: ' + count + ' repetitions in alt ' + (i + 1));
-                break; // Use first matching alternative
+        // Fallback if onend does not fire after proactive stop
+        setTimeout(() => {
+            if (!this.state.userWantsListening) {
+                this.state.recognitionRestartPending = false;
+                return;
             }
+            if (!this.state.isListening) {
+                console.log('🔄 Proactive restart fallback — recognition still off');
+                this.state.recognitionRestartPending = false;
+                this.safeRestartRecognition();
+            } else {
+                this.state.recognitionRestartPending = false;
+            }
+        }, this.config.recognitionRestartDelayMs + 400);
+    }
+
+    safeRestartRecognition(attempt = 0) {
+        if (!this.state.userWantsListening || !this.recognition || document.hidden) return;
+
+        const delay = attempt === 0
+            ? this.config.recognitionRestartDelayMs
+            : 100 * (attempt + 1);
+
+        setTimeout(() => {
+            if (!this.state.userWantsListening || !this.recognition || document.hidden) return;
+
+            try {
+                this.recognition.start();
+                this.state.isListening = true;
+                this.state.recognitionRestartPending = false;
+                this.state.lastResultTime = Date.now();
+                this.updateUI();
+                console.log('🔄 Recognition restarted');
+            } catch (error) {
+                if (error.message && error.message.includes('already started')) {
+                    this.state.isListening = true;
+                    this.state.recognitionRestartPending = false;
+                    this.state.lastResultTime = Date.now();
+                    this.updateUI();
+                } else if (attempt < 8) {
+                    console.log('🔄 Restart attempt ' + (attempt + 1) + ' in ' + (100 * (attempt + 1)) + 'ms');
+                    this.safeRestartRecognition(attempt + 1);
+                } else {
+                    console.error('❌ Restart exhausted attempts, scheduling retry');
+                    this.state.isListening = false;
+                    this.state.recognitionRestartPending = false;
+                    this.updateUI();
+                    setTimeout(() => this.safeRestartRecognition(0), 2000);
+                }
+            }
+        }, delay);
+    }
+
+    onRecognitionResult(event) {
+        const now = Date.now();
+        this.state.lastResultTime = now;
+
+        const results = event.results;
+        let hasFinal = false;
+        let bestTranscript = '';
+        let matchCount = 0;
+        let bestInterimTranscript = '';
+        let interimMatchCount = 0;
+
+        for (let ri = event.resultIndex; ri < results.length; ri++) {
+            const result = results[ri];
+            if (result.isFinal) hasFinal = true;
+
+            for (let ai = 0; ai < result.length; ai++) {
+                const transcript = result[ai].transcript;
+                const confidence = result[ai].confidence;
+
+                if (ai === 0 && ri === results.length - 1) {
+                    bestTranscript = transcript;
+                }
+
+                const count = this.countMantraRepetitions(transcript);
+                if (count > 0) {
+                    if (result.isFinal) {
+                        matchCount = Math.max(matchCount, count);
+                        bestTranscript = transcript;
+                        console.log('🎤 Final [' + (ai + 1) + ']: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%) → ' + count);
+                    } else {
+                        interimMatchCount = Math.max(interimMatchCount, count);
+                        bestInterimTranscript = transcript;
+                        console.log('🎤 Interim: "' + transcript + '" → ' + count);
+                    }
+                } else if (result.isFinal) {
+                    console.log('🎤 Final [' + (ai + 1) + ']: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
+                }
+            }
+        }
+
+        if (!hasFinal) {
+            if (bestInterimTranscript) {
+                this.displayRecognizedText(bestInterimTranscript + '…');
+                this.tryInterimCount(bestInterimTranscript, interimMatchCount, now);
+            }
+            return;
         }
 
         this.displayRecognizedText(bestTranscript);
@@ -648,6 +798,7 @@ class HariJapCounter {
 
         if (matchCount > 0) {
             console.log('✅ Found ' + matchCount + ' mantra(s) in recognition');
+            this.state.lastCountedTranscript = '';
             this.handleSuccessfulRecognition(matchCount, now);
         } else if (bestTranscript.trim().length > 0) {
             console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
@@ -655,144 +806,83 @@ class HariJapCounter {
         }
     }
 
+    tryInterimCount(transcript, matchCount, timestamp) {
+        if (matchCount <= 0) return;
+
+        const normalized = this.normalizeText(transcript);
+        const sameTranscriptRecently =
+            normalized === this.state.lastCountedTranscript &&
+            timestamp - this.state.lastCountedTranscriptTime < this.config.minTimeBetweenCounts;
+
+        if (sameTranscriptRecently) return;
+
+        if (timestamp - this.state.lastRecognitionTime < this.config.minTimeBetweenCounts) return;
+
+        this.state.lastCountedTranscript = normalized;
+        this.state.lastCountedTranscriptTime = timestamp;
+        this.metrics.recognitionAttempts++;
+        console.log('✅ Interim mantra detected — counting immediately');
+        this.handleSuccessfulRecognition(matchCount, timestamp);
+    }
+
     onRecognitionEnd() {
         console.log('🔚 Recognition ended');
+        this.state.isListening = false;
+        this.state.recognitionRestartPending = false;
+        this.updateUI();
 
-        // CRITICAL FIX: Always keep listening state true if user wants to listen
-        // Only auto-restart if user is still in listening mode
-        if (this.state.isListening && this.state.isInitialized && !document.hidden) {
-            // Immediate restart for continuous recognition
-            setTimeout(() => {
-                if (this.state.isListening && this.recognition) {
-                    try {
-                        this.recognition.start();
-                        console.log('🔄 Auto-restarting recognition');
-                        // Ensure listening state stays true
-                        this.state.isListening = true;
-                        this.updateUI();
-                    } catch (error) {
-                        console.error('❌ Auto-restart failed:', error);
-                        // CRITICAL FIX: Don't stop listening if recognition is already started
-                        // This is a common error and doesn't mean recognition failed
-                        if (error.message && error.message.includes('already started')) {
-                            console.log('ℹ️ Recognition already running, continuing...');
-                            // Keep listening state as true - DO NOT TURN OFF
-                            this.state.isListening = true;
-                            this.updateUI();
-                        } else {
-                            // Try again after a short delay
-                            setTimeout(() => {
-                                if (this.state.isListening && this.recognition) {
-                                    try {
-                                        this.recognition.start();
-                                        this.state.isListening = true;
-                                        this.updateUI();
-                                    } catch (retryError) {
-                                        console.error('❌ Retry failed:', retryError);
-                                        // Only stop if it's a critical error
-                                        if (!retryError.message || !retryError.message.includes('already started')) {
-                                            this.state.isListening = false;
-                                            this.updateUI();
-                                        }
-                                    }
-                                }
-                            }, 200);
-                        }
-                    }
-                }
-            }, 50); // Reduced to 50ms for faster continuous recognition
-        } else {
-            // Only stop if user explicitly stopped or page is hidden
-            if (!this.state.isListening) {
-                // User stopped it, don't restart
-                this.updateUI();
-            } else {
-                // Page might be hidden, but keep state
-                this.updateUI();
-            }
+        if (this.state.userWantsListening && this.state.isInitialized && !document.hidden && this.recognition) {
+            this.safeRestartRecognition();
         }
     }
 
     onRecognitionError(event) {
         console.error('❌ Recognition error:', event.error);
-        
+
         const errorMessages = {
             'no-speech': 'कोणी बोलत नाही असे वाटते',
             'audio-capture': 'मायक्रोफोन उपलब्ध नाही आहे',
             'not-allowed': 'मायक्रोफोन ची परवानगी नाही',
-            'network': 'नेटवर्क समस्या'
+            'network': 'नेटवर्क समस्या — पुन्हा प्रयत्न करत आहे'
         };
 
-        // CRITICAL FIX: Don't stop listening on 'no-speech' errors
-        // These are common and recognition should continue
-        // Only stop on critical errors
-        const criticalErrors = ['not-allowed', 'audio-capture', 'network'];
-        
-        if (criticalErrors.includes(event.error)) {
-            // Only stop if it's truly critical
-            if (event.error === 'not-allowed' || event.error === 'audio-capture') {
-                this.state.isListening = false;
-                if (errorMessages[event.error]) {
-                    this.showNotification(errorMessages[event.error], 'error');
-                }
-            } else {
-                // For network errors, try to continue
-                console.log('⚠️ Network error, attempting to continue...');
-                this.state.isListening = true; // Keep listening state
+        const fatalErrors = ['not-allowed', 'audio-capture'];
+
+        if (fatalErrors.includes(event.error)) {
+            this.state.isListening = false;
+            this.state.userWantsListening = false;
+            this.stopRecognitionWatchdog();
+            if (errorMessages[event.error]) {
+                this.showNotification(errorMessages[event.error], 'error');
             }
+        } else if (event.error === 'network') {
+            console.log('⚠️ Network error — keeping recognition on, retrying via network');
+            this.state.userWantsListening = true;
+            this.state.isListening = false;
+            this.showNotification(errorMessages.network, 'error', 2000);
         } else if (event.error === 'no-speech') {
-            // 'no-speech' is normal - just continue listening
             console.log('ℹ️ No speech detected, continuing to listen...');
-            // CRITICAL: Keep listening state true - DO NOT TURN OFF
-            this.state.isListening = true;
+            this.state.userWantsListening = true;
+            this.state.isListening = false;
         } else if (event.error !== 'aborted') {
-            // For other errors, try to continue
-            console.log('⚠️ Recognition error, attempting to continue:', event.error);
-            // CRITICAL: Keep listening state true - DO NOT TURN OFF
-            this.state.isListening = true;
+            console.log('⚠️ Recognition error, continuing:', event.error);
+            this.state.userWantsListening = true;
+            this.state.isListening = false;
         }
 
         this.updateUI();
-        
-        // Auto-restart if still in listening mode and not a critical error
-        if (this.state.isListening && !criticalErrors.includes(event.error) && event.error !== 'aborted') {
-            setTimeout(() => {
-                if (this.state.isListening && this.recognition) {
-                    try {
-                        this.recognition.start();
-                        console.log('🔄 Auto-restarting after error');
-                        // Ensure listening state stays true
-                        this.state.isListening = true;
-                        this.updateUI();
-                    } catch (error) {
-                        console.error('❌ Auto-restart after error failed:', error);
-                        // Only stop if it's a critical restart failure
-                        if (error.message && !error.message.includes('already started')) {
-                            // Try one more time
-                            setTimeout(() => {
-                                if (this.state.isListening && this.recognition) {
-                                    try {
-                                        this.recognition.start();
-                                        this.state.isListening = true;
-                                        this.updateUI();
-                                    } catch (retryError) {
-                                        console.error('❌ Retry after error failed:', retryError);
-                                        // Only stop if it's truly critical
-                                        if (!retryError.message || !retryError.message.includes('already started')) {
-                                            this.state.isListening = false;
-                                            this.updateUI();
-                                        }
-                                    }
-                                }
-                            }, 100);
-                        } else {
-                            // Already started is fine - keep listening
-                            this.state.isListening = true;
-                            this.updateUI();
-                        }
+
+        if (this.state.userWantsListening && !fatalErrors.includes(event.error)) {
+            if (event.error === 'aborted') {
+                // Backup restart when proactive stop aborts the session
+                setTimeout(() => {
+                    if (this.state.userWantsListening && !this.state.isListening) {
+                        this.safeRestartRecognition();
                     }
-                }
-            }, 100); // Reduced delay to 100ms for faster recovery after errors
+                }, this.config.recognitionRestartDelayMs + 200);
+            } else {
+                this.safeRestartRecognition();
+            }
         }
     }
 
@@ -847,14 +937,13 @@ class HariJapCounter {
         console.log('🔍 Normalized text:', normalized);
         console.log('🔍 Cleaned text:', cleaned);
         
-        // STRATEGY 0: Quick check for exact "jai jai ram krishna hare" pattern
-        // This is the most common pronunciation, so check it first
-        const exactHarePattern = /jai\s+jai\s+ram\s+krishna\s+hare/i;
-        if (exactHarePattern.test(normalized)) {
-            const matches = normalized.match(new RegExp(exactHarePattern.source, 'gi'));
-            const count = matches ? matches.length : 1;
-            console.log('✅ EXACT MATCH (jai jai ram krishna hare):', count);
-            return count;
+        // STRATEGY 0: Quick check for exact full mantra patterns (hari/hare)
+        const exactMantraPattern =
+            /\b(?:jai|jay)\s+(?:jai|jay)\s+ram\s+krishna\s+(?:hari|hare|haare|harry)\b/gi;
+        const exactMatches = normalized.match(exactMantraPattern);
+        if (exactMatches && exactMatches.length > 0) {
+            console.log('✅ EXACT MATCH (full mantra):', exactMatches.length, exactMatches);
+            return exactMatches.length;
         }
         
         // STRATEGY 1: Exact phrase matching (fastest and most accurate)
@@ -1010,15 +1099,13 @@ class HariJapCounter {
     normalizeText(text) {
         return text
             .toLowerCase()
-            .replace(/[।,\.!\?;:"']/g, ' ')  // Replace punctuation with space
-            .replace(/\s+/g, ' ')             // Normalize multiple spaces
+            .replace(/[।,\.!\?;:"']/g, ' ')
+            .replace(/\b(मी|mi|me)\b/gi, ' ')
+            .replace(/\s+/g, ' ')
             .trim();
     }
 
     cleanMantraText(text) {
-        // Normalize common word variations for better matching
-        // IMPORTANT: This normalization helps with matching but we also check
-        // the original normalized text in fuzzyMatchMantra for "hare" specifically
         return text
             // Normalize hari/hare/haare variations (all are acceptable)
             // Keep "hare" recognizable - convert to "hari" for consistency
@@ -1427,6 +1514,9 @@ class HariJapCounter {
         if (this.elements.listeningStatus) {
             if (this.state.isListening) {
                 this.elements.listeningStatus.textContent = '🎤 ऐकत आहे...';
+                this.elements.listeningStatus.classList.add('listening');
+            } else if (this.state.userWantsListening) {
+                this.elements.listeningStatus.textContent = '🔄 ओळख पुन्हा सुरू होत आहे...';
                 this.elements.listeningStatus.classList.add('listening');
             } else {
                 this.elements.listeningStatus.textContent = '⏸️ थांबलेले आहे';
