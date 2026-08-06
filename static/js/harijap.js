@@ -48,6 +48,8 @@ class HariJapCounter {
             lastCountedTranscript: '',
             lastCountedTranscriptTime: 0,
             recognitionRestartPending: false,
+            countedUpToTokenIndex: 0, // Word-stream: tokens already matched in current utterance
+            saveDebounceTimer: null,
 
             // Mantra word tracking
             mantraWords: ['जय', 'जय', 'राम', 'कृष्णा', 'हारी']
@@ -63,7 +65,8 @@ class HariJapCounter {
 
             // Recognition settings
             recognitionLang: 'en-IN',
-            minTimeBetweenCounts: 200,
+            minTimeBetweenCounts: 80, // Allow faster consecutive mantras
+            saveDebounceMs: 2000,     // Batch server saves to avoid network lag
             recognitionKeepaliveMs: 5000,   // proactive restart when idle (uses network)
             recognitionWatchdogInterval: 1500,
             recognitionRestartDelayMs: 150, // delay between stop/start for browser API
@@ -593,6 +596,7 @@ class HariJapCounter {
         this.state.userWantsListening = true;
         this.state.lastCountedTranscript = '';
         this.state.lastCountedTranscriptTime = 0;
+        this.state.countedUpToTokenIndex = 0;
 
         if (this.state.isListening) {
             this.state.lastResultTime = Date.now();
@@ -752,77 +756,134 @@ class HariJapCounter {
         const results = event.results;
         let hasFinal = false;
         let bestTranscript = '';
-        let matchCount = 0;
-        let bestInterimTranscript = '';
-        let interimMatchCount = 0;
+        let wordStreamCounted = 0;
 
         for (let ri = event.resultIndex; ri < results.length; ri++) {
             const result = results[ri];
+            const transcript = result[0].transcript;
+            const confidence = result[0].confidence;
+
             if (result.isFinal) hasFinal = true;
+            bestTranscript = transcript;
 
-            for (let ai = 0; ai < result.length; ai++) {
-                const transcript = result[ai].transcript;
-                const confidence = result[ai].confidence;
+            const streamCount = this.processWordStream(transcript, result.isFinal, now);
+            wordStreamCounted += streamCount;
 
-                if (ai === 0 && ri === results.length - 1) {
-                    bestTranscript = transcript;
-                }
-
-                const count = this.countMantraRepetitions(transcript);
-                if (count > 0) {
-                    if (result.isFinal) {
-                        matchCount = Math.max(matchCount, count);
-                        bestTranscript = transcript;
-                        console.log('🎤 Final [' + (ai + 1) + ']: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%) → ' + count);
-                    } else {
-                        interimMatchCount = Math.max(interimMatchCount, count);
-                        bestInterimTranscript = transcript;
-                        console.log('🎤 Interim: "' + transcript + '" → ' + count);
-                    }
-                } else if (result.isFinal) {
-                    console.log('🎤 Final [' + (ai + 1) + ']: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%)');
-                }
+            if (result.isFinal) {
+                console.log('🎤 Final: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%) → stream:' + streamCount);
+            } else {
+                console.log('🎤 Interim: "' + transcript + '" → stream:' + streamCount);
             }
         }
 
-        if (!hasFinal) {
-            if (bestInterimTranscript) {
-                this.displayRecognizedText(bestInterimTranscript + '…');
-                this.tryInterimCount(bestInterimTranscript, interimMatchCount, now);
-            }
+        this.displayRecognizedText(bestTranscript + (hasFinal ? '' : '…'));
+
+        if (wordStreamCounted > 0) {
             return;
         }
 
-        this.displayRecognizedText(bestTranscript);
-        this.metrics.recognitionAttempts++;
+        // Fallback: full-phrase match when word stream missed (e.g. ramkrishna as one token)
+        if (hasFinal && bestTranscript.trim().length > 0) {
+            const phraseCount = this.countMantraRepetitions(bestTranscript);
+            this.metrics.recognitionAttempts++;
 
-        if (matchCount > 0) {
-            console.log('✅ Found ' + matchCount + ' mantra(s) in recognition');
-            this.state.lastCountedTranscript = '';
-            this.handleSuccessfulRecognition(matchCount, now);
-        } else if (bestTranscript.trim().length > 0) {
-            console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
-            this.handleInvalidSpeech();
+            if (phraseCount > 0) {
+                console.log('✅ Phrase fallback found ' + phraseCount + ' mantra(s)');
+                this.handleSuccessfulRecognition(phraseCount, now);
+            } else {
+                console.log('⚠️ No mantra match found in: "' + bestTranscript + '"');
+                this.handleInvalidSpeech();
+            }
         }
     }
 
-    tryInterimCount(transcript, matchCount, timestamp) {
-        if (matchCount <= 0) return;
+    /**
+     * Count mantras word-by-word as speech arrives — much faster than waiting for final results.
+     * Handles "Jay Shri Ram..." (Shri misheard instead of second Jay).
+     */
+    processWordStream(transcript, isFinal, timestamp) {
+        const tokens = this.tokenizeTranscript(transcript);
+        if (tokens.length === 0) return 0;
 
+        // Last interim word is unstable; include it only when the segment is final
+        const scanEnd = isFinal ? tokens.length : Math.max(0, tokens.length - 1);
+        let counted = 0;
+        let i = this.state.countedUpToTokenIndex;
+
+        while (i <= scanEnd - 5) {
+            if (this.matchesMantraAt(tokens, i)) {
+                i += 5;
+                this.state.countedUpToTokenIndex = i;
+                counted++;
+            } else {
+                i++;
+            }
+        }
+
+        if (counted > 0) {
+            this.metrics.recognitionAttempts++;
+            this.handleSuccessfulRecognition(counted, timestamp);
+        }
+
+        if (isFinal) {
+            this.state.countedUpToTokenIndex = 0;
+        }
+
+        return counted;
+    }
+
+    tokenizeTranscript(transcript) {
         const normalized = this.normalizeText(transcript);
-        const sameTranscriptRecently =
-            normalized === this.state.lastCountedTranscript &&
-            timestamp - this.state.lastCountedTranscriptTime < this.config.minTimeBetweenCounts;
+        const cleaned = this.cleanMantraText(normalized);
+        return cleaned.split(/\s+/).filter(w => w.length > 0);
+    }
 
-        if (sameTranscriptRecently) return;
+    normalizeWord(word) {
+        return word.toLowerCase()
+            .replace(/\bjay\b/g, 'jai')
+            .replace(/\bkrishn\b/g, 'krishna')
+            .replace(/\b(haare|hare|harry|her|hair)\b/g, 'hari')
+            .replace(/\b(haari)\b/g, 'hari')
+            .replace(/\b(shree|sri)\b/g, 'shri');
+    }
 
-        if (timestamp - this.state.lastRecognitionTime < this.config.minTimeBetweenCounts) return;
+    wordMatchesAny(word, aliases) {
+        const w = this.normalizeWord(word);
+        return aliases.some(alias => {
+            const a = this.normalizeWord(alias);
+            if (w === a) return true;
+            // Allow minor speech-recognition typos (1 char difference on words 4+ chars)
+            if (w.length >= 4 && a.length >= 4 && Math.abs(w.length - a.length) <= 1) {
+                let diff = 0;
+                const maxLen = Math.max(w.length, a.length);
+                for (let i = 0; i < maxLen; i++) {
+                    if (w[i] !== a[i]) diff++;
+                    if (diff > 1) return false;
+                }
+                return diff <= 1;
+            }
+            return false;
+        });
+    }
 
-        this.state.lastCountedTranscript = normalized;
-        this.state.lastCountedTranscriptTime = timestamp;
-        this.metrics.recognitionAttempts++;
-        console.log('✅ Interim mantra detected — counting immediately');
-        this.handleSuccessfulRecognition(matchCount, timestamp);
+    matchesMantraAt(tokens, start) {
+        const expected = [
+            ['jai', 'jay'],
+            ['jai', 'jay', 'shri', 'shree', 'sri'], // "Jay Shri" is very common misrecognition
+            ['ram', 'raam', 'राम'],
+            ['krishna', 'krishn', 'krishan', 'krishana', 'कृष्ण', 'कृष्णा'],
+            ['hari', 'hare', 'haare', 'harry', 'हारी', 'हरी', 'हरि']
+        ];
+
+        if (start + 5 > tokens.length) return false;
+
+        for (let j = 0; j < 5; j++) {
+            if (!this.wordMatchesAny(tokens[start + j], expected[j])) {
+                return false;
+            }
+        }
+        console.log('✅ Word-stream match at index', start, ':', tokens.slice(start, start + 5).join(' '));
+        return true;
     }
 
     onRecognitionEnd() {
@@ -939,7 +1000,7 @@ class HariJapCounter {
         
         // STRATEGY 0: Quick check for exact full mantra patterns (hari/hare)
         const exactMantraPattern =
-            /\b(?:jai|jay)\s+(?:jai|jay)\s+ram\s+krishna\s+(?:hari|hare|haare|harry)\b/gi;
+            /\b(?:jai|jay)\s+(?:(?:jai|jay)|(?:shri|shree|sri))\s+ram\s+krishna\s+(?:hari|hare|haare|harry)\b/gi;
         const exactMatches = normalized.match(exactMantraPattern);
         if (exactMatches && exactMatches.length > 0) {
             console.log('✅ EXACT MATCH (full mantra):', exactMatches.length, exactMatches);
@@ -1038,9 +1099,9 @@ class HariJapCounter {
             return 0;
         }
         
-        // Check for optional "jai jai" or "jay jay" prefix
-        // Accept "jai jai", "jay jay", "jai", or just "jai" appearing once or twice
+        // Check for optional "jai jai" or "jay jay" prefix (also "jay shri" — common misrecognition)
         const hasJaiJay = /\b(jai|jay)\s+(jai|jay)\b/i.test(cleaned);
+        const hasJayShri = /\b(jai|jay)\s+(shri|shree|sri)\b/i.test(cleaned);
         const hasSingleJai = /\b(jai|jay)\b/i.test(cleaned);
         
         // Check for optional "hari/hare/haare" suffix
@@ -1052,6 +1113,7 @@ class HariJapCounter {
             hasRamKrishna,
             hasRamKrishnaNearby,
             hasJaiJay,
+            hasJayShri,
             hasSingleJai,
             hasHari,
             originalText: originalText,
@@ -1067,14 +1129,16 @@ class HariJapCounter {
         // - "ram krishna" (without suffix)
         // - "ramkrishna" (no space)
         
-        // Count occurrences - prioritize "jai jai" count if present (more accurate)
-        if (hasJaiJay) {
-            const jaiJayPattern = /\b(jai|jay)\s+(jai|jay)\b/gi;
-            const jaiJayMatches = cleaned.match(jaiJayPattern) || normalized.match(jaiJayPattern);
-            const jaiJayCount = jaiJayMatches ? jaiJayMatches.length : 0;
-            if (jaiJayCount > 0) {
-                console.log('✅ Using jai jai count:', jaiJayCount);
-                return jaiJayCount;
+        // Count occurrences - prioritize "jai jai" / "jay shri" count if present
+        if (hasJaiJay || hasJayShri) {
+            const prefixPattern = hasJaiJay
+                ? /\b(jai|jay)\s+(jai|jay)\b/gi
+                : /\b(jai|jay)\s+(shri|shree|sri)\b/gi;
+            const prefixMatches = cleaned.match(prefixPattern) || normalized.match(prefixPattern);
+            const prefixCount = prefixMatches ? prefixMatches.length : 0;
+            if (prefixCount > 0) {
+                console.log('✅ Using prefix count:', prefixCount);
+                return prefixCount;
             }
         }
         
@@ -1107,6 +1171,8 @@ class HariJapCounter {
 
     cleanMantraText(text) {
         return text
+            // Treat "shri" after "jai/jay" as second "jai" (common speech recognition error)
+            .replace(/\b(jai|jay)\s+(shri|shree|sri)\b/gi, '$1 jai')
             // Normalize hari/hare/haare variations (all are acceptable)
             // Keep "hare" recognizable - convert to "hari" for consistency
             .replace(/\b(haare|hare|harry|her|hair)\b/gi, 'hari')  // Normalize all variations → hari
@@ -1191,7 +1257,7 @@ class HariJapCounter {
         });
 
         this.updateUI();
-        this.saveToServer();
+        this.scheduleSaveToServer();
     }
 
     incrementCounter() {
@@ -1402,6 +1468,16 @@ class HariJapCounter {
             console.error('❌ Error loading from server:', error);
             this.showNotification('डेटा लोड करता आला नाही', 'error');
         }
+    }
+
+    scheduleSaveToServer() {
+        if (this.state.saveDebounceTimer) {
+            clearTimeout(this.state.saveDebounceTimer);
+        }
+        this.state.saveDebounceTimer = setTimeout(() => {
+            this.state.saveDebounceTimer = null;
+            this.saveToServer();
+        }, this.config.saveDebounceMs);
     }
 
     async saveToServer(immediate = false) {
