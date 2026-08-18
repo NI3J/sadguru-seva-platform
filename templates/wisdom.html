@@ -10,52 +10,108 @@
 {% endblock %}
 
 {% block content %}
-  <!-- 🏠 Navigation -->
   <section class="home-button-section">
     <a href="{{ url_for('main.home') }}" class="home-button">🏠 मुख्य पृष्ठ वर जा</a>
   </section>
 
-  <!-- ✨ Floating Particles -->
   <div class="spiritual-particles">
     {% for _ in range(8) %}
       <div class="particle"></div>
     {% endfor %}
   </div>
 
-  <!-- 🌿 Wisdom Quotes Section -->
   <section class="wisdom-section">
-    <div class="sacred-header">
-      <div class="sacred-symbol">🕉️</div>
-      <h1 class="section-title">🌿 सदगुरुंचे दररोजचे विचार</h1>
-      <div class="divider">
-        <span class="divider-symbol">🪷</span><span class="divider-line"></span>
-        <span class="divider-symbol">✨</span><span class="divider-line"></span>
-        <span class="divider-symbol">🪷</span>
-      </div>
-    </div>
+    <div class="wisdom-poster">
+      <div class="poster-bg-pattern"></div>
 
-    <div class="quotes-container">
-      {% for quote in quotes %}
-        <article class="quote-card" data-index="{{ loop.index0 }}">
-          <div class="quote-ornament">🌸</div>
-          <blockquote class="quote-content">
-            <p class="quote-text">"{{ quote[0] }}"</p>
-            <footer class="quote-author">
-              <div class="author-symbol">🙏</div>
-              <cite>प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर</cite>
-            </footer>
-          </blockquote>
-          <div class="quote-decoration">
-            <span class="decoration-dot"></span>
-            <span class="decoration-dot"></span>
-            <span class="decoration-dot"></span>
+      <!-- Header -->
+      <header class="poster-header">
+        <div class="poster-logo">
+          <div class="poster-logo-circle">
+            <img
+              src="{{ url_for('static', filename='images/Babajiphoto.jpeg') }}"
+              alt="सद्गुरु"
+              class="poster-logo-img"
+            >
           </div>
-        </article>
-      {% endfor %}
+          <p class="poster-logo-text">
+            <span class="logo-line-gold">सद्गुरु</span>
+            <span class="logo-line-white">सेवा</span>
+          </p>
+        </div>
+
+        <div class="poster-title-block">
+          <h1 class="poster-title">सदगुरुंचे दररोजचे विचार</h1>
+          <div class="poster-flourish">
+            <span class="flourish-line"></span>
+            <span class="flourish-diamond">◆</span>
+            <span class="flourish-line"></span>
+          </div>
+        </div>
+
+        <div class="poster-date-badge">
+          <span class="date-day">{{ today_day }}</span>
+          <span class="date-separator"></span>
+          <span class="date-month">{{ today_month }}</span>
+        </div>
+      </header>
+
+      <!-- Body -->
+      <div class="quotes-container">
+        {% for quote in quotes %}
+          {% set words = quote[0].split(' ') %}
+          {% set mid = (words|length / 2)|int %}
+          {% if mid == 0 %}{% set mid = words|length %}{% endif %}
+          <article class="quote-card poster-body" data-index="{{ loop.index0 }}">
+            <div class="poster-quote-col">
+              <blockquote class="quote-content">
+                <p class="poster-quote-text">
+                  <span class="quote-part-gold">{{ words[:mid]|join(' ') }}</span>
+                  {% if words|length > mid %}
+                    <span class="quote-part-white"> {{ words[mid:]|join(' ') }}</span>
+                  {% endif %}
+                </p>
+              </blockquote>
+            </div>
+
+            <div class="poster-image-col">
+              <div class="poster-lotus" aria-hidden="true">
+                <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+                  <ellipse cx="100" cy="90" rx="80" ry="18" fill="rgba(0,180,180,0.25)"/>
+                  <path d="M100 30 C60 50 40 80 55 95 C70 105 85 95 100 85 C115 95 130 105 145 95 C160 80 140 50 100 30Z" fill="rgba(0,200,200,0.35)"/>
+                  <path d="M100 40 C75 55 65 75 75 88 C85 96 92 88 100 82 C108 88 115 96 125 88 C135 75 125 55 100 40Z" fill="rgba(0,220,220,0.45)"/>
+                  <path d="M100 50 C85 60 80 72 86 82 C92 90 96 84 100 80 C104 84 108 90 114 82 C120 72 115 60 100 50Z" fill="rgba(100,240,240,0.5)"/>
+                </svg>
+              </div>
+              <div class="poster-halo" aria-hidden="true"></div>
+              <div class="poster-bokeh" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <img
+                src="{{ url_for('static', filename='images/Baba/Baba1.jpeg') }}"
+                alt="प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर"
+                class="poster-baba-image"
+              >
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+      <!-- Footer -->
+      <footer class="poster-footer">
+        <div class="poster-flourish">
+          <span class="flourish-line"></span>
+          <span class="flourish-diamond">◆</span>
+          <span class="flourish-line"></span>
+        </div>
+        <p class="poster-author">
+          <span class="author-symbol">🙏</span>
+          प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर
+        </p>
+      </footer>
     </div>
   </section>
 
-  <!-- 🔐 OTP Section -->
   <section class="otp-section">
     <div class="otp-header">
       <div class="sacred-symbol-small">🎞️</div>
@@ -64,7 +120,6 @@
     </div>
 
     <div class="otp-form-container">
-      <!-- ✉️ OTP Request Form -->
       <form action="/verify-otp" method="POST" class="otp-form">
         <input type="text" name="username" placeholder="आपले नाव" required>
         <input type="tel" name="mobile" placeholder="मोबाईल नंबर" required>
@@ -72,7 +127,6 @@
       </form>
 
       {% if otp_sent %}
-        <!-- 🔒 OTP Validation Form -->
         <form action="/validate-otp" method="POST" class="otp-form">
           <input type="text" name="otp" placeholder="OTP लिहा" required>
           <button type="submit">🔓 प्रवेश मिळवा</button>
@@ -80,13 +134,11 @@
       {% endif %}
     </div>
 
-    <!-- 🌸 Spiritual Message -->
     <div class="spiritual-message">
       <p>"ज्ञानाचा मार्ग हा आनंदाचा मार्ग आहे" 🌸</p>
     </div>
   </section>
 
-  <!-- ⏳ Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner">
       <div class="spinner-ring"></div>
@@ -94,9 +146,6 @@
     </div>
   </div>
 
-  <!-- 🎉 Success Particles -->
   <div class="success-particles" id="successParticles"></div>
-
-  <!-- 📜 Wisdom JS -->
   <script src="{{ url_for('static', filename='js/wisdom.js') }}"></script>
 {% endblock %}

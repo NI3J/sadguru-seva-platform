@@ -35,12 +35,20 @@ def wisdom_feed():
             raise ValueError("No thoughts available in DB.")
         
         # FIX: Use date.today() instead of datetime.date.today()
-        today = date.today().isoformat()
+        today_date = date.today()
+        today = today_date.isoformat()
         
         index = int(hashlib.sha256(today.encode()).hexdigest(), 16) % total
         
         cursor.execute("SELECT content FROM sadguru_thoughts LIMIT 1 OFFSET %s", (index,))
         thought = cursor.fetchone()['content']
+
+        marathi_months = [
+            'जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून',
+            'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'
+        ]
+        today_day = today_date.day
+        today_month = marathi_months[today_date.month - 1]
         
     except Exception as e:
         logger.error(f"Error loading wisdom: {e}")
@@ -51,7 +59,12 @@ def wisdom_feed():
         if conn:
             conn.close()
     
-    return render_template('wisdom.html', quotes=[(thought,)])
+    return render_template(
+        'wisdom.html',
+        quotes=[(thought,)],
+        today_day=today_day,
+        today_month=today_month,
+    )
 
 # 🗃️ Wisdom Archive
 @wisdom_bp.route('/wisdom/archive')
