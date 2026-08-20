@@ -24,13 +24,8 @@ class SatsangError(Exception):
 # 📖 Wisdom Feed
 @wisdom_bp.route('/wisdom/')
 def wisdom_feed():
-    conn = None      # ← हे add करा
-    cursor = None    # ← हे add करा
     try:
         conn = get_db_connection()
-        if conn is None:
-            raise Exception("Database connection failed")
-            
         cursor = conn.cursor(DictCursor)
         
         cursor.execute("SELECT COUNT(*) AS count FROM sadguru_thoughts")
@@ -39,6 +34,7 @@ def wisdom_feed():
         if total == 0:
             raise ValueError("No thoughts available in DB.")
         
+        # FIX: Use date.today() instead of datetime.date.today()
         today_date = date.today()
         today = today_date.isoformat()
         
@@ -54,27 +50,21 @@ def wisdom_feed():
         today_day = today_date.day
         today_month = marathi_months[today_date.month - 1]
         
-        return render_template(
-            'wisdom.html',
-            quotes=[(thought,)],
-            today_day=today_day,
-            today_month=today_month,
-        )
-        
     except Exception as e:
         logger.error(f"Error loading wisdom: {e}")
-        return render_template(
-            'wisdom.html',
-            quotes=[],
-            today_day=date.today().day,
-            today_month='',
-            error="🧘 Unable to load Sadguru's thought today."
-        )
+        return "🧘 Unable to load Sadguru's thought today."
     finally:
-        if cursor:    # ← आता safely check होईल
+        if cursor:
             cursor.close()
-        if conn:      # ← आता safely check होईल
+        if conn:
             conn.close()
+    
+    return render_template(
+        'wisdom.html',
+        quotes=[(thought,)],
+        today_day=today_day,
+        today_month=today_month,
+    )
 
 # 🗃️ Wisdom Archive
 @wisdom_bp.route('/wisdom/archive')

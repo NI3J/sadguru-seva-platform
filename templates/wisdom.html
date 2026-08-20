@@ -59,17 +59,38 @@
       <!-- Body -->
       <div class="quotes-container">
         {% for quote in quotes %}
-          {% set words = quote[0].split(' ') %}
-          {% set mid = (words|length / 2)|int %}
-          {% if mid == 0 %}{% set mid = words|length %}{% endif %}
+          {% set raw = quote[0]|replace('||', '||') %}
+          {% if '||' in raw %}
+            {% set parts = raw.split('||', 1) %}
+            {% set gold_text = parts[0]|trim %}
+            {% set white_text = parts[1]|trim if parts|length > 1 else '' %}
+          {% else %}
+            {% set words = raw.split() %}
+            {% set mid = (words|length / 2)|int %}
+            {% if mid == 0 %}{% set mid = words|length %}{% endif %}
+            {% set gold_text = words[:mid]|join(' ') %}
+            {% set white_text = words[mid:]|join(' ') %}
+          {% endif %}
+
+          {% set gold_words = gold_text.split() %}
+          {% set white_words = white_text.split() %}
+          {% set gold_lines = 3 if gold_words|length > 6 else (2 if gold_words|length > 3 else 1) %}
+          {% set white_lines = 3 if white_words|length > 6 else (2 if white_words|length > 3 else 1) %}
+          {% set gold_per = ((gold_words|length + gold_lines - 1) / gold_lines)|int %}
+          {% set white_per = ((white_words|length + white_lines - 1) / white_lines)|int %}
+          {% if gold_per < 1 %}{% set gold_per = 1 %}{% endif %}
+          {% if white_per < 1 %}{% set white_per = 1 %}{% endif %}
+
           <article class="quote-card poster-body" data-index="{{ loop.index0 }}">
             <div class="poster-quote-col">
               <blockquote class="quote-content">
                 <p class="poster-quote-text">
-                  <span class="quote-part-gold">{{ words[:mid]|join(' ') }}</span>
-                  {% if words|length > mid %}
-                    <span class="quote-part-white"> {{ words[mid:]|join(' ') }}</span>
-                  {% endif %}
+                  {% for i in range(0, gold_words|length, gold_per) %}
+                    <span class="quote-part-gold quote-line">{{ gold_words[i:i+gold_per]|join(' ') }}</span>
+                  {% endfor %}
+                  {% for i in range(0, white_words|length, white_per) %}
+                    <span class="quote-part-white quote-line">{{ white_words[i:i+white_per]|join(' ') }}</span>
+                  {% endfor %}
                 </p>
               </blockquote>
             </div>
@@ -109,6 +130,13 @@
           प. पु. श्री. विद्यानंदजी सागर महाराज बाबा गातेगांवकर
         </p>
       </footer>
+
+      <div class="poster-reactions" aria-hidden="true">
+        <span class="reaction-icon">🙏</span>
+        <span class="reaction-icon">❤️</span>
+        <span class="reaction-icon">👍</span>
+        <span class="reaction-icon">😢</span>
+      </div>
     </div>
   </section>
 
