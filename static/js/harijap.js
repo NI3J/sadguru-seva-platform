@@ -1,10 +1,25 @@
 /**
  * =====================================================================
- * HARI JAP COUNTER APPLICATION - FINAL FIXED VERSION
+ * HARI JAP COUNTER APPLICATION - ACCURACY-PATCHED VERSION
  * =====================================================================
  * Voice-recognition based counter for chanting "जय जय राम कृष्णा हारी"
  * Features: Multi-repetition detection, instant feedback, milestone tracking
- * FIXED: Enhanced fuzzy matching for better speech recognition
+ *
+ * PATCH NOTES (accuracy fixes applied on top of FINAL FIXED VERSION):
+ *   FIX #1: recognitionLang changed from 'en-IN' -> 'hi-IN'
+ *           (mantra is Hindi/Marathi, not English — using an English
+ *            acoustic model was the single biggest source of misses)
+ *   FIX #2: onRecognitionResult now loops through ALL maxAlternatives
+ *           candidates instead of only ever reading alternative [0]
+ *   FIX #3: recognitionAttempts is now incremented on every FINAL result
+ *           regardless of match outcome, so the accuracy % on screen is
+ *           a real success-rate, not an always-near-100% vanity number
+ *   FIX #4: wordMatchesAny fuzzy tolerance lowered to 3+ chars (was 4+)
+ *           so short words like "ram" can absorb a 1-character mis-hearing
+ *   FIX #5: countedUpToTokenIndex is now resynced (reset to 0) whenever
+ *           an interim transcript revises earlier words instead of only
+ *           growing them — prevents silent desync/undercounting on long
+ *           continuous listening sessions
  * =====================================================================
  */
 
@@ -49,6 +64,7 @@ class HariJapCounter {
             lastCountedTranscriptTime: 0,
             recognitionRestartPending: false,
             countedUpToTokenIndex: 0, // Word-stream: tokens already matched in current utterance
+            lastSeenTokens: [],       // FIX #5: last tokenized transcript, used to detect revisions
             saveDebounceTimer: null,
 
             // Mantra word tracking
@@ -64,7 +80,11 @@ class HariJapCounter {
             pronunciationsPerMala: 108,
 
             // Recognition settings
-            recognitionLang: 'en-IN',
+            // FIX #1: was 'en-IN'. The mantra is chanted in Hindi/Marathi,
+            // so the Hindi acoustic+language model recognizes it far more
+            // reliably. cleanMantraText() already normalizes Devanagari
+            // output (कृष्ण/हारी/राम/जय), so this should not break matching.
+            recognitionLang: 'hi-IN',
             minTimeBetweenCounts: 80, // Allow faster consecutive mantras
             saveDebounceMs: 2000,     // Batch server saves to avoid network lag
             recognitionKeepaliveMs: 5000,   // proactive restart when idle (uses network)
@@ -597,6 +617,7 @@ class HariJapCounter {
         this.state.lastCountedTranscript = '';
         this.state.lastCountedTranscriptTime = 0;
         this.state.countedUpToTokenIndex = 0;
+        this.state.lastSeenTokens = [];
 
         if (this.state.isListening) {
             this.state.lastResultTime = Date.now();
@@ -760,23 +781,47 @@ class HariJapCounter {
 
         for (let ri = event.resultIndex; ri < results.length; ri++) {
             const result = results[ri];
-            const transcript = result[0].transcript;
-            const confidence = result[0].confidence;
-
             if (result.isFinal) hasFinal = true;
-            bestTranscript = transcript;
 
-            const streamCount = this.processWordStream(transcript, result.isFinal, now);
-            wordStreamCounted += streamCount;
+            // FIX #2: previously this only ever read result[0].transcript,
+            // silently discarding the other maxAlternatives=5 candidates.
+            // Now we try each alternative (best confidence first) until one
+            // produces a mantra match via the word-stream scanner.
+            let matchedThisResult = 0;
+            let usedTranscript = result[0].transcript;
 
+            const altCount = Math.min(result.length, 5);
+            for (let alt = 0; alt < altCount; alt++) {
+                const altTranscript = result[alt].transcript;
+                const streamCount = this.processWordStream(altTranscript, result.isFinal, now);
+                if (streamCount > 0) {
+                    matchedThisResult = streamCount;
+                    usedTranscript = altTranscript;
+                    if (alt > 0) {
+                        console.log('✅ Alternative #' + alt + ' matched (alt 0 missed): "' + altTranscript + '"');
+                    }
+                    break; // first matching alternative wins, avoids double counting
+                }
+            }
+
+            bestTranscript = usedTranscript;
+            wordStreamCounted += matchedThisResult;
+
+            const confidence = result[0].confidence;
             if (result.isFinal) {
-                console.log('🎤 Final: "' + transcript + '" (' + (confidence * 100).toFixed(1) + '%) → stream:' + streamCount);
+                console.log('🎤 Final: "' + usedTranscript + '" (' + ((confidence || 0) * 100).toFixed(1) + '%) → stream:' + matchedThisResult);
             } else {
-                console.log('🎤 Interim: "' + transcript + '" → stream:' + streamCount);
+                console.log('🎤 Interim: "' + usedTranscript + '" → stream:' + matchedThisResult);
             }
         }
 
         this.displayRecognizedText(bestTranscript + (hasFinal ? '' : '…'));
+
+        // FIX #3: count every FINAL result as a recognition "attempt" so the
+        // accuracy % reflects real success rate, not just successful matches.
+        if (hasFinal) {
+            this.metrics.recognitionAttempts++;
+        }
 
         if (wordStreamCounted > 0) {
             return;
@@ -785,7 +830,6 @@ class HariJapCounter {
         // Fallback: full-phrase match when word stream missed (e.g. ramkrishna as one token)
         if (hasFinal && bestTranscript.trim().length > 0) {
             const phraseCount = this.countMantraRepetitions(bestTranscript);
-            this.metrics.recognitionAttempts++;
 
             if (phraseCount > 0) {
                 console.log('✅ Phrase fallback found ' + phraseCount + ' mantra(s)');
@@ -805,6 +849,27 @@ class HariJapCounter {
         const tokens = this.tokenizeTranscript(transcript);
         if (tokens.length === 0) return 0;
 
+        // FIX #5: Chrome's Web Speech API can REVISE earlier words in an
+        // interim transcript as more audio context arrives, not just append
+        // new ones. The original code assumed countedUpToTokenIndex only
+        // ever needed to move forward, which could desync silently. Here we
+        // detect a revision (tokens before our pointer no longer match what
+        // we previously saw there) and resync by rewinding the pointer.
+        const prevTokens = this.state.lastSeenTokens;
+        const checkLen = Math.min(this.state.countedUpToTokenIndex, prevTokens.length, tokens.length);
+        let revised = false;
+        for (let k = 0; k < checkLen; k++) {
+            if (tokens[k] !== prevTokens[k]) {
+                revised = true;
+                break;
+            }
+        }
+        if (revised) {
+            console.log('🔁 Transcript revision detected — resyncing token pointer');
+            this.state.countedUpToTokenIndex = 0;
+        }
+        this.state.lastSeenTokens = tokens;
+
         // Last interim word is unstable; include it only when the segment is final
         const scanEnd = isFinal ? tokens.length : Math.max(0, tokens.length - 1);
         let counted = 0;
@@ -821,12 +886,12 @@ class HariJapCounter {
         }
 
         if (counted > 0) {
-            this.metrics.recognitionAttempts++;
             this.handleSuccessfulRecognition(counted, timestamp);
         }
 
         if (isFinal) {
             this.state.countedUpToTokenIndex = 0;
+            this.state.lastSeenTokens = [];
         }
 
         return counted;
@@ -852,8 +917,11 @@ class HariJapCounter {
         return aliases.some(alias => {
             const a = this.normalizeWord(alias);
             if (w === a) return true;
-            // Allow minor speech-recognition typos (1 char difference on words 4+ chars)
-            if (w.length >= 4 && a.length >= 4 && Math.abs(w.length - a.length) <= 1) {
+            // FIX #4: fuzzy tolerance lowered from 4+ chars to 3+ chars.
+            // "ram" is only 3 characters, so the old threshold meant a
+            // misheard "ram" (e.g. "raam" -> "rum") could NEVER be caught
+            // by fuzzy matching and always failed the whole 5-word mantra.
+            if (w.length >= 3 && a.length >= 3 && Math.abs(w.length - a.length) <= 1) {
                 let diff = 0;
                 const maxLen = Math.max(w.length, a.length);
                 for (let i = 0; i < maxLen; i++) {
@@ -877,11 +945,29 @@ class HariJapCounter {
 
         if (start + 5 > tokens.length) return false;
 
+        let mismatches = 0;
+        let mismatchIndex = -1;
         for (let j = 0; j < 5; j++) {
             if (!this.wordMatchesAny(tokens[start + j], expected[j])) {
-                return false;
+                mismatches++;
+                mismatchIndex = j;
+                if (mismatches > 1) return false; // more than 1 miss = reject
             }
         }
+
+        if (mismatches === 1) {
+            // FIX #4 (continued): allow a 4-of-5 match ONLY if "ram" (index 2)
+            // and "krishna" (index 3) — the two anchor words that make this
+            // mantra unambiguous — both matched. This tolerates one garbled
+            // word (usually "jai"/"hari" mis-transcription) without opening
+            // the door to false positives from unrelated phrases.
+            const ramOk = this.wordMatchesAny(tokens[start + 2], expected[2]);
+            const krishnaOk = this.wordMatchesAny(tokens[start + 3], expected[3]);
+            if (!(ramOk && krishnaOk)) return false;
+            console.log('✅ Word-stream match (4/5, word #' + mismatchIndex + ' fuzzy-accepted) at index', start, ':', tokens.slice(start, start + 5).join(' '));
+            return true;
+        }
+
         console.log('✅ Word-stream match at index', start, ':', tokens.slice(start, start + 5).join(' '));
         return true;
     }
@@ -1626,6 +1712,9 @@ class HariJapCounter {
         }
 
         if (this.elements.accuracy && this.metrics.recognitionAttempts > 0) {
+            // FIX #3: this now reflects a REAL success rate because
+            // recognitionAttempts is incremented on every final result,
+            // not just on successful matches (see onRecognitionResult).
             const accuracy = Math.round(
                 (this.metrics.recognitionSuccesses / this.metrics.recognitionAttempts) * 100
             );
