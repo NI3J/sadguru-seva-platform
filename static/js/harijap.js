@@ -936,11 +936,11 @@ class HariJapCounter {
 
     matchesMantraAt(tokens, start) {
         const expected = [
-            ['jai', 'jay'],
-            ['jai', 'jay', 'shri', 'shree', 'sri'], // "Jay Shri" is very common misrecognition
-            ['ram', 'raam', 'राम'],
-            ['krishna', 'krishn', 'krishan', 'krishana', 'कृष्ण', 'कृष्णा'],
-            ['hari', 'hare', 'haare', 'harry', 'हारी', 'हरी', 'हरि']
+            ['jai', 'jay', 'जय'],
+            ['jai', 'jay', 'shri', 'shree', 'sri', 'जय', 'श्री'], // "Jay Shri" is very common misrecognition
+            ['ram', 'raam', 'राम', 'रामा'],
+            ['krishna', 'krishn', 'krishan', 'krishana', 'कृष्ण', 'कृष्णा', 'क्रिष्ण', 'क्रिष्णा'],
+            ['hari', 'hare', 'haare', 'harry', 'हारी', 'हरी', 'हरि', 'हरे', 'हारे']
         ];
 
         if (start + 5 > tokens.length) return false;
@@ -1250,7 +1250,10 @@ class HariJapCounter {
         return text
             .toLowerCase()
             .replace(/[।,\.!\?;:"']/g, ' ')
-            .replace(/\b(मी|mi|me)\b/gi, ' ')
+            // FIX: \b never matches around Devanagari (JS \b only recognizes
+            // A-Za-z0-9_ as "word" chars), so /\bमी\b/ was silently dead code.
+            // Using lookbehind/lookahead on whitespace/string-edges instead.
+            .replace(/(?<=^|\s)(मी|mi|me)(?=\s|$)/gi, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -1262,21 +1265,41 @@ class HariJapCounter {
             // Normalize hari/hare/haare variations (all are acceptable)
             // Keep "hare" recognizable - convert to "hari" for consistency
             .replace(/\b(haare|hare|harry|her|hair)\b/gi, 'hari')  // Normalize all variations → hari
-            .replace(/\bहारी\b/g, 'hari')                  // Hindi हारी → hari
-            .replace(/\bहरी\b/g, 'hari')                   // Hindi हरी → hari
-            .replace(/\bहरि\b/g, 'hari')                    // Hindi हरि → hari
+            // ------------------------------------------------------------
+            // CRITICAL FIX: all of the following Devanagari rules previously
+            // used /\bword\b/ which NEVER matches Devanagari text in JS
+            // regex (Devanagari chars aren't "word characters" to \b, so a
+            // Devanagari word surrounded by spaces has no \w/\W transition
+            // for \b to latch onto). Switched to lookbehind/lookahead on
+            // whitespace or string start/end, which works correctly for
+            // any script. Also added हरे, which was missing entirely.
+            // ------------------------------------------------------------
+            .replace(/(?<=^|\s)हारी(?=\s|$)/g, 'hari')      // Hindi हारी → hari
+            .replace(/(?<=^|\s)हरी(?=\s|$)/g, 'hari')       // Hindi हरी → hari
+            .replace(/(?<=^|\s)हरि(?=\s|$)/g, 'hari')       // Hindi हरि → hari
+            .replace(/(?<=^|\s)हरे(?=\s|$)/g, 'hari')       // Hindi हरे → hari (was missing!)
+            .replace(/(?<=^|\s)हारे(?=\s|$)/g, 'hari')      // Hindi हारे → hari
             // Normalize krishna variations
             .replace(/\bkrishn\b/gi, 'krishna')            // Normalize krishn → krishna
-            .replace(/\bकृष्ण\b/g, 'krishna')              // Hindi कृष्ण → krishna
-            .replace(/\bकृष्णा\b/g, 'krishna')             // Hindi कृष्णा → krishna
+            .replace(/(?<=^|\s)कृष्ण(?=\s|$)/g, 'krishna')  // Hindi कृष्ण → krishna
+            .replace(/(?<=^|\s)कृष्णा(?=\s|$)/g, 'krishna') // Hindi कृष्णा → krishna
+            .replace(/(?<=^|\s)क्रिष्ण(?=\s|$)/g, 'krishna') // Common misspelling क्रिष्ण → krishna
+            .replace(/(?<=^|\s)क्रिष्णा(?=\s|$)/g, 'krishna')// Common misspelling क्रिष्णा → krishna
             // Normalize jay/jai variations
             .replace(/\bjay\b/gi, 'jai')                   // Normalize jay → jai
-            .replace(/\bजय\b/g, 'jai')                     // Hindi जय → jai
+            .replace(/(?<=^|\s)जय(?=\s|$)/g, 'jai')         // Hindi जय → jai
+            .replace(/(?<=^|\s)जय़(?=\s|$)/g, 'jai')         // Hindi जय़ (with nukta) → jai
+            // Normalize shri variations (Devanagari)
+            .replace(/(?<=^|\s)श्री(?=\s|$)/g, 'shri')      // Hindi श्री → shri
             // Normalize ram (handle common mispronunciations)
-            .replace(/\bराम\b/g, 'ram')                   // Hindi राम → ram
+            .replace(/(?<=^|\s)राम(?=\s|$)/g, 'ram')        // Hindi राम → ram
+            .replace(/(?<=^|\s)रामा(?=\s|$)/g, 'ram')       // Hindi रामा → ram
             // Handle "ramkrishna" as one word - add space for better matching
             .replace(/\bramkrishna\b/gi, 'ram krishna')
             .replace(/\bramkrishn\b/gi, 'ram krishna')
+            .replace(/(?<=^|\s)रामकृष्ण(?=\s|$)/g, 'ram krishna')  // Devanagari ramkrishna as one word
+            // Re-run jai/shri combo rule in case Devanagari conversion just created it
+            .replace(/\b(jai|jay)\s+(shri|shree|sri)\b/gi, '$1 jai')
             // Clean up extra spaces
             .replace(/\s+/g, ' ')
             .trim();
