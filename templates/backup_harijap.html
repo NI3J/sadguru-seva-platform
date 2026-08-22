@@ -73,10 +73,10 @@
         <!-- Control Buttons -->
         <div class="controls">
             <button class="btn btn-primary" id="startBtn" onclick="handleStartClick(event)">
-                🎤 जप शुरू करें 
+                🎤 जप शुरू करें
             </button>
             <button class="btn btn-secondary" id="stopBtn" disabled onclick="handleStopClick(event)">
-                ⏹️ रोकें 
+                ⏹️ रोकें
             </button>
             <button class="btn btn-manual" id="manualBtn" onclick="handleManualClick(event)">
                 ➕ मैन्युअल गिनती
@@ -89,7 +89,7 @@
         <!-- Status Section -->
         <div class="status-section">
             <div class="listening-status" id="listeningStatus">
-                🎤 माइक्रोफोन तैयार है 
+                🎤 माइक्रोफोन तैयार है
             </div>
             <div class="recognition-text" id="recognitionText">
                 मंत्र बोलना शुरू करें...
@@ -123,24 +123,6 @@
             <div class="full-jap-subtitle">कुल जप की संख्या</div>
         </div>
 
-        <!-- Experimental: Template Matching Test Panel -->
-        <!-- This is completely isolated from the main counter above:      -->
-        <!-- it does not read/write harijap_progress, does not call        -->
-        <!-- saveToServer(), and cannot affect your real jap count.        -->
-        <!-- Safe to test in production.                                   -->
-        <div style="margin-top: 20px; padding: 15px; background: rgba(255,215,0,0.08); border-radius: 15px; border: 1px solid rgba(255,215,0,0.3);">
-            <h3 style="color: #ffd700; margin-bottom: 10px; font-size: 1rem;">🧪 प्रायोगिक: टेम्पलेट मैचिंग टेस्ट</h3>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button id="tmStartBtn" class="btn btn-primary" style="flex:1;">▶️ टेस्ट शुरू करें</button>
-                <button id="tmStopBtn" class="btn btn-secondary" style="flex:1;" disabled>⏹️ रोकें</button>
-            </div>
-            <div style="color:#fff; font-size:0.9rem;">
-                मिलान गिनती: <span id="tmMatchCount" style="color:#4caf50; font-weight:bold;">0</span> |
-                अंतिम दूरी: <span id="tmLastDistance">--</span>
-            </div>
-            <div id="tmLog" style="max-height:150px; overflow-y:auto; font-size:0.75rem; color:rgba(255,255,255,0.6); margin-top:8px; font-family:monospace;"></div>
-        </div>
-
         <!-- Keyboard Shortcuts Info -->
         <div style="margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
             <h3 style="color: #ffd700; margin-bottom: 10px; font-size: 1.1rem;">⌨️ कीबोर्ड शॉर्टकट:</h3>
@@ -160,56 +142,6 @@
 
     <!-- Load JavaScript -->
     <script src="{{ url_for('static', filename='js/harijap.js') }}"></script>
-
-    <!-- Template Matcher (experimental, does not affect main counter) -->
-    <script src="{{ url_for('static', filename='js/templateMatcher.js') }}"></script>
-    <script>
-    (function() {
-        let tmMatcher = null;
-        let tmMatchCount = 0;
-
-        function tmLog(msg) {
-            const logEl = document.getElementById('tmLog');
-            if (!logEl) return;
-            const line = document.createElement('div');
-            line.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
-            logEl.prepend(line);
-            while (logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
-        }
-
-        document.getElementById('tmStartBtn').addEventListener('click', async function() {
-            try {
-                tmMatcher = new MantraTemplateMatcher('/static/js/templates.json');
-                tmMatchCount = 0;
-                document.getElementById('tmMatchCount').textContent = '0';
-
-                tmMatcher.onMatch = function(distance, templateIdx) {
-                    tmMatchCount++;
-                    document.getElementById('tmMatchCount').textContent = tmMatchCount;
-                    document.getElementById('tmLastDistance').textContent = distance.toFixed(3) + ' (template ' + templateIdx + ')';
-                    tmLog('✅ MATCH #' + tmMatchCount + ' - distance=' + distance.toFixed(3));
-                };
-
-                await tmMatcher.start();
-                tmLog('🎤 टेम्पलेट मैचर शुरू हुआ');
-                document.getElementById('tmStartBtn').disabled = true;
-                document.getElementById('tmStopBtn').disabled = false;
-            } catch (err) {
-                console.error('Template matcher start error:', err);
-                tmLog('❌ त्रुटि: ' + err.message);
-            }
-        });
-
-        document.getElementById('tmStopBtn').addEventListener('click', function() {
-            if (tmMatcher) {
-                tmMatcher.stop();
-                tmLog('⏸️ टेम्पलेट मैचर रुका। कुल मिलान: ' + tmMatchCount);
-            }
-            document.getElementById('tmStartBtn').disabled = false;
-            document.getElementById('tmStopBtn').disabled = true;
-        });
-    })();
-    </script>
     
     <!-- Immediate button handlers (fallback) -->
     <script>
